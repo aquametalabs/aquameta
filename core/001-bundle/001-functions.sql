@@ -250,16 +250,32 @@ checkout -
 
 */
 
+
+--
+-- user stories:
+--
+-- 1. user downloads a new bundle, checking out where everything is fresh and
+-- new.  we don't run into any collissions and just plop it all into place.
+--
+-- 2. user tries to check out a bundle when his working copy is different from
+-- previous commit.  this would be indicated by rows in offstage_row_deleted and
+-- offstage_field_change, or stage_row_*.
+--
+------------------------------------------------------------------------------
+
+-- create or replace function checkout_row (in row_id meta.row_id, in fields text[], in vals text[], in force_overwrite boolean) returns void as $$
 CREATE TYPE checkout_field AS (name text, value text, type_name text);
+
 create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
     declare
+        query_str text;
     begin
+        raise notice '------------ checkout_row % ----------',
+            (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
         set search_path=bundle,meta,public;
 
-        raise notice 'FIELDS[0]: % % %',  row_id, fields, fields[1];
-
         if meta.row_exists(row_id) then
-            raise notice 'row % already exists.... overwriting.',
+            raise notice '---------------------- row % already exists.... overwriting.',
             (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
 
             -- check to see if this row which is being merged is going to overwrite a row that is
@@ -267,16 +283,104 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
 
             -- overwrite existing values with new values.
+            /*
             execute 'update ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id::meta.relation_id).name)
                 || ' set (' || array_to_string(fields.name,', ','NULL') || ')'
                 || '   = (' || array_to_string(fields.value || '::'||fields.type_name, ', ','NULL') || ')'
                 || ' where ' || (row_id.pk_column_id).name
-                || '::text = ' || quote_literal(row_id.pk_value) || '::text'; -- FIXME?
+                || '     = ' || row_id.pk_value;
+            */
+            -- this code is terrible, but i've spent way too long trying to do it a nice way.
+            query_str := 'update '
+                || quote_ident((row_id::meta.schema_id).name)
+                || '.'
+                || quote_ident((row_id::meta.relation_id).name)
+                || ' set (';
+
+            for i in 1 .. array_upper(fields, 1)
+            loop
+                query_str := query_str || quote_ident(fields[i].name);
+
+                if i < array_upper(fields, 1) then
+                    query_str := query_str || ', ';
+                end if;
+            end loop;
+
+            query_str := query_str
+                || ') = (';
+
+            for i in 1 .. array_upper(fields, 1)
+            loop
+                query_str := query_str
+                || coalesce(
+                    quote_literal(fields[i].value)
+                        || '::'
+                        || fields[i].type_name,
+                    'NULL'
+                );
+
+                if i < array_upper(fields, 1) then
+                    query_str := query_str || ', ';
+                end if;
+            end loop;
+
+            query_str := query_str 
+                || ')'
+                || ' where ' || quote_ident((row_id.pk_column_id).name)
+                || '::text = ' || quote_literal(row_id.pk_value) || '::text'; -- cast them both to text instead of look up the column's type... maybe lazy?
+
+            raise notice 'query_str: %', query_str;
+
+            execute query_str;
+
         else
-            execute 'insert into ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id::meta.relation_id).name)
-                || ' (' || (select string_agg (quote_ident((f::checkout_field).name), ',') from unnest(fields) as f) || ')'
+            -- this code is terrible, but i've spent way too long trying to do it a nice way.
+            raise notice '---------------------- row doesn''t exists.... INSERT:';
+            query_str := 'insert into '
+                || quote_ident((row_id::meta.schema_id).name)
+                || '.'
+                || quote_ident((row_id::meta.relation_id).name)
+                || ' (';
+
+            for i in 1 .. array_upper(fields, 1)
+            loop
+                query_str := query_str || quote_ident(fields[i].name);
+
+                if i < array_upper(fields, 1) then
+                    query_str := query_str || ', ';
+                end if;
+            end loop;
+
+            query_str := query_str
+                || ') values (';
+
+            for i in 1 .. array_upper(fields, 1)
+            loop
+                query_str := query_str
+                || coalesce(
+                    quote_literal(fields[i].value)
+                        || '::'
+                        || fields[i].type_name,
+                    'NULL'
+                );
+
+                if i < array_upper(fields, 1) then
+                    query_str := query_str || ', ';
+                end if;
+            end loop;
+
+            query_str := query_str  || ')';
+
+            raise notice 'query_str: %', query_str;
+
+            execute query_str;
+
+
+            /*
+            (select string_agg (quote_ident((f::checkout_field).name), ',') from unnest(fields) as f) || ')'
                 || ' values '
                 || ' (' || (select string_agg (quote_literal(f.value) || '::' || (f::checkout_field).type_name,  ',') from unnest(fields) as f) || ')';
+                */
         end if;
     end;
 
@@ -290,32 +394,32 @@ create or replace function checkout (in commit_id uuid) returns void as $$
     begin
         set local search_path=bundle,meta,public;
 
+        raise notice '################################################## CHECKOUT SCHEMA % ###############################', commit_id;
+
         for commit_row in
             select
-                rr.id as id,
                 rr.row_id,
-                (rr.row_id::meta.schema_id).name as schema_name,
-                (rr.row_id::meta.relation_id).name as relation_name,
                 array_agg(
                     row(
                         ((f.field_id).column_id).name,
                         f.value,
                         col.type_name
                     )::checkout_field
-                ) as f_aggs
+                ) as fields_agg
             from bundle.commit c
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
                 join meta.column col on (f.field_id).column_id = col.id
             where c.id=commit_id
+            and (rr.row_id::meta.schema_id).name = 'meta'
             group by rr.id
             -- add meta rows first, in sensible order
             order by
                 case
                     when row_id::meta.relation_id = meta.relation_id('meta','schema') then 0
-                    when row_id::meta.relation_id = meta.relation_id('meta','table') then 1
-                    when row_id::meta.relation_id = meta.relation_id('meta','column') then 2
+                    when row_id::meta.relation_id = meta.relation_id('meta','table') then 2
+                    when row_id::meta.relation_id = meta.relation_id('meta','column') then 3
                     when row_id::meta.relation_id = meta.relation_id('meta','sequence') then 4
                     when row_id::meta.relation_id = meta.relation_id('meta','constraint_check') then 4
                     when row_id::meta.relation_id = meta.relation_id('meta','constraint_unique') then 4
@@ -327,8 +431,41 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 end
                     */
         loop
-            raise notice 'CHECKOUT row: % %', commit_row.row_id, commit_row.f_aggs;
-             perform checkout_row(commit_row.row_id, commit_row.f_aggs, true);
+            raise notice '------------------------------------------------------------------------CHECKOUT row: % %',
+                (commit_row.row_id).pk_column_id.relation_id.name,
+                (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
+            perform checkout_row(commit_row.row_id, commit_row.fields_agg, true);
+        end loop;
+
+
+
+
+
+        raise notice '################################################## CHECKOUT DATA % ###############################', commit_id;
+
+        for commit_row in
+            select
+                rr.row_id,
+                array_agg(
+                    row(
+                        ((f.field_id).column_id).name,
+                        f.value,
+                        col.type_name
+                    )::checkout_field
+                ) as fields_agg
+            from bundle.commit c
+                join bundle.rowset r on c.rowset_id=r.id
+                join bundle.rowset_row rr on rr.rowset_id=r.id
+                join bundle.rowset_row_field f on f.rowset_row_id=rr.id
+                join meta.column col on (f.field_id).column_id = col.id
+            where c.id=commit_id
+            and (rr.row_id::meta.schema_id).name != 'meta'
+            group by rr.id
+        loop
+            raise notice '------------------------------------------------------------------------CHECKOUT row: % %',
+                (commit_row.row_id).pk_column_id.relation_id.name,
+                (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
+            perform checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
         return;
 
