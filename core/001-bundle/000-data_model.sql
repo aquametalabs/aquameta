@@ -1,0 +1,666 @@
+/*******************************************************************************
+ * Bundle
+ * Data Version Control System
+ *
+ * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
+ * Company: http://aquametalabs.com/
+ * Project: http://aquameta.org/
+ ******************************************************************************/
+
+
+/*
+ * Code is organized as follows:
+ *     1. bundle bundle data model - the tables where bundles are stored
+ *     2. head - views that contain the "current" commit from every bundle
+ *     3. ignored - where you specify parts of the db that show stay untracked
+ *     4. staged changes - where you specify rows/fields that should be different
+ *        from the head commit, in the next commit
+ *     5. offstage changes - views that contain the parts of the db that are
+ *        different from the head commit
+ *     6. stage - contains what the next commit would look like if you were to
+ *        commit right now
+ *     7. status - summarizes the status of the head commit, working copy db, and
+ *        stage
+ *     8. untracked - rows which are not in any head commit, and availble for
+ *        stage_row_add()
+ *     9. remotes - pushing and pulling to other databases
+ *
+ */
+begin;
+
+-- these require postgres-contrib to be installed
+create extension if not exists "uuid-ossp" schema public;
+create extension if not exists "pgcrypto" schema public;
+
+create schema bundle;
+
+set search_path=bundle,meta,public;
+
+
+-------------------------
+-- UTIL FIXME
+--------------------------
+create function exec(statements text[]) returns setof record as $$
+   declare
+       statement text;
+   begin
+       foreach statement in array statements loop
+           -- raise info 'EXEC statement: %', statement;
+           return query execute statement;
+       end loop;
+    end;
+$$ language plpgsql volatile returns null on null input;
+
+------------------------------------------------------------------------------
+-- 1. REPOSITORY DATA MODEL
+------------------------------------------------------------------------------
+
+create table bundle (
+    id uuid default public.uuid_generate_v4() primary key,
+    name text,
+    -- head_commit_id uuid, (circular, added later)
+    unique(name)
+);
+
+create table rowset (
+    id uuid default public.uuid_generate_v4() primary key
+);
+
+create table rowset_row (
+    id uuid default public.uuid_generate_v4() primary key,
+    rowset_id uuid references rowset(id) on delete cascade,
+    row_id meta.row_id
+);
+
+create table rowset_row_field (
+    id uuid default public.uuid_generate_v4() primary key,
+    rowset_row_id uuid references rowset_row(id) on delete cascade,
+    field_id meta.field_id,
+    value text
+    -- blob_id uuid references blob(id) on delete null -- simplify for now
+);
+
+/*
+removed.  start with single parent
+create table commit_parent (
+    id uuid default public.uuid_generate_v4() primary key,
+    commit_id uuid references commit(id) on delete cascade,
+    parent_id uuid references commit(id) on delete cascade
+);
+
+create table blob (
+    id uuid default public.uuid_generate_v4() primary key,
+    hash bytea,
+    value text,
+    unique (hash)
+);
+
+create function blob_hash_gen_trigger() returns trigger as $$
+    begin
+        if TG_OP = 'INSERT' or TG_OP = 'UPDATE' then
+            NEW.hash = digest(NEW.value, 'sha256'::text)::bytea;
+            return NEW;
+        end if;
+    end;
+$$ language plpgsql;
+
+create trigger blob_hash_update
+    before insert or update on blob
+    for each row execute procedure blob_hash_gen_trigger();
+*/
+
+
+
+create table commit (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle(id) on delete cascade,
+    rowset_id uuid references rowset(id) on delete cascade,
+    role_id meta.role_id,
+    parent_id uuid references commit(id),
+    -- TODO: merge_parent_id uuid references commit(id),
+    time timestamp not null default now(),
+    message text
+);
+-- circular
+alter table bundle add head_commit_id uuid references commit(id) on delete cascade;
+
+
+------------------------------------------------------------------------------
+-- 2. HEAD
+-- Views that contain the "current" commit from each bundle, the commit
+-- referenced by bundle.head_commit_id.
+------------------------------------------------------------------------------
+
+-- head_commit_row: show the rows head commit
+create view head_commit_row as
+select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle.bundle bundle
+    join bundle.commit c on bundle.head_commit_id=c.id
+    join bundle.rowset r on r.id = c.rowset_id
+    join bundle.rowset_row rr on rr.rowset_id = r.id;
+
+
+-- head_commit_row: show the fields in each head commit
+create view head_commit_field as
+select bundle.id as bundle_id, rr.row_id, f.field_id, f.value from bundle.bundle bundle
+    join bundle.commit c on bundle.head_commit_id=c.id
+    join bundle.rowset r on r.id = c.rowset_id
+    join bundle.rowset_row rr on rr.rowset_id = r.id
+    join bundle.rowset_row_field f on f.rowset_row_id = rr.id;
+
+
+-- head_commit_row_with_exists: rows in the head commit, along with whether or
+-- not that row actually exists in the database
+create view head_commit_row_with_exists as
+select bundle.id as bundle_id, c.id as commit_id, rr.row_id, meta.row_exists(rr.row_id) as exists
+from bundle.bundle bundle
+    join bundle.commit c on bundle.head_commit_id=c.id
+    join bundle.rowset r on r.id = c.rowset_id
+    join bundle.rowset_row rr on rr.rowset_id = r.id;
+    -- order by meta.row_exists(rr.row_id), rr.row_id;
+
+
+
+------------------------------------------------------------------------------
+-- 3. IGNORED
+-- Ignored rows do not show up in untracked_row and are not available for
+-- adding to staged_row_new.  The user inserts into ignored_row a row that they
+-- don't want to continue to be hasseled about adding to the stage.
+------------------------------------------------------------------------------
+create table ignored_row (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid not null references bundle(id) on delete cascade,
+    row_id meta.row_id,
+    unique (row_id) --TOO RESTRICTIVE?
+);
+
+-- ignored_schema:  Ignored rows that are in meta.schema:  If a schema's meta row
+-- is ignored, the ignore cascades down to every row in that schema, effectively
+-- ignoring everything in it.
+create view ignored_schema as
+    select (row_id).pk_value::meta.schema_id as schema_id, row_id as meta_row_id
+    from bundle.ignored_row
+    where
+        (row_id::meta.schema_id).name = 'meta' and
+        (row_id::meta.relation_id).name = 'schema';
+
+-- ignored_relation:  Same as ignored_schema but for relation.
+create view ignored_relation as
+    select (row_id).pk_value::meta.relation_id as relation_id, row_id as meta_row_id
+    from bundle.ignored_row
+    where
+        (row_id::meta.schema_id).name = 'meta' and
+        (row_id::meta.relation_id).name = 'relation';
+
+-- TODO: ignored_column support...
+
+
+------------------------------------------------------------------------------
+-- 4. STAGED CHANGES
+--
+-- The tables where users add changes to be included in the next commit:  New
+-- rows, deletd rows and changed fields.
+------------------------------------------------------------------------------
+
+-- a row not in the current commit, but is marked to be added to the next commit
+create table stage_row_added (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid not null references bundle(id) on delete cascade,
+    row_id meta.row_id,
+    unique (bundle_id, row_id)
+); -- TODO: check that rows inserted into this table ARE NOT in the head commit's rowset
+
+-- a row that is marked to be deleted from the current commit in the next commit
+create table stage_row_deleted (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid not null references bundle(id) on delete cascade,
+    rowset_row_id uuid references rowset_row(id),
+    unique (bundle_id, rowset_row_id)
+); -- TODO: check that rows inserted into this table ARE in the head commit's rowset
+
+-- a field that is marked to be different from the current commmit in the next
+-- commit, with it's value
+create table stage_field_changed (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid not null references bundle(id),
+    field_id meta.field_id,
+    new_value text,
+    unique (bundle_id, field_id)
+); -- TODO: check that rows inserted into this table ARE in the head commit's rowset
+
+
+
+
+------------------------------------------------------------------------------
+-- 5. OFFSTAGE CHANGES
+--
+-- A diff between the head commits of all the bundles, and the database.  AKA
+-- changes to things that are tracked, that have not yet been staged.  Rows
+-- show up in these views if rows in the head commit are different than rows in
+-- the database.
+------------------------------------------------------------------------------
+-- deleted
+create view offstage_row_deleted as
+select row_id, bundle_id
+from bundle.head_commit_row_with_exists
+where exists = false
+-- TODO make this an except
+and row_id not in
+(select rr.row_id from bundle.stage_row_deleted srd join bundle.rowset_row rr on rr.id = srd.rowset_row_id)
+;
+
+create view offstage_row_deleted_by_schema as
+select
+    row_id::meta.schema_id as schema_id,
+    (row_id::meta.schema_id).name as schema_name,
+    count(*) as count
+from bundle.offstage_row_deleted
+group by schema_id;
+
+create view offstage_row_deleted_by_relation as
+select row_id::meta.schema_id as schema_id,
+    (row_id::meta.schema_id).name as schema_name,
+    row_id::meta.relation_id as relation_id,
+    (row_id::meta.relation_id).name as relation_name,
+    count(*) as count
+from bundle.offstage_row_deleted
+group by schema_id, relation_id;
+
+
+-- field changed
+create view offstage_field_changed as
+select * from (
+select
+    field_id,
+    row_id,
+    f.value as old_value,
+    meta.field_id_literal_value(field_id) as new_value,
+    bundle_id
+from bundle.head_commit_field f
+where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so slow?  workaround by nesting selects.  still slow.
+    and */ f.field_id not in
+    (select ofc.field_id from bundle.stage_field_changed ofc)
+) f where old_value != new_value; -- FIXME: will break on nulls
+
+/*
+create view offstage_field_changed_by_schema as
+select
+    row_id::meta.schema_id as schema_id,
+    (row_id::meta.schema_id).name as schema_name,
+    count(*) as count
+from bundle.offstage_field_changed
+group by schema_id;
+
+create view offstage_field_changed_by_relation as
+select row_id::meta.schema_id as schema_id,
+    (row_id::meta.schema_id).name as schema_name,
+    row_id::meta.relation_id as relation_id,
+    (row_id::meta.relation_id).name as relation_name,
+    count(*) as count
+from bundle.offstage_field_changed
+group by schema_id, relation_id;
+*/
+
+
+
+------------------------------------------------------------------------------
+-- 6. STAGE
+--
+-- A virtual view of what the next commit will look like: The head commit's
+-- rowset, minus rows in stage_row_deleted, plus rows in stage_row_added,
+-- overwritten by field values in stage_field_changed
+------------------------------------------------------------------------------
+
+create view stage_row as
+    -- the head commit's rowset rows
+    select b.id as bundle_id, rr.row_id as row_id, false as new_row
+        from bundle.rowset_row rr
+        join bundle.rowset r on rr.rowset_id=r.id
+        join bundle.commit c on c.rowset_id = r.id
+        join bundle.bundle b on c.bundle_id=b.id
+            and b.head_commit_id = c.id
+
+    union
+    -- plus stage_row_added
+    select bundle_id, row_id, true as new_row
+    from bundle.stage_row_added
+
+    except
+    -- minus stage_row_deleted
+    select srd.bundle_id, rr.row_id, false
+        from bundle.stage_row_deleted srd
+        join bundle.rowset_row rr on srd.rowset_row_id = rr.id;
+
+
+
+/*
+a virtual view of what the next commit's fields will look like.  it's centered
+around stage_row, we can definitely start there.  then, we get the field values
+from:
+
+a) if it was in the previous commit, those fields, but overwritten by stage_field_changed.  stage_row already takes care of removing stage_row_added and stage_row_deleted.
+
+b) if it is a newly added row (it'll be in stage_row_added), then use the working copy's fields
+
+c) what if you have a stage_field_changed on a newly added row?  then, not sure.  probably use it?
+
+problem: stage_field_change contains W.C. data when there are unstaged changes.
+
+*/
+
+
+
+create or replace view stage_row_field as
+---------- new rows ----------
+select
+    sr.row_id as stage_row_id,
+    meta.field_id(
+        re.schema_name,
+        re.name,
+        re.primary_key_column_names[1], -- FIXME
+        (sr.row_id).pk_value,
+        c.name
+    ) as field_id,
+
+    meta.field_id_literal_value(
+        meta.field_id(
+            re.schema_name,
+            re.name,
+            re.primary_key_column_names[1], -- FIXME
+            (sr.row_id).pk_value,
+            c.name
+        )
+    )::text as value
+
+from bundle.stage_row sr
+    join meta.relation re on sr.row_id::meta.relation_id = re.id
+    join meta.column c on c.relation_id=re.id
+where sr.new_row=true
+
+union all
+
+------------ old rows with changed fields -------------
+select
+    sr.row_id as stage_row_id,
+    hcf.field_id as field_id,
+    case
+        when sfc.field_id is not null then
+            sfc.new_value
+        else hcf.value
+    end as value
+from bundle.stage_row sr
+    left join bundle.head_commit_field hcf on sr.row_id=hcf.row_id
+    left join stage_field_changed sfc on sfc.field_id = hcf.field_id
+    where sr.new_row=false;
+
+
+
+------------------------------------------------------------------------------
+-- 7. STATUS
+--
+-- a view that pulls together rows from the head commit, live working copy db,
+-- and stage.  it's sorted by change_type: deleted, modified, same, added.
+------------------------------------------------------------------------------
+
+
+-- FIXME: this is slow because of odd/slow behavior by offstage_field_changed
+create or replace view head_db_stage as
+select
+    *,
+    meta.row_exists(row_id) as row_exists,
+    case
+        when change_type = 'same' then null
+        when change_type = 'deleted' then (stage_row_id is null)
+        when change_type = 'added' then true
+        when change_type = 'modified' then /* not sure */ false
+    end as staged,
+
+    /* (stage_row_id is null and change != 'deleted') as staged, */
+    (head_row_id is not null) in_head
+from (
+    select
+        coalesce (hcr.bundle_id, sr.bundle_id) as bundle_id,
+        hcr.commit_id,
+        coalesce (hcr.row_id, sr.row_id) as row_id,
+        hcr.row_id as head_row_id,
+        sr.row_id as stage_row_id,
+
+        -- change_type
+        case
+            when sr.row_id is null then 'deleted'
+            when hcr.row_id is null then  'added'
+            when 1 = 2 /* not sure */ then  'modified'
+            else 'same'
+        end as change_type,
+
+        -- offstage changes
+        array_agg(ofc.field_id) as offstage_field_changes,
+        array_agg(ofc.old_value) as offstage_field_changes_old_vals,
+        array_agg(ofc.new_value) as offstage_field_changes_new_vals,
+        -- staged changes
+        array_agg(sfc.field_id) as stage_field_changes,
+        array_agg(ofc.old_value) as stage_field_changes_old_vals,
+        array_agg(sfc.new_value) as stage_field_changes_new_vals
+
+    from bundle.head_commit_row hcr
+    full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
+    left join stage_field_changed sfc on (sfc.field_id).row_id=hcr.row_id
+    left join offstage_field_changed ofc on ofc.row_id=hcr.row_id
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, ofc.row_id
+) c
+order by
+case c.change_type
+    when 'deleted' then 1
+    when 'modified' then 2
+    when 'same' then 3
+    when 'added' then 4
+end, row_id;
+
+
+create view head_db_stage_changed as
+select * from bundle.head_db_stage
+where change_type != 'same'
+    or stage_field_changes::text != '{NULL}'
+    or offstage_field_changes::text != '{NULL}'
+    or row_exists = false;
+
+
+
+------------------------------------------------------------------------------
+-- 8. UNTRACKED
+--
+-- All currently existing database rows that are not ignored (directly or via a
+-- cascade), not currently in any of the head commits, and not in
+-- stage_row_added [or stage_row_deleted?].
+------------------------------------------------------------------------------
+
+-- Relations that are not specifically ignored, and not in a ignored schema
+create or replace view not_ignored_relation as
+    select relation_id, schema_id, primary_key_column_id from (
+       -- every single table
+    select t.id as relation_id, s.id as schema_id, r.primary_key_column_ids[1] as primary_key_column_id --TODO audit column
+    from meta.schema s
+    join meta.table t on t.schema_id=s.id
+    join meta.relation r on r.id=t.id
+    where primary_key_column_ids[1] is not null
+
+    -- combined with every view in the meta schema
+    UNION
+    select v.id as relation_id, v.schema_id, meta.column_id('meta',v.name,'id') as primary_key_column_id
+    from meta.view v
+    where v.schema_name = 'meta'
+) r
+
+       -- ...that is not ignored
+    where relation_id not in (
+        select relation_id from bundle.ignored_relation
+    )
+    -- ...and is not in an ignored schema
+    and schema_id not in (
+        select schema_id from bundle.ignored_schema
+    )
+;
+
+/*
+Generates a set of sql statements that select not_ignored_rows: that are not
+ignored by schema- or relation-ignores.  NOTE: We haven't pulled out
+specifically ignored rows yet.
+*/
+
+create view not_ignored_row_stmt as
+select *, 'select meta.row_id(' ||
+    quote_literal((r.schema_id).name) || ', ' ||
+    quote_literal((r.relation_id).name) || ', ' ||
+    quote_literal((r.primary_key_column_id).name) || ', ' ||
+    quote_ident((r.primary_key_column_id).name) || '::text ' ||
+    ') as row_id from ' ||
+    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) as stmt
+from bundle.not_ignored_relation r;
+-- join
+
+create or replace view untracked_row as
+select r.row_id, r.row_id::meta.relation_id as relation_id
+    from bundle.exec((
+        select array_agg (stmt) from bundle.not_ignored_row_stmt
+    )) r(
+        row_id meta.row_id
+    )
+where r.row_id not in (
+    select a.row_id from bundle.stage_row_added a
+    union
+    select rr.row_id from bundle.stage_row_deleted d join rowset_row rr on d.rowset_row_id=rr.id
+    union
+    select rr.row_id from bundle.bundle bundle
+        join bundle.commit c on bundle.head_commit_id=c.id
+        join bundle.rowset r on c.rowset_id = r.id
+        join bundle.rowset_row rr on rr.rowset_id=r.id
+);
+
+
+create or replace view untracked_row_by_schema as
+select r.row_id::meta.schema_id schema_id, (r.row_id::meta.schema_id).name as schema_name, count(*) as count
+from bundle.untracked_row r
+group by r.row_id::meta.schema_id, (r.row_id::meta.schema_id).name;
+
+create or replace view untracked_row_by_relation as
+select
+    (r.row_id::meta.relation_id) relation_id,
+    (r.row_id::meta.relation_id).name relation_name,
+    (r.row_id::meta.schema_id) schema_id, count(*) as count
+from bundle.untracked_row r
+group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_id::meta.schema_id;
+
+
+
+
+
+
+
+------------------------------------------------------------------------------
+-- 9. REMOTE PUSH/PULL
+-- Other copies of this bundle that we push to and/or pull from.
+-- Super janky.
+------------------------------------------------------------------------------
+
+/* PACKER */
+create type rowbundle as (
+    row_id meta.row_id,
+    row_json json
+);
+
+create table bundle._bundlepacker_tmp (row_id meta.row_id, next_fk uuid);
+
+create or replace function bundlepacker (bundle_id uuid)
+returns setof rowbundle
+as $$
+
+begin
+    set local search_path=bundle;
+    delete from bundle._bundlepacker_tmp;
+
+    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','bundle','id', id::text), null from bundle where id=bundle_id;
+    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','commit','id', id::text), rowset_id from bundle.commit c where c.bundle_id::text in (select (row_id).pk_value from bundle._bundlepacker_tmp);
+    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','rowset','id', id::text), null from bundle.rowset where id in (select next_fk from bundle._bundlepacker_tmp where (row_id::meta.relation_id).name = 'commit');
+    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','rowset_row','id', id::text), rowset_id from bundle.rowset_row rr where rr.rowset_id::text in (select (row_id).pk_value from bundle._bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset');
+    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','rowset_row_field','id', id::text), rowset_row_id from bundle.rowset_row_field rr where rr.rowset_row_id::text in (select (row_id).pk_value from bundle._bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset_row');
+
+    RETURN QUERY EXECUTE  'select row_id, meta.row_id_to_json(row_id) from bundle._bundlepacker_tmp';
+
+end;
+$$ language plpgsql;
+
+
+/* UNPACKER */
+create table bundleunpacker (bundle text);
+
+
+create or replace function bundleunpacker_insert_function()
+returns trigger
+as $$
+declare
+    bundle_row record;
+    row_id meta.row_id;
+begin
+    -- raise notice 'NEW.row_id::json:::::::::::::::::::::::::::::: %', NEW.bundle::json;
+
+    -- setof key text, value json
+    for bundle_row in select * from json_each(NEW.bundle::json)
+    loop
+        row_id := meta.row_id(bundle_row.value->'row_id');
+
+        raise notice 'ARRRRRRRRRRRGS: bundle_row.value->"row_id": %     row_id: %         % % % %',
+            bundle_row.value->'row_id',
+            row_id,
+            (row_id::meta.schema_id).name,
+            'table',
+            (row_id::meta.relation_id).name,
+            bundle_row.value->'row_json';
+
+
+
+        select * from www.row_insert(
+            (row_id::meta.schema_id).name,
+            'table',
+            (row_id::meta.relation_id).name,
+            bundle_row.value->'row_json'
+        );
+
+        raise notice 'bundle_row.value->row_json = %', bundle_row.value->'row_json';
+
+        /*
+        raise notice 'bundle_row.value = %', bundle_row.value;
+        execute 'insert into ' || quote_ident((row_id::meta.schema_id).name)
+                               || '.' quote_ident((row_id::meta.relation_id).name)
+                               || '.'
+        */
+    end loop;
+
+    return NEW;
+end;
+$$ language plpgsql;
+
+create trigger bundleunpacker_insert_trigger after insert on bundleunpacker
+FOR EACH ROW
+execute procedure bundleunpacker_insert_function ();
+
+
+/*
+create table remote (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle.bundle(id) on delete cascade,
+    name text,
+    push boolean not null default 'f',
+    pull boolean not null default 'f',
+    allow_push boolean not null default 'f',
+    allow_pull boolean not null default 'f'
+
+    /*,
+    circular dependency:
+    connection_id uuid references p2p.connection(id)
+    */
+);
+
+*/
+
+
+
+commit;

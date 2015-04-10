@@ -1,0 +1,5 @@
+comment = 'background worker exposing a REST interface'
+default_version = '0.1'
+module_pathname = '$libdir/pg_http'
+relocatable = true
+superuser = true

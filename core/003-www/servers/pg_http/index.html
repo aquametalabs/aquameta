@@ -1,0 +1,32 @@
+<!DOCTYPE html>  
+<html>  
+    <head>
+        <script src="http://cdn.jsdelivr.net/jquery/2.0.3/jquery-2.0.3.min.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                window.WebSocket = window.WebSocket || window.MozWebSocket; 
+                var websocket = new WebSocket('ws://127.0.0.1:8080', 'echo');
+                websocket.onopen = function () {
+                    $('h1').html('Connected!');
+                };
+                websocket.onerror = function () {
+                    $('h1').html('Error Connecting!');
+                };
+                websocket.onmessage = function (message) {
+                    $('div').append(message.data + "<br />");
+                }; 
+                $('button').click(function(e) {
+                    e.preventDefault();
+                    websocket.send($('input').val());
+                    $('input').val('');
+                });
+            });
+        </script>
+        </head>
+    <body>
+        <h1>WebSocket Status</h1>
+        <input type="text" />
+        <button>Send Test Message</button>
+        <div></div>
+    </body>
+</html>
