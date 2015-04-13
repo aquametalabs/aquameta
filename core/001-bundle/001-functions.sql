@@ -443,6 +443,23 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
         raise notice '################################################## CHECKOUT DATA % ###############################', commit_id;
 
+
+        -- turn off constraints
+        for commit_row in 
+            select distinct 
+                (rr.row_id).pk_column_id.relation_id.name as relation_name,
+                (rr.row_id).pk_column_id.relation_id.schema_id.name as schema_name
+            from bundle.commit c
+                join bundle.rowset r on c.rowset_id=r.id
+                join bundle.rowset_row rr on rr.rowset_id=r.id
+        loop
+            execute 'alter table '
+                || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name) 
+                || ' disable trigger all';
+        end loop;
+
+
+        -- insert the rows
         for commit_row in
             select
                 rr.row_id,
@@ -467,6 +484,23 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
             perform checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
+
+
+
+        -- turn constraints back on
+        for commit_row in 
+            select distinct 
+                (rr.row_id).pk_column_id.relation_id.name as relation_name,
+                (rr.row_id).pk_column_id.relation_id.schema_id.name as schema_name
+            from bundle.commit c
+                join bundle.rowset r on c.rowset_id=r.id
+                join bundle.rowset_row rr on rr.rowset_id=r.id
+        loop
+            execute 'alter table '
+                || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name) 
+                || ' disable trigger all';
+        end loop;
+
         return;
 
     end;
