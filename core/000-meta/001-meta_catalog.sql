@@ -21,6 +21,8 @@ create function meta.require_all(fields public.hstore, required_fields text[]) r
         f record;
 
     begin
+        -- hstore needs this
+        set local search_path=public,meta;
         for f in select unnest(required_fields) as field_name loop
             if (fields->f.field_name) is null then
                 raise exception '% is a required field.', f.field_name;
@@ -35,6 +37,8 @@ create function meta.require_one(fields public.hstore, required_fields text[]) r
         f record;
 
     begin
+        -- hstore needs this
+        set local search_path=public,meta;
         for f in select unnest(required_fields) as field_name loop
             if (fields->f.field_name) is not null then
                 return;
