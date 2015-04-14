@@ -7,8 +7,7 @@ A web application development platform built entirely in PostgreSQL.
 http://aquameta.com/
 
 ## Build
-1. Install PostgresSQL 9.4 (see http://www.postgresql.org/download/)
-2. Run ./build.sh
-3. Install a webserver.  There are two choices, either uwsgi or postgresql
-   background worker.  See core/003-www/servers/README.
-4. http://localhost:8080
+1. Install PostgresSQL 9.4, and the postgresql-contrib package.  (see http://www.postgresql.org/download/)
+2. `/build.sh`
+3. Build and install the webserver.  See core/003-www/servers/background_worker/README.
+4. http://localhost:8080/
