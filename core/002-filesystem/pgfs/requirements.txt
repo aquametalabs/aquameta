@@ -1,0 +1,3 @@
+argparse==1.2.1
+fusepy==2.0.2
+psycopg2==2.5.2

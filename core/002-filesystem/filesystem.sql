@@ -1,4 +1,4 @@
-drop schema if exists filesystem cascade;
+begin;
 create schema filesystem;
 
 set search_path=filesystem;
@@ -22,4 +22,4 @@ begin
   perform lo_unlink(l_oid);
 end;$$;
 
-
+commit;
