@@ -414,7 +414,6 @@ select
         when change_type = 'modified' then /* not sure */ false
     end as staged,
 
-    /* (stage_row_id is null and change != 'deleted') as staged, */
     (head_row_id is not null) in_head
 from (
     select
@@ -550,18 +549,33 @@ from bundle.untracked_row r
 group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_id::meta.schema_id;
 
 
-
-
-
-
-
 ------------------------------------------------------------------------------
 -- 9. REMOTE PUSH/PULL
 -- Other copies of this bundle that we push to and/or pull from.
 -- Super janky.
 ------------------------------------------------------------------------------
 
+create table remote (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle.bundle(id) on delete cascade,
+    host text,
+    method text,
+    push boolean not null default 'f'
+);
+
+/*
+create function fetch (in remote_id uuid) returns void
+as $$
+    
+
+
+$$ language plpgsql;
+*/
+
+
+
 /* PACKER */
+/* This is used to push/pull bundles over WebRTC */
 create type rowbundle as (
     row_id meta.row_id,
     row_json json
@@ -641,26 +655,4 @@ $$ language plpgsql;
 create trigger bundleunpacker_insert_trigger after insert on bundleunpacker
 FOR EACH ROW
 execute procedure bundleunpacker_insert_function ();
-
-
-/*
-create table remote (
-    id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid references bundle.bundle(id) on delete cascade,
-    name text,
-    push boolean not null default 'f',
-    pull boolean not null default 'f',
-    allow_push boolean not null default 'f',
-    allow_pull boolean not null default 'f'
-
-    /*,
-    circular dependency:
-    connection_id uuid references p2p.connection(id)
-    */
-);
-
-*/
-
-
-
 commit;

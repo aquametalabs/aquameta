@@ -270,13 +270,13 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
     declare
         query_str text;
     begin
-        raise notice '------------ checkout_row % ----------',
-            (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
+        -- raise notice '------------ checkout_row % ----------',
+        --    (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
         set search_path=bundle,meta,public;
 
         if meta.row_exists(row_id) then
-            raise notice '---------------------- row % already exists.... overwriting.',
-            (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
+            -- raise notice '---------------------- row % already exists.... overwriting.',
+            -- (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
 
             -- check to see if this row which is being merged is going to overwrite a row that is
             -- different from the head commit
@@ -329,13 +329,13 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
                 || ' where ' || quote_ident((row_id.pk_column_id).name)
                 || '::text = ' || quote_literal(row_id.pk_value) || '::text'; -- cast them both to text instead of look up the column's type... maybe lazy?
 
-            raise notice 'query_str: %', query_str;
+            -- raise notice 'query_str: %', query_str;
 
             execute query_str;
 
         else
             -- this code is terrible, but i've spent way too long trying to do it a nice way.
-            raise notice '---------------------- row doesn''t exists.... INSERT:';
+            -- raise notice '---------------------- row doesn''t exists.... INSERT:';
             query_str := 'insert into '
                 || quote_ident((row_id::meta.schema_id).name)
                 || '.'
@@ -371,7 +371,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
             query_str := query_str  || ')';
 
-            raise notice 'query_str: %', query_str;
+            -- raise notice 'query_str: %', query_str;
 
             execute query_str;
 
@@ -394,7 +394,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
     begin
         set local search_path=bundle,meta,public;
 
-        raise notice '################################################## CHECKOUT SCHEMA % ###############################', commit_id;
+        -- raise notice '################################################## CHECKOUT SCHEMA % ###############################', commit_id;
 
         for commit_row in
             select
@@ -431,9 +431,9 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 end
                     */
         loop
-            raise notice '------------------------------------------------------------------------CHECKOUT row: % %',
-                (commit_row.row_id).pk_column_id.relation_id.name,
-                (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
+            -- raise notice '------------------------------------------------------------------------CHECKOUT row: % %',
+            --    (commit_row.row_id).pk_column_id.relation_id.name,
+            --    (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
             perform checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
 
@@ -441,7 +441,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
 
 
-        raise notice '################################################## CHECKOUT DATA % ###############################', commit_id;
+        -- raise notice '################################################## CHECKOUT DATA % ###############################', commit_id;
 
 
         -- turn off constraints
@@ -479,9 +479,9 @@ create or replace function checkout (in commit_id uuid) returns void as $$
             and (rr.row_id::meta.schema_id).name != 'meta'
             group by rr.id
         loop
-            raise notice '------------------------------------------------------------------------CHECKOUT row: % %',
-                (commit_row.row_id).pk_column_id.relation_id.name,
-                (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
+            -- raise notice '------------------------------------------------------------------------CHECKOUT row: % %',
+            --    (commit_row.row_id).pk_column_id.relation_id.name,
+            --    (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
             perform checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
 

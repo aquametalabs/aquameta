@@ -1,4 +1,7 @@
-create extension if not exists pgtap;
+begin;
+
+create extension if not exists pgtap schema public;
+set search_path=public,meta;
 
 -- select plan(115);
 select * from no_plan();
@@ -389,8 +392,5 @@ delete from bundle_test.chakra;
 
 
 
-------------------------------------------------------
--- cleanup
-------------------------------------------------------
-delete from bundle.bundle where name='com.aquameta.bundle.tests';
-drop schema bundle_test cascade;
+
+rollback;
