@@ -21,6 +21,7 @@ create table semantics.type (
     edit_widget_id uuid references widget.widget(id),
     new_widget_id uuid references widget.widget(id)
     */
+    form_field_widget_id uuid references widget.widget(id),
     form_field_label_widget_id uuid references widget.widget(id),
     form_field_display_widget_id uuid references widget.widget(id),
     form_field_edit_widget_id uuid references widget.widget(id),
@@ -46,7 +47,8 @@ create table semantics.relation (
     list_view_widget_id uuid references widget.widget(id),
     list_item_identifier_widget_id uuid references widget.widget(id),
     row_detail_widget_id uuid references widget.widget(id),
-    grid_view_row_widget_id uuid references widget.widget(id)
+    grid_view_row_widget_id uuid references widget.widget(id),
+    new_row_widget_id uuid references widget.widget(id)
 );
 
 /*
@@ -77,6 +79,7 @@ create table semantics."column" (
     new_widget_id uuid references widget.widget(id)
     */
 
+    form_field_widget_id uuid references widget.widget(id),
     form_field_label_widget_id uuid references widget.widget(id),
     form_field_display_widget_id uuid references widget.widget(id),
     form_field_edit_widget_id uuid references widget.widget(id),
@@ -216,6 +219,7 @@ insert into relation (id, identifier_listitem_widget_id) values (meta.relation_i
 --insert into semantics."column" (id, human_name, display) select id, name, 'true' from meta."column" where schema_name='meta';
 --insert into semantics."column" (id, human_name, display) select id, name, 'false' from meta."column" where schema_name='pg_catalog';
 */
+
 
 
 commit;
