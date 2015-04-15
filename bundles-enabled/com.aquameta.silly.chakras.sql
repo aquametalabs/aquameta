@@ -1,1 +1,0 @@
-../bundles-available/com.aquameta.silly.chakras.sql
