@@ -34,7 +34,6 @@ ALTER TABLE bundle DISABLE TRIGGER ALL;
 COPY bundle (id, name, head_commit_id) FROM stdin;
 0c2aa87b-0a66-48cb-ac9d-733d0a740bde	com.aquameta.bundle	\N
 737177af-16f4-40e1-ac0d-2c11b2b727e9	com.aquameta.core.ide	4fcdbb7d-630b-456d-8eae-c60ed88d3539
-1899efa8-85d0-4cc0-9ed9-d9ac72e95d02	com.aquameta.silly.chakras	20686aba-87a0-4230-bd7b-9e59ae4cde04
 \.
 
 
@@ -81,9 +80,6 @@ ALTER TABLE commit DISABLE TRIGGER ALL;
 
 COPY commit (id, bundle_id, rowset_id, role_id, parent_id, "time", message) FROM stdin;
 4fcdbb7d-630b-456d-8eae-c60ed88d3539	737177af-16f4-40e1-ac0d-2c11b2b727e9	9d4a41bb-f655-4a60-bb43-aa8c60be0e84	\N	\N	2015-04-12 20:39:04.204809	first commit
-cbffcf2e-dfc3-4a1f-a820-333ffcd3bcc0	1899efa8-85d0-4cc0-9ed9-d9ac72e95d02	db7fce40-c4d4-4db8-8771-2af7dac94a29	\N	\N	2015-04-10 04:56:52.003998	setup ze silly schema
-1356d622-28d5-4f92-b1a5-66894809fddf	1899efa8-85d0-4cc0-9ed9-d9ac72e95d02	9f49672b-af1b-4c0c-92ac-b6974aa7915f	\N	cbffcf2e-dfc3-4a1f-a820-333ffcd3bcc0	2015-04-10 04:57:10.10458	here come the first four chakras
-20686aba-87a0-4230-bd7b-9e59ae4cde04	1899efa8-85d0-4cc0-9ed9-d9ac72e95d02	1e18953d-ff04-4e32-92d0-4b144edfc28a	\N	1356d622-28d5-4f92-b1a5-66894809fddf	2015-04-10 04:57:10.289994	here come the next three
 \.
 
 
