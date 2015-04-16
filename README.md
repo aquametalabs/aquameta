@@ -8,6 +8,6 @@ http://aquameta.com/
 
 ## Build
 1. Install PostgresSQL 9.4, and the postgresql-contrib package.  (see http://www.postgresql.org/download/)
-2. `/build.sh`
+2. `./build.sh`
 3. Build and install the webserver.  See core/003-www/servers/background_worker/README.
 4. http://localhost:8080/
