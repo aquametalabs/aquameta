@@ -240,7 +240,7 @@ class PostgresFS(LoggingMixIn, Operations):
             tablename = split[2]
             pk = split[3]
             if self._schema_exists(schema) and self._row_exists(schema, tablename, pk):
-                query = "SELECT c.name from meta.\"column\" c join meta.\"table\" t on c.table_id = t.id join meta.\"schema\" s on t.schema_id = s.id where s.name = '{schema}' and t.name = '{tablename}';".format(tablename=tablename, schema=schema)
+                query = "SELECT c.name from meta.\"column\" c join meta.relation t on c.relation_id = t.id join meta.\"schema\" s on t.schema_id = s.id where s.name = '{schema}' and t.name = '{tablename}';".format(tablename=tablename, schema=schema)
                 cur.execute(query)
                 all_cols = cur.fetchall()
                 to_return = [str(x[0]) for x in all_cols]
