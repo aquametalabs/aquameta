@@ -3,8 +3,8 @@
  * Pub/sub event system for PostgreSQL
  * 
  * Created by Aquameta Labs in Portland, Oregon, USA.
- * Company: http://aquametalabs.com/
- * Project: http://aquameta.org/
+ * Company: http://aquameta.com/
+ * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
 begin;

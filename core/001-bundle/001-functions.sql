@@ -3,8 +3,8 @@
  * Data Version Control System
  *
  * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
- * Company: http://aquametalabs.com/
- * Project: http://aquameta.org/
+ * Company: http://aquameta.com/
+ * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
 /*
