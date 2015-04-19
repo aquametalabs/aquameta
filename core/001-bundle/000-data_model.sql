@@ -555,6 +555,14 @@ group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_
 -- Super janky.
 ------------------------------------------------------------------------------
 
+create table remote_webrtc (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle.bundle(id) on delete cascade,
+    host text,
+    method text,
+    push boolean not null default 'f'
+);
+
 create table remote (
     id uuid default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle.bundle(id) on delete cascade,
@@ -563,96 +571,4 @@ create table remote (
     push boolean not null default 'f'
 );
 
-/*
-create function fetch (in remote_id uuid) returns void
-as $$
-    
-
-
-$$ language plpgsql;
-*/
-
-
-
-/* PACKER */
-/* This is used to push/pull bundles over WebRTC */
-create type rowbundle as (
-    row_id meta.row_id,
-    row_json json
-);
-
-create table bundle._bundlepacker_tmp (row_id meta.row_id, next_fk uuid);
-
-create or replace function bundlepacker (bundle_id uuid)
-returns setof rowbundle
-as $$
-
-begin
-    set local search_path=bundle;
-    delete from bundle._bundlepacker_tmp;
-
-    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','bundle','id', id::text), null from bundle where id=bundle_id;
-    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','commit','id', id::text), rowset_id from bundle.commit c where c.bundle_id::text in (select (row_id).pk_value from bundle._bundlepacker_tmp);
-    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','rowset','id', id::text), null from bundle.rowset where id in (select next_fk from bundle._bundlepacker_tmp where (row_id::meta.relation_id).name = 'commit');
-    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','rowset_row','id', id::text), rowset_id from bundle.rowset_row rr where rr.rowset_id::text in (select (row_id).pk_value from bundle._bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset');
-    insert into bundle._bundlepacker_tmp select meta.row_id('bundle','rowset_row_field','id', id::text), rowset_row_id from bundle.rowset_row_field rr where rr.rowset_row_id::text in (select (row_id).pk_value from bundle._bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset_row');
-
-    RETURN QUERY EXECUTE  'select row_id, meta.row_id_to_json(row_id) from bundle._bundlepacker_tmp';
-
-end;
-$$ language plpgsql;
-
-
-/* UNPACKER */
-create table bundleunpacker (bundle text);
-
-
-create or replace function bundleunpacker_insert_function()
-returns trigger
-as $$
-declare
-    bundle_row record;
-    row_id meta.row_id;
-begin
-    -- raise notice 'NEW.row_id::json:::::::::::::::::::::::::::::: %', NEW.bundle::json;
-
-    -- setof key text, value json
-    for bundle_row in select * from json_each(NEW.bundle::json)
-    loop
-        row_id := meta.row_id(bundle_row.value->'row_id');
-
-        raise notice 'ARRRRRRRRRRRGS: bundle_row.value->"row_id": %     row_id: %         % % % %',
-            bundle_row.value->'row_id',
-            row_id,
-            (row_id::meta.schema_id).name,
-            'table',
-            (row_id::meta.relation_id).name,
-            bundle_row.value->'row_json';
-
-
-
-        select * from www.row_insert(
-            (row_id::meta.schema_id).name,
-            'table',
-            (row_id::meta.relation_id).name,
-            bundle_row.value->'row_json'
-        );
-
-        raise notice 'bundle_row.value->row_json = %', bundle_row.value->'row_json';
-
-        /*
-        raise notice 'bundle_row.value = %', bundle_row.value;
-        execute 'insert into ' || quote_ident((row_id::meta.schema_id).name)
-                               || '.' quote_ident((row_id::meta.relation_id).name)
-                               || '.'
-        */
-    end loop;
-
-    return NEW;
-end;
-$$ language plpgsql;
-
-create trigger bundleunpacker_insert_trigger after insert on bundleunpacker
-FOR EACH ROW
-execute procedure bundleunpacker_insert_function ();
 commit;

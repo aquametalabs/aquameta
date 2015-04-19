@@ -572,6 +572,9 @@ create function www.rows_select_function(
 $$
 language plpgsql;
 
+/******************************************************************************
+ * FUNCTION row_delete
+ *****************************************************************************/
 
 create function www.row_delete(
     schema_name text,

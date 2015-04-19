@@ -290,7 +290,6 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
                 || ' where ' || (row_id.pk_column_id).name
                 || '     = ' || row_id.pk_value;
             */
-            -- this code is terrible, but i've spent way too long trying to do it a nice way.
             query_str := 'update '
                 || quote_ident((row_id::meta.schema_id).name)
                 || '.'
@@ -324,7 +323,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
                 end if;
             end loop;
 
-            query_str := query_str 
+            query_str := query_str
                 || ')'
                 || ' where ' || quote_ident((row_id.pk_column_id).name)
                 || '::text = ' || quote_literal(row_id.pk_value) || '::text'; -- cast them both to text instead of look up the column's type... maybe lazy?
@@ -334,7 +333,6 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
             execute query_str;
 
         else
-            -- this code is terrible, but i've spent way too long trying to do it a nice way.
             raise log '---------------------- row doesn''t exists.... INSERT:';
             query_str := 'insert into '
                 || quote_ident((row_id::meta.schema_id).name)
@@ -445,8 +443,8 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
         raise notice '################################################## DISABLING TRIGGERS % ###############################', commit_id;
         -- turn off constraints
-        for commit_row in 
-            select distinct 
+        for commit_row in
+            select distinct
                 (rr.row_id).pk_column_id.relation_id.name as relation_name,
                 (rr.row_id).pk_column_id.relation_id.schema_id.name as schema_name
             from bundle.commit c
@@ -459,7 +457,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name);
 
             execute 'alter table '
-                || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name) 
+                || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name)
                 || ' disable trigger all';
         end loop;
 
@@ -495,8 +493,8 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
         -- turn constraints back on
         raise notice '################################################## ENABLING TRIGGERS % ###############################', commit_id;
-        for commit_row in 
-            select distinct 
+        for commit_row in
+            select distinct
                 (rr.row_id).pk_column_id.relation_id.name as relation_name,
                 (rr.row_id).pk_column_id.relation_id.schema_id.name as schema_name
             from bundle.commit c
@@ -506,7 +504,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 and (rr.row_id::meta.schema_id).name != 'meta'
         loop
             execute 'alter table '
-                || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name) 
+                || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name)
                 || ' enable trigger all';
         end loop;
 
@@ -517,4 +515,48 @@ $$ language plpgsql;
 
 
 
-commit;
+
+------------------------------------------------------------------------------
+-- PUSH/FETCH FUNCTIONS
+--
+--
+------------------------------------------------------------------------------
+
+-- push
+/*
+1. ask the remote repository if it has the bundle
+    yes:
+        ask the remote what commits it has in the
+            x,y,z:
+                send commits where not in x,y,x
+    no:
+
+
+
+
+
+
+
+*/
+
+/*
+create function push (bundle_id uuid, remote_id uuid)
+returns void as $$
+
+    -- http://localhost:8080/endpoint/bundle/table/commit/rows?bundle_id=737177af-16f4-40e1-ac0d-2c11b2b727e9
+    with remote_host as
+        (select r.host from bundle.remote r where r.id=remote_id)
+    select * from http_get (
+    -- http_get (
+
+
+
+
+
+
+
+$$ language plpgsql;
+
+
+*/
+
