@@ -114,7 +114,7 @@ $$ language plpythonu;
 create or replace function rows_select(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
 as $$
 
-select www_client.http_get ((select url from www.remote_http where id=http_remote_id) 
+select www_client.http_get ((select url from bundle.remote_http where id=http_remote_id) 
         || '/' || www_client.urlencode((relation_id.schema_id).name)
         || '/relation'
         || '/' || www_client.urlencode(relation_id.name)

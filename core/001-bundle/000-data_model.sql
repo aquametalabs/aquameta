@@ -563,11 +563,10 @@ create table remote_webrtc (
     push boolean not null default 'f'
 );
 
-create table remote (
+create table remote_http (
     id uuid default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle.bundle(id) on delete cascade,
-    host text,
-    method text,
+    url text,
     push boolean not null default 'f'
 );
 
