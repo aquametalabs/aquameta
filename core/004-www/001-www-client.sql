@@ -8,19 +8,61 @@
 
 begin;
 
+create language plpythonu;
 create schema www_client;
 set search_path=www_client;
 
--- ??????
-create table www_client.remote (
-    name text,
-    url text
-);
-
-insert into www_client.remote (name, url) values ('bazaar', 'http://bazaar.aquameta.com');
--- ??????
 
 
+/*******************************************************************************
+* 
+* 
+* UTILS
+* General purpose http client utilities.
+* 
+* 
+*******************************************************************************/
+
+
+/*******************************************************************************
+* urlencode
+* via http://stackoverflow.com/questions/10318014/javascript-encodeuri-like-function-in-postgresql
+*******************************************************************************/
+CREATE OR REPLACE FUNCTION urlencode(in_str text, OUT _result text)
+    STRICT IMMUTABLE AS $urlencode$
+DECLARE
+    _i      int4;
+    _temp   varchar;
+    _ascii  int4;
+BEGIN
+    _result = '';
+    FOR _i IN 1 .. length(in_str) LOOP
+        _temp := substr(in_str, _i, 1);
+        IF _temp ~ '[0-9a-zA-Z:/@._?#-]+' THEN
+            _result := _result || _temp;
+        ELSE
+            _ascii := ascii(_temp);
+            IF _ascii > x'07ff'::int4 THEN
+                RAISE EXCEPTION 'Won''t deal with 3 (or more) byte sequences.';
+            END IF;
+            IF _ascii <= x'07f'::int4 THEN
+                _temp := '%'||to_hex(_ascii);
+            ELSE
+                _temp := '%'||to_hex((_ascii & x'03f'::int4)+x'80'::int4);
+                _ascii := _ascii >> 6;
+                _temp := '%'||to_hex((_ascii & x'01f'::int4)+x'c0'::int4)
+                            ||_temp;
+            END IF;
+            _result := _result || upper(_temp);
+        END IF;
+    END LOOP;
+    RETURN ;
+END;
+$urlencode$ LANGUAGE plpgsql;
+
+/*******************************************************************************
+* http_get
+*******************************************************************************/
 create or replace function www_client.http_get (url text) returns text
 as $$
 
@@ -34,8 +76,58 @@ return raw_response
 
 $$ language plpythonu;
 
+/*******************************************************************************
+* http_post
+*******************************************************************************/
+/*
+create or replace function www_client.http_get (url text) returns text
+as $$
+
+import urllib2
+import urllib
+
+req = urllib2.Request(url)
+response = urllib2.urlopen(req)
+raw_response = response.read()
+return raw_response
+
+$$ language plpythonu;
+*/
 
 
+
+
+
+
+
+/*******************************************************************************
+* 
+* 
+* ENDPOINT CLIENT
+* 
+* 
+*******************************************************************************/
+
+/*******************************************************************************
+* rows_select
+*******************************************************************************/
+create or replace function rows_select(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
+as $$
+
+select www_client.http_get ((select url from www.remote_http where id=http_remote_id) 
+        || '/' || www_client.urlencode((relation_id.schema_id).name)
+        || '/relation'
+        || '/' || www_client.urlencode(relation_id.name)
+        || '/rows'
+    )::json;
+
+$$ language sql;
+
+
+
+/*******************************************************************************
+* row_select
+*******************************************************************************/
 create or replace function www_client.http_post (url text, bundle_id uuid) returns text
 as $$
 
@@ -82,8 +174,4 @@ $$ language plpythonu;
 
 
 commit;
-
-
-
-
 
