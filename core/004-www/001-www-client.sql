@@ -15,12 +15,12 @@ set search_path=www_client;
 
 
 /*******************************************************************************
-* 
-* 
+*
+*
 * UTILS
 * General purpose http client utilities.
-* 
-* 
+*
+*
 *******************************************************************************/
 
 
@@ -101,11 +101,11 @@ $$ language plpythonu;
 
 
 /*******************************************************************************
-* 
-* 
+*
+*
 * ENDPOINT CLIENT
-* 
-* 
+*
+*
 *******************************************************************************/
 
 /*******************************************************************************
@@ -114,7 +114,7 @@ $$ language plpythonu;
 create or replace function rows_select(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
 as $$
 
-select www_client.http_get ((select url from bundle.remote_http where id=http_remote_id) 
+select www_client.http_get ((select endpoint_url from bundle.remote_http where id=http_remote_id)
         || '/' || www_client.urlencode((relation_id.schema_id).name)
         || '/relation'
         || '/' || www_client.urlencode(relation_id.name)
@@ -128,7 +128,7 @@ $$ language sql;
 /*******************************************************************************
 * row_select
 *******************************************************************************/
-create or replace function www_client.http_post (url text, bundle_id uuid) returns text
+create or replace function www_client.row_select(url text, bundle_id uuid) returns text
 as $$
 
 import urllib2
@@ -156,9 +156,6 @@ $$ language plpythonu;
 
 --
 --
---
---
---
 -- row_delete(remote_id uuid, row_id meta.row_id)
 -- row_insert(remote_id uuid, relation_id meta.relation_id, row_object json)
 -- row_update(remote_id uuid, row_id meta.row_id, args json)
@@ -170,8 +167,44 @@ $$ language plpythonu;
 --
 --
 --
---
+
+
+
+
+/*******************************************************************************
+*
+*
+* BUNDLE CONNECTIONS
+*
+*
+*******************************************************************************/
+
+
+
+create or replace function bundle.compare(in remote_http_id uuid)
+returns table(local_commit_id uuid, remote_commit_id uuid)
+as $$
+declare
+begin
+    return query
+        with remote_commit as (select (json_array_elements(
+                www_client.http_get(
+                    r.endpoint_url
+                        || '/bundle/table/commit/rows?bundle_id='
+                        || r.bundle_id
+                )::json->'result')->'row'->>'id')::uuid as id
+            from bundle.remote_http r
+            where r.id = remote_http_id
+        )
+        select c.id as local_commit_id, rc.id as remote_id
+        from bundle.commit c
+            full outer join remote_commit rc on rc.id=c.id;
+
+end;
+$$ language  plpgsql;
+
+
+
 
 
 commit;
-

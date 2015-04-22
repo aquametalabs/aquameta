@@ -566,8 +566,10 @@ create table remote_webrtc (
 create table remote_http (
     id uuid default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle.bundle(id) on delete cascade,
-    url text,
+    endpoint_url text,
     push boolean not null default 'f'
 );
+
+insert into remote_http (bundle_id, endpoint_url) values ((select id from bundle.bundle where name='com.aquameta.core.ide'), 'http://demo.aquameta.org/endpoint');
 
 commit;
