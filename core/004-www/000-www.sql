@@ -136,6 +136,28 @@ language sql;
 
 
 /****************************************************************************************************
+ * FUNCTION rows_insert                                                                              *
+ ****************************************************************************************************/
+
+--
+create function www.rows_insert(
+    args json
+
+) returns setof json as $$
+    begin
+        for i in select * from json_array_elements(args)
+        loop
+            execute www.row_insert(
+            );
+        end loop;
+    end
+$$
+language plpgsql;
+
+
+
+
+/****************************************************************************************************
  * FUNCTION row_insert                                                                              *
  ****************************************************************************************************/
 
@@ -663,7 +685,12 @@ create or replace function www.request(
             end if;
 
         elsif verb = 'POST' then
-            return query select 200, 'OK'::text, (select www.row_insert(path_parts[2], path_parts[3], path_parts[4], data2::json))::text;
+            if path_parts[2] = 'insert' then
+                raise notice "INSERT MULTIPLE";
+                return query select 200, 'OK'::text, (select www.rows_insert(data2::json))::text;
+            else
+                return query select 200, 'OK'::text, (select www.row_insert(path_parts[2], path_parts[3], path_parts[4], data2::json))::text;
+            end if;
 
         elsif verb = 'PATCH' then
             return query select 200, 'OK'::text, (select www.row_update(path_parts[2], path_parts[3], path_parts[4], path_parts[6], data2::json))::text;
