@@ -570,6 +570,5 @@ create table remote_http (
     push boolean not null default 'f'
 );
 
-insert into remote_http (bundle_id, endpoint_url) values ((select id from bundle.bundle where name='com.aquameta.core.ide'), 'http://demo.aquameta.org/endpoint');
 
 commit;

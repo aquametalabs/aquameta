@@ -142,13 +142,16 @@ language sql;
 --
 create function www.rows_insert(
     args json
-
 ) returns setof json as $$
+    declare
+        i record;
     begin
         for i in select * from json_array_elements(args)
         loop
-            execute www.row_insert(
-            );
+            raise notice '%', args;
+--            execute www.row_insert(
+
+--            );
         end loop;
     end
 $$
@@ -686,7 +689,7 @@ create or replace function www.request(
 
         elsif verb = 'POST' then
             if path_parts[2] = 'insert' then
-                raise notice "INSERT MULTIPLE";
+                raise notice 'INSERT MULTIPLE';
                 return query select 200, 'OK'::text, (select www.rows_insert(data2::json))::text;
             else
                 return query select 200, 'OK'::text, (select www.row_insert(path_parts[2], path_parts[3], path_parts[4], data2::json))::text;

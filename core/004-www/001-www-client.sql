@@ -79,12 +79,26 @@ $$ language plpythonu;
 /*******************************************************************************
 * http_post
 *******************************************************************************/
-create or replace function www_client.http_post(url text, args json)
+create or replace function www_client.http_post(url text, args text)
 returns text
 as $$
 import requests
+import json
+import plpy
 
-return requests.post(url, args)
+plpy.log('hello')
+
+
+json_args = json.loads(args)
+plpy.log(json_args)
+#url = url
+#
+#r = requests.post(url, json_args))
+#
+#return 'ok' #r.status_code
+ 
+
+return 'ok'
 
 $$ language plpythonu;
 
@@ -120,14 +134,14 @@ $$ language sql;
 /*******************************************************************************
 * rows_insert
 *******************************************************************************/
-create or replace function www_client.rows_insert(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
+create or replace function www_client.rows_insert(http_remote_id uuid, args json[], out response json)
 as $$
 
 select www_client.http_post (
     (
         select endpoint_url from bundle.remote_http where id=http_remote_id)
             || '/insert',
-        args
+        (array_to_json(args))::text
 
     )::json;
 
@@ -239,7 +253,7 @@ $$ language  plpgsql;
 
 
 create or replace function bundle.push(in remote_http_id uuid)
-returns setof _bundlepacker_tmp -- table(_row_id meta.row_id)
+returns void -- table(_row_id meta.row_id)
 as $$
 declare
     records json[];
@@ -278,10 +292,10 @@ begin
 
     perform array_append(records, to_json(r)) from _bundlepacker_tmp r;
 
-    perform www_client.rows_insert(records);
+    perform www_client.rows_insert(remote_http_id, records);
 
     -- RETURN QUERY EXECUTE  'select row_id, meta.row_id_to_json(row_id) from _bundlepacker_tmp';
-    RETURN QUERY EXECUTE 'select * from _bundlepacker_tmp';
+    -- RETURN QUERY EXECUTE 'select * from _bundlepacker_tmp';
 
 end;
 $$ language plpgsql;
