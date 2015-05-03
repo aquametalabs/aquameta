@@ -55,9 +55,10 @@ $$ language plpgsql volatile returns null on null input;
 -- 1. REPOSITORY DATA MODEL
 ------------------------------------------------------------------------------
 
-
 -- hash table
 
+
+create extension if not exists pgcrypto schema public;
 
 create table blob (
     hash bytea unique,
@@ -66,7 +67,7 @@ create table blob (
 
 create function blob_hash_gen_trigger() returns trigger as $$
     begin
-        NEW.hash = public.digest(NEW.value, 'sha256'::text)::bytea;
+        NEW.hash = public.digest(NEW.value, 'sha256');
         return NEW;
     end;
 $$ language plpgsql;
