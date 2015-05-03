@@ -43,12 +43,20 @@ create or replace function commit (bundle_name text, message text) returns void 
     insert into bundle.rowset_row (rowset_id, row_id)
     select new_rowset_id, row_id from bundle.stage_row where bundle_id=_bundle_id;
 
+
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
-    insert into bundle.rowset_row_field (rowset_row_id, field_id, value)
+    insert into bundle.rowset_row_field (rowset_row_id, field_id, value_hash)
     select rr.id, f.field_id, f.value
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
     join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
+
+    insert into bundle.blob (value)
+    select rr.id, f.field_id, f.value
+    from bundle.rowset_row rr
+    join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
+    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id
+    join bundle.blob b on (f.field_id).row_id = rr.row_id;
 
     -- create the commit
     insert into bundle.commit (bundle_id, parent_id, rowset_id, message)
@@ -400,7 +408,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 array_agg(
                     row(
                         ((f.field_id).column_id).name,
-                        f.value,
+                        b.value,
                         col.type_name
                     )::bundle.checkout_field
                 ) as fields_agg
@@ -408,6 +416,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
+                join bundle.blob b on f.value_hash=b.hash
                 join meta.column col on (f.field_id).column_id = col.id
             where c.id=commit_id
             and (rr.row_id::meta.schema_id).name = 'meta'
@@ -470,7 +479,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 array_agg(
                     row(
                         ((f.field_id).column_id).name,
-                        f.value,
+                        b.value,
                         col.type_name
                     )::bundle.checkout_field
                 ) as fields_agg
@@ -478,6 +487,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
+                join bundle.blob b on f.value_hash=b.hash
                 join meta.column col on (f.field_id).column_id = col.id
             where c.id=commit_id
             and (rr.row_id::meta.schema_id).name != 'meta'

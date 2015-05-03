@@ -55,6 +55,30 @@ $$ language plpgsql volatile returns null on null input;
 -- 1. REPOSITORY DATA MODEL
 ------------------------------------------------------------------------------
 
+
+-- hash table
+
+
+create table blob (
+    hash bytea unique,
+    value text
+);
+
+create function blob_hash_gen_trigger() returns trigger as $$
+    begin
+        NEW.hash = public.digest(NEW.value, 'sha256'::text)::bytea;
+        return NEW;
+    end;
+$$ language plpgsql;
+
+create trigger blob_hash_update
+    before insert or update on blob
+    for each row execute procedure blob_hash_gen_trigger();
+
+
+-- bundle
+
+
 create table bundle (
     id uuid default public.uuid_generate_v4() primary key,
     name text,
@@ -76,9 +100,33 @@ create table rowset_row_field (
     id uuid default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
     field_id meta.field_id,
-    value text
-    -- blob_id uuid references blob(id) on delete null -- simplify for now
+    value text,
+    value_hash bytea references blob(hash)
 );
+
+create function rowset_row_field_hash_gen_trigger() returns trigger as $$
+    begin
+        raise notice 'ROWSET_ROW_FIELD_HASH_GEN_TRIGGER';
+        NEW.value_hash = public.digest(NEW.value, 'sha256'::text)::bytea;
+
+        -- check if the blob already exists
+        if exists (select 1 from bundle.blob b where b.hash = NEW.value_hash) then
+            -- raise notice 'already exists.';
+            return NEW;
+        end if;
+
+        -- create the blob
+        insert into bundle.blob(value) values (NEW.value);
+        NEW.value = NULL;
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+create trigger rowset_row_field_hash_update
+    before insert or update on bundle.rowset_row_field
+    for each row execute procedure bundle.rowset_row_field_hash_gen_trigger();
+
 
 /*
 removed.  start with single parent
@@ -87,29 +135,7 @@ create table commit_parent (
     commit_id uuid references commit(id) on delete cascade,
     parent_id uuid references commit(id) on delete cascade
 );
-
-create table blob (
-    id uuid default public.uuid_generate_v4() primary key,
-    hash bytea,
-    value text,
-    unique (hash)
-);
-
-create function blob_hash_gen_trigger() returns trigger as $$
-    begin
-        if TG_OP = 'INSERT' or TG_OP = 'UPDATE' then
-            NEW.hash = digest(NEW.value, 'sha256'::text)::bytea;
-            return NEW;
-        end if;
-    end;
-$$ language plpgsql;
-
-create trigger blob_hash_update
-    before insert or update on blob
-    for each row execute procedure blob_hash_gen_trigger();
 */
-
-
 
 create table commit (
     id uuid default public.uuid_generate_v4() primary key,
@@ -141,7 +167,7 @@ select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle.bundle b
 
 -- head_commit_row: show the fields in each head commit
 create view head_commit_field as
-select bundle.id as bundle_id, rr.row_id, f.field_id, f.value from bundle.bundle bundle
+select bundle.id as bundle_id, rr.row_id, f.field_id, f.value_hash from bundle.bundle bundle
     join bundle.commit c on bundle.head_commit_id=c.id
     join bundle.rowset r on r.id = c.rowset_id
     join bundle.rowset_row rr on rr.rowset_id = r.id
@@ -272,14 +298,15 @@ select * from (
 select
     field_id,
     row_id,
-    f.value as old_value,
+    b.value as old_value,
     meta.field_id_literal_value(field_id) as new_value,
     bundle_id
-from bundle.head_commit_field f
+from bundle.head_commit_field f 
+join bundle.blob b on f.value_hash = b.hash
 where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so slow?  workaround by nesting selects.  still slow.
     and */ f.field_id not in
     (select ofc.field_id from bundle.stage_field_changed ofc)
-) f where old_value != new_value; -- FIXME: will break on nulls
+) x where old_value != new_value; -- FIXME: will break on nulls
 
 /*
 create view offstage_field_changed_by_schema as
@@ -385,10 +412,11 @@ select
     case
         when sfc.field_id is not null then
             sfc.new_value
-        else hcf.value
+        else b.value
     end as value
 from bundle.stage_row sr
     left join bundle.head_commit_field hcf on sr.row_id=hcf.row_id
+    left join bundle.blob b on hcf.value_hash = b.hash
     left join stage_field_changed sfc on sfc.field_id = hcf.field_id
     where sr.new_row=false;
 
