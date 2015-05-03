@@ -465,7 +465,7 @@ from (
         array_agg(ofc.new_value) as offstage_field_changes_new_vals,
         -- staged changes
         array_agg(sfc.field_id) as stage_field_changes,
-        array_agg(ofc.old_value) as stage_field_changes_old_vals,
+        array_agg(ofc.old_value) as stage_field_changes_old_vals, -- FIXME this is coming in as null
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
     from bundle.head_commit_row hcr
