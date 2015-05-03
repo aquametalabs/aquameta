@@ -106,7 +106,7 @@ create table rowset_row_field (
 
 create function rowset_row_field_hash_gen_trigger() returns trigger as $$
     begin
-        raise notice 'ROWSET_ROW_FIELD_HASH_GEN_TRIGGER';
+        -- raise notice 'ROWSET_ROW_FIELD_HASH_GEN_TRIGGER';
         NEW.value_hash = public.digest(NEW.value, 'sha256'::text)::bytea;
 
         -- check if the blob already exists
