@@ -79,26 +79,51 @@ $$ language plpythonu;
 /*******************************************************************************
 * http_post
 *******************************************************************************/
-create or replace function www_client.http_post(url text, args text)
+create or replace function www_client.http_post(url text, request_args text)
 returns text
 as $$
-import requests
-import json
-import plpy
+import urllib2
+import urllib
 
-plpy.log('hello')
+req = urllib2.Request(url, request_args)
+response = urllib2.urlopen(req)
+raw_response = response.read()
+return raw_response
+
+$$ language plpythonu;
 
 
-json_args = json.loads(args)
-plpy.log(json_args)
-#url = url
-#
-#r = requests.post(url, json_args))
-#
-#return 'ok' #r.status_code
- 
 
-return 'ok'
+/*******************************************************************************
+* http_delete
+*******************************************************************************/
+create or replace function www_client.http_delete(url text)
+returns text
+as $$
+import urllib2
+opener = urllib2.build_opener(urllib2.HTTPHandler)
+# request.add_header('Content-Type', 'your/contenttype')
+request.get_method = lambda: 'DELETE'
+response = urllib2.urlopen(request)
+raw_response = response.read()
+
+$$ language plpythonu;
+
+
+
+/*******************************************************************************
+* http_patch
+*******************************************************************************/
+create or replace function www_client.http_patch(url text, request_args text)
+returns text
+as $$
+import urllib2
+opener = urllib2.build_opener(urllib2.HTTPHandler)
+request = urllib2.Request(url, request_args)
+# request.add_header('Content-Type', 'your/contenttype')
+request.get_method = lambda: 'PATCH'
+response = urllib2.urlopen(request)
+raw_response = response.read()
 
 $$ language plpythonu;
 
