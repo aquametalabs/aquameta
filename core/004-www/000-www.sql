@@ -1,4 +1,4 @@
-/*******************************************************************************
+/******************************************************************************
  * WWW
  * HTTP request handler for a datum REST interface
  *
@@ -700,6 +700,8 @@ create or replace function www.request(
 
         elsif verb = 'DELETE' then
             return query select 200, 'OK'::text, (select www.row_delete(path_parts[2], path_parts[4], path_parts[3], path_parts[6]))::text;
+        else
+            return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::json;
         end if;
 
     exception

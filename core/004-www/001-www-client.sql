@@ -67,7 +67,6 @@ create or replace function www_client.http_get (url text) returns text
 as $$
 
 import urllib2
-import urllib
 
 req = urllib2.Request(url)
 response = urllib2.urlopen(req)
@@ -79,13 +78,12 @@ $$ language plpythonu;
 /*******************************************************************************
 * http_post
 *******************************************************************************/
-create or replace function www_client.http_post(url text, request_args text)
+create or replace function www_client.http_post(url text, data text)
 returns text
 as $$
 import urllib2
-import urllib
 
-req = urllib2.Request(url, request_args)
+req = urllib2.Request(url, data)
 response = urllib2.urlopen(req)
 raw_response = response.read()
 return raw_response
@@ -101,11 +99,12 @@ create or replace function www_client.http_delete(url text)
 returns text
 as $$
 import urllib2
-opener = urllib2.build_opener(urllib2.HTTPHandler)
-# request.add_header('Content-Type', 'your/contenttype')
-request.get_method = lambda: 'DELETE'
-response = urllib2.urlopen(request)
+
+req = urllib2.Request(url)
+req.get_method = lambda: 'DELETE'
+response = urllib2.urlopen(req)
 raw_response = response.read()
+return raw_response
 
 $$ language plpythonu;
 
@@ -114,20 +113,18 @@ $$ language plpythonu;
 /*******************************************************************************
 * http_patch
 *******************************************************************************/
-create or replace function www_client.http_patch(url text, request_args text)
+create or replace function www_client.http_patch(url text, data text)
 returns text
 as $$
 import urllib2
-opener = urllib2.build_opener(urllib2.HTTPHandler)
-request = urllib2.Request(url, request_args)
-# request.add_header('Content-Type', 'your/contenttype')
-request.get_method = lambda: 'PATCH'
-response = urllib2.urlopen(request)
+
+req = urllib2.Request(url, data)
+req.get_method = lambda: 'PATCH'
+response = urllib2.urlopen(req)
 raw_response = response.read()
+return raw_response
 
 $$ language plpythonu;
-
-
 
 
 
@@ -177,64 +174,66 @@ $$ language sql;
 /*******************************************************************************
 * row_select
 *******************************************************************************/
-create or replace function www_client.row_select(url text, bundle_id uuid) returns text
+create or replace function www_client.row_select(http_remote_id uuid, row_id meta.row_id) returns json
 as $$
 
-import urllib2
-import urllib
-import plpy
+select www_client.http_get (
+    (
+        select endpoint_url from bundle.remote_http where id=http_remote_id)
+            || '/' || (row_id::meta.schema_id).name
+            || '/table' 
+            || '/' || (row_id::meta.relation_id).name
+            || '/row'
+            || '/' || row_id.pk_value
+    )::json;
+
+$$ language sql;
 
 
-# get from repo
-# which commits do i need not include?
-
-url = 'http://bazaar.aquameta.com'
-
-stmt = plpy.prepare('select * from bundle.commit where bundle_id = $1', [ 'uuid' ]);
-commits = plpy.execute(stmt, [ bundle_id ]);
-
-data = urllib.urlencode(commits)
-req = urllib2.Request(url, data)
-response = urllib2.urlopen(req)
-raw_response = response.read()
-return raw_response
-
-$$ language plpythonu;
-
-
-create or replace function www_client.row_select(url text, bundle_id uuid) returns text
+/*******************************************************************************
+* field_select
+*******************************************************************************/
+create or replace function www_client.field_select(http_remote_id uuid, field_id meta.field_id) returns text
 as $$
 
-import urllib2
-import urllib
-import plpy
+select www_client.http_get (
+    (
+        select endpoint_url from bundle.remote_http where id=http_remote_id)
+            || '/' || (field_id::meta.schema_id).name
+            || '/table' 
+            || '/' || (field_id::meta.relation_id).name
+            || '/row'
+            || '/' || (field_id.row_id).pk_value
+            || '/' || (field_id.column_id).name
+    );
+
+$$ language sql;
 
 
-# get from repo
-# which commits do i need not include?
+/*******************************************************************************
+* row_delete
+*******************************************************************************/
+create or replace function www_client.row_delete(http_remote_id uuid, row_id meta.row_id) returns text
+as $$
 
-url = 'http://bazaar.aquameta.com'
+select www_client.http_delete (
+    (
+        select endpoint_url from bundle.remote_http where id=http_remote_id)
+            || '/' || (row_id::meta.schema_id).name
+            || '/table' 
+            || '/' || (row_id::meta.relation_id).name
+            || '/row'
+            || '/' || row_id.pk_value
+    );
 
-stmt = plpy.prepare('select * from bundle.commit where bundle_id = $1', [ 'uuid' ]);
-commits = plpy.execute(stmt, [ bundle_id ]);
-
-data = urllib.urlencode(commits)
-req = urllib2.Request(url, data)
-response = urllib2.urlopen(req)
-raw_response = response.read()
-return raw_response
-
-$$ language plpythonu;
+$$ language sql;
 
 
 --
 --
--- row_delete(remote_id uuid, row_id meta.row_id)
 -- row_insert(remote_id uuid, relation_id meta.relation_id, row_object json)
 -- row_update(remote_id uuid, row_id meta.row_id, args json)
--- row_select(remote_id uuid, row_id meta.row_id)
 --
--- field_select(remote_id uuid, field_id meta.field_id)
 -- rows_select(remote_id uuid, relation_id meta.relation_id, args json)
 -- rows_select_function(remote_id uuid, function_id meta.function_id)
 --
