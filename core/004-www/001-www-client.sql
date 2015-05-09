@@ -257,7 +257,9 @@ create or replace function bundle.compare(in remote_http_id uuid)
 returns table(local_commit_id uuid, remote_commit_id uuid)
 as $$
 declare
+    local_bundle_id uuid;
 begin
+    select into local_bundle_id bundle_id from bundle.remote_http rh where rh.id = remote_http_id;
     return query
         with remote_commit as (select (json_array_elements(
                 www_client.http_get(
@@ -270,7 +272,8 @@ begin
         )
         select c.id as local_commit_id, rc.id as remote_id
         from bundle.commit c
-            full outer join remote_commit rc on rc.id=c.id;
+            full outer join remote_commit rc on rc.id=c.id
+            where c.bundle_id = local_bundle_id;
 
 end;
 $$ language  plpgsql;
