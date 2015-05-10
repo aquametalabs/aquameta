@@ -25,7 +25,7 @@ postgres@34f81a644855:~$ psql
 psql (9.4.1)
 Type "help" for help.
 
-postgres=# create role eric3 superuser login;
+postgres=# create role eric superuser login;
 CREATE ROLE
 postgres=# \q
 postgres@34f81a644855:~$
