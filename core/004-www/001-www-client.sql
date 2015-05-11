@@ -156,16 +156,13 @@ $$ language sql;
 /*******************************************************************************
 * rows_insert
 *******************************************************************************/
-create or replace function www_client.rows_insert(http_remote_id uuid, args json[], out response json)
+create or replace function www_client.rows_insert(http_remote_id uuid, args json, out response text)
 as $$
 
 select www_client.http_post (
-    (
-        select endpoint_url from bundle.remote_http where id=http_remote_id)
-            || '/insert',
-        (array_to_json(args))::text
-
-    )::json;
+    (select endpoint_url || '/insert' from bundle.remote_http where id=http_remote_id),
+    args::text -- fixme?  does a post expect x=7&y=p&z=3 ?
+);
 
 $$ language sql;
 
@@ -283,43 +280,41 @@ create or replace function bundle.push(in remote_http_id uuid)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
-    records json[];
+    ct integer;
+    bundle_id uuid;
 begin
-    -- commits to push
-    create temporary table _bundlepacker_tmp (row_id meta.row_id, next_fk uuid);
+    raise notice '################################### PUSH ##########################';
+    select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
 
-    -- bundle
-    insert into _bundlepacker_tmp
-        select meta.row_id('bundle','bundle','id', bundle.id::text), null
-        from bundle.bundle 
-        join bundle.remote_http on remote_http.bundle_id=bundle.id;
+    perform meta.construct_join_graph('_bundle_push_temp', ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''" }')::json,
+    '[
+        {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id"}
+     ]'::json); 
+    
 
-    -- commit
-    with unpushed_commits as (
-        select commit.id from bundle.compare(remote_http_id) comp
-            join bundle.commit on commit.id = comp.local_commit_id
-            -- join bundle.remote_http r on r.bundle_id = c.id FIXME?
-        -- where r.id = remote_http_id
-            and comp.remote_commit_id is null)
-     insert into _bundlepacker_tmp select meta.row_id('bundle','commit','id', id::text), rowset_id from bundle.commit
-        where commit.bundle_id::text in (select (row_id).pk_value from _bundlepacker_tmp)
-            and commit.id in (select id from unpushed_commits);
+     --   {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
 
-    -- rowset
-    insert into _bundlepacker_tmp select meta.row_id('bundle','rowset','id', id::text), null from bundle.rowset
-        where id in (select next_fk from _bundlepacker_tmp where (row_id::meta.relation_id).name = 'commit');
+    -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
+    perform www_client.rows_insert (
+        remote_http_id, 
+        array_to_json(
+            array_agg(
+                row_to_json(
+                    _bundle_push_temp
+                )
+            )
+        ) 
+    )
+    from _bundle_push_temp;
 
-    -- rowset_row
-    insert into _bundlepacker_tmp select meta.row_id('bundle','rowset_row','id', id::text), rowset_id from bundle.rowset_row rr
-        where rr.rowset_id::text in (select (row_id).pk_value from _bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset');
+    drop table _bundle_push_temp;
 
-    -- rowset_row_field
-    insert into _bundlepacker_tmp select meta.row_id('bundle','rowset_row_field','id', id::text), rowset_row_id from bundle.rowset_row_field rr
-        where rr.rowset_row_id::text in (select (row_id).pk_value from _bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset_row');
+    -- raise notice '%', records;
 
-    perform array_append(records, to_json(r)) from _bundlepacker_tmp r;
-
-    perform www_client.rows_insert(remote_http_id, records);
+    -- perform www_client.rows_insert(remote_http_id, records);
 
     -- RETURN QUERY EXECUTE  'select row_id, meta.row_id_to_json(row_id) from _bundlepacker_tmp';
     -- RETURN QUERY EXECUTE 'select * from _bundlepacker_tmp';
