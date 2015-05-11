@@ -81,10 +81,13 @@ begin
 end;
 $$ language plpgsql;
 
+/*
+sample usage:
 select meta.construct_join_graph('foo', '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id"}', 
     '[
         {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id"},
         {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"}
      ]');
+*/
 
 commit;
