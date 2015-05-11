@@ -276,64 +276,26 @@ end;
 $$ language  plpgsql;
 
 
--- TRYING TO WRITE THIS IS UNSPEAKABLY PAINFUL.  THIS IS BROKEN.
 create or replace function bundle.push(in remote_http_id uuid)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
     ct integer;
+    bundle_id uuid;
 begin
     raise notice '################################### PUSH ##########################';
-    -- commits to push
-    create table _bundlepacker_tmp (row_id text, the_row json);
+    select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
 
-    -- bundle
-    insert into _bundlepacker_tmp
-        select meta.row_id('bundle','bundle','id', bundle.id::text)::text, row_to_json(bundle)
-        from bundle.bundle 
-        join bundle.remote_http on remote_http.bundle_id=bundle.id;
+    perform meta.construct_join_graph('_bundle_push_temp', ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''" }')::json,
+    '[
+        {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id"}
+     ]'::json); 
+    
 
-    raise notice '####################### 1';
-    select into ct count(*) from _bundlepacker_tmp;
-    raise notice '####################### _bundlepacker_tmp has % records', ct;
-
-    -- commit
-    with unpushed_commits as (
-        select commit.id from bundle.compare(remote_http_id) comp
-            join bundle.commit on commit.id = comp.local_commit_id
-            -- join bundle.remote_http r on r.bundle_id = c.id FIXME?
-        -- where r.id = remote_http_id
-            and comp.remote_commit_id is null)
-     insert into _bundlepacker_tmp select /* (meta.row_id('bundle','commit','id', comm.id::text))::text */ 'testing', row_to_json(comm) from bundle.commit comm
-        where comm.bundle_id::text in (select (row_id::meta.row_id).pk_value from _bundlepacker_tmp)
-            and comm.id in (select id from unpushed_commits);
-
-    raise notice '####################### 2';
-    select into ct count(*) from _bundlepacker_tmp;
-    raise notice '####################### _bundlepacker_tmp has % records', ct;
-
-    -- rowset
-    insert into _bundlepacker_tmp 
-    select meta.row_id('bundle','rowset','id', rs.id::text)::text, row_to_json(rs)
-        from bundle.rowset rs
-        join bundle.commit c on c.rowset_id = rs.id
-        where (c.id)::text in (select (row_id::meta.row_id).pk_value from _bundlepacker_tmp where (row_id::meta.relation_id).name = 'commit');
-
-    raise notice '####################### 3';
-    select into ct count(*) from _bundlepacker_tmp;
-    raise notice '####################### _bundlepacker_tmp has % records', ct;
-
-    -- rowset_row
-    insert into _bundlepacker_tmp select meta.row_id('bundle','rowset_row','id', rr.id::text)::text, row_to_json(rr) from bundle.rowset_row rr
-        where rr.rowset_id::text in (select (row_id::meta.row_id).pk_value from _bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset');
-
-    -- rowset_row_field
-    insert into _bundlepacker_tmp select meta.row_id('bundle','rowset_row_field','id', rrf.id::text)::text, row_to_json(rowset_row_field) from bundle.rowset_row_field rrf
-        where rrf.rowset_row_id::text in (select (row_id::meta.row_id).pk_value from _bundlepacker_tmp where (row_id::meta.relation_id).name = 'rowset_row');
-
-
-    select into ct count(*) from _bundlepacker_tmp;
-    raise notice '####################### _bundlepacker_tmp has % records', ct;
+     --   {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
     perform www_client.rows_insert (
@@ -341,12 +303,14 @@ begin
         array_to_json(
             array_agg(
                 row_to_json(
-                    _bundlepacker_tmp
+                    _bundle_push_temp
                 )
             )
         ) 
     )
-    from _bundlepacker_tmp;
+    from _bundle_push_temp;
+
+    drop table _bundle_push_temp;
 
     -- raise notice '%', records;
 
