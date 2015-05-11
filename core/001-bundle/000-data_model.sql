@@ -594,7 +594,7 @@ create table remote_webrtc (
 
 create table remote_http (
     id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid references bundle.bundle(id) on delete cascade,
+    bundle_id uuid not null references bundle.bundle(id) on delete cascade,
     endpoint_url text,
     push boolean not null default 'f'
 );

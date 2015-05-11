@@ -19,6 +19,7 @@ declare
 
     rowset json;
     q text;
+    ct integer;
 begin
     -- create temp table
     tmp := quote_ident(temp_table_name);
@@ -72,6 +73,10 @@ begin
         raise notice 'QUERY: %', q;
         execute q;
 
+        raise notice '####################### %', i;
+        -- raise notice '####################### _bundlepacker_tmp has % records', ct;
+    
+
             
     end loop;
 
@@ -83,10 +88,13 @@ $$ language plpgsql;
 
 /*
 sample usage:
-select meta.construct_join_graph('foo', '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id"}', 
+select meta.construct_join_graph('foo', '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id"}',
     '[
         {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id"},
-        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"}
+        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
      ]');
 */
 
