@@ -68,6 +68,10 @@ create table blob (
 create function blob_hash_gen_trigger() returns trigger as $$
     begin
         NEW.hash = public.digest(NEW.value, 'sha256');
+        if exists (select 1 from bundle.blob b where b.hash = NEW.hash) then
+            return NULL;
+        end if;
+
         return NEW;
     end;
 $$ language plpgsql;
@@ -581,7 +585,6 @@ group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_
 ------------------------------------------------------------------------------
 -- 9. REMOTE PUSH/PULL
 -- Other copies of this bundle that we push to and/or pull from.
--- Super janky.
 ------------------------------------------------------------------------------
 
 create table remote_webrtc (

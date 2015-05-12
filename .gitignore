@@ -1,1 +1,3 @@
 *.swp
+core/004-www/servers/background_worker/pg_http.o
+core/004-www/servers/background_worker/pg_http.so

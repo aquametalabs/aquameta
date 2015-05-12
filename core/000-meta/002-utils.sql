@@ -35,7 +35,7 @@ declare
     q text;
     ct integer;
 begin
-    raise notice '######## construct_json_graph % % %', temp_table_name, start_rowset, subrowsets;
+    raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
     -- create temp table
     tmp := quote_ident(temp_table_name);
     execute 'create temp table ' 
@@ -93,8 +93,6 @@ begin
         raise notice 'QUERY PHASE 2: %', q;
         execute q;
 
-        raise notice '####################### %', i;
-        -- raise notice '####################### _bundlepacker_tmp has % records', ct;
     end loop;
 end;
 $$ language plpgsql;
