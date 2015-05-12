@@ -614,6 +614,30 @@ create function meta.role_id(name text) returns meta.role_id as $$
 $$ language sql;
 
 
+create function meta.eq(
+    leftarg meta.role_id,
+    rightarg json
+) returns boolean as $$
+    select (leftarg).name = rightarg->>'name';
+$$ language sql;
+
+
+create operator = (
+    leftarg = meta.role_id,
+    rightarg = json,
+    procedure = meta.eq
+);
+
+
+create function meta.role_id(value json) returns meta.role_id as $$
+    select row(value->>'name')::meta.role_id
+$$ immutable language sql;
+
+
+create cast (json as meta.role_id)
+with function meta.role_id(json)
+as assignment;
+
 
 /******************************************************************************
  * meta.connection_id

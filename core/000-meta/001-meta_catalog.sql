@@ -112,10 +112,12 @@ select
     meta.type_id(n.nspname, pg_catalog.format_type(t.oid, NULL)) as id,
     n.nspname as "schema_name",
     pg_catalog.format_type(t.oid, NULL) as "name",
+    case when c.relkind = 'c' then true else false end as "composite",
     pg_catalog.obj_description(t.oid, 'pg_type') as "description"
 from pg_catalog.pg_type t
      left join pg_catalog.pg_namespace n on n.oid = t.typnamespace
-where (t.typrelid = 0 or (select c.relkind = 'c' from pg_catalog.pg_class c where c.oid = t.typrelid))
+     left join pg_catalog.pg_class c on c.oid = t.typrelid
+where (t.typrelid = 0 or c.relkind = 'c')
   and not exists(select 1 from pg_catalog.pg_type el where el.oid = t.typelem and el.typarray = t.oid)
   and pg_catalog.pg_type_is_visible(t.oid)
 order by 1, 2;
