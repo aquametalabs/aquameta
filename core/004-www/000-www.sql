@@ -195,6 +195,7 @@ create function www.row_insert(
                                         ($4->' || quote_literal(json_object_keys) || ')::text
                                     else ($4->>' || quote_literal(json_object_keys) || ')::text
                                end::' || case when www.is_json_object((args->>json_object_keys)) then 'json::'
+-- start of composite detection:                                              when t.composite = true then
                                               else ''
                                          end || c.type_name, ',
                                '
@@ -204,6 +205,7 @@ create function www.row_insert(
                                on c.schema_name = _schema_name and
                                   c.relation_name = _relation_name and
                                   c.name = json_object_keys
+                       left join meta.type t on c.type_id = t.id
                 ) || ')
                 returning *
             )
