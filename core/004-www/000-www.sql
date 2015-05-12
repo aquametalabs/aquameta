@@ -141,22 +141,23 @@ language sql;
 
 create or replace function www.rows_insert(
     args json
-) returns setof json as $$
+) returns void as $$
     declare
         row_id meta.row_id;
-        foo text;
+        q text;
     begin
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
         -- select into elements json_array_elements(args);
         raise notice '%', json_array_length(args);
         for i in 1..json_array_length(args) loop
-            foo := args->i->>'row_id';
-            raise notice '% =  %', foo, args->i; -- args#>'['||i||']';
+            row_id := (args->i->>'row_id')::meta.row_id;
+            raise notice '########################### inserting row %: %', i, row_id;
+            -- raise notice '% =  %', row_id, args->i;
             -- args
---            select json_to_record(i)
---            execute www.row_insert(
-
---            );
+            perform row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
+            -- q := 'insert into ' || (row_id).pk_column_id.relation_id.name || ' select * from json_to_record (args->i->''row'')';
+            -- raise notice 'QUERY: %', q;
+            -- execute q;
         end loop;
     end
 $$
@@ -718,20 +719,6 @@ create or replace function www.request(
  --            return query select 400, 'Bad Request'::text, ('{"status": 400, "message": "Bad Request: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}');
     end;
 $$ language plpgsql;
-
-/*
-
-create function build_rowgraph (
-    starting_table text,
-    starting_where text,
-    joins text[]
-) returns table (row_id meta.row_id, row_contents json)
-  as $$
-
-$$ language plpgsql;
-
-
-*/
 
 
 /*
