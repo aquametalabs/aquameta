@@ -45,8 +45,15 @@ create or replace function commit (bundle_name text, message text) returns void 
 
 
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
-    insert into bundle.rowset_row_field (rowset_row_id, field_id, value)
-    select rr.id, f.field_id, f.value
+    insert into bundle.blob (value)
+    select f.value
+    from bundle.rowset_row rr
+    join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
+    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
+
+    -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
+    insert into bundle.rowset_row_field (rowset_row_id, field_id, value_hash)
+    select rr.id, f.field_id, public.digest(value, 'sha256')
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
     join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;

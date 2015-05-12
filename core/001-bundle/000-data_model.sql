@@ -105,10 +105,10 @@ create table rowset_row_field (
     id uuid default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
     field_id meta.field_id,
-    value text,
     value_hash bytea references blob(hash)
 );
 
+/*
 create function rowset_row_field_hash_gen_trigger() returns trigger as $$
     begin
         -- raise notice 'ROWSET_ROW_FIELD_HASH_GEN_TRIGGER';
@@ -131,6 +131,7 @@ $$ language plpgsql;
 create trigger rowset_row_field_hash_update
     before insert or update on bundle.rowset_row_field
     for each row execute procedure bundle.rowset_row_field_hash_gen_trigger();
+*/
 
 
 /*
