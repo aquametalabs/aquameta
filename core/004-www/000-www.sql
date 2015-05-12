@@ -139,16 +139,21 @@ language sql;
  * FUNCTION rows_insert                                                                              *
  ****************************************************************************************************/
 
---
-create function www.rows_insert(
+create or replace function www.rows_insert(
     args json
 ) returns setof json as $$
     declare
-        i record;
+        row_id meta.row_id;
+        foo text;
     begin
-        for i in select * from json_array_elements(args)
-        loop
-            raise notice '%', args;
+        raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
+        -- select into elements json_array_elements(args);
+        raise notice '%', json_array_length(args);
+        for i in 1..json_array_length(args) loop
+            foo := args->i->>'row_id';
+            raise notice '% =  %', foo, args->i; -- args#>'['||i||']';
+            -- args
+--            select json_to_record(i)
 --            execute www.row_insert(
 
 --            );
@@ -684,6 +689,7 @@ create or replace function www.request(
             elsif parts = 7 then
                 return query select 200, 'OK'::text, (select www.field_select(path_parts[2], path_parts[4], path_parts[3], path_parts[6], path_parts[7]))::text;
             else
+                raise notice '############## 404 not found ##############';
                 return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::json;
             end if;
 
