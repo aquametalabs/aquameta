@@ -429,21 +429,21 @@ create or replace function row_exists(in row_id meta.row_id, out answer boolean)
     end;
 $$ language plpgsql;
 
-/*
 create function meta.eq(
     leftarg meta.row_id,
     rightarg json
 ) returns boolean as $$
-    select (leftarg).schema_id = rightarg->'schema_id' and
-           (leftarg).name = rightarg->>'name';
+    select (leftarg).pk_column_id = rightarg->'column_id' and
+           (leftarg).pk_value = rightarg->>'pk_value';
 $$ language sql;
 
 create operator = (
-    leftarg = meta.relation_id,
+    leftarg = meta.row_id,
     rightarg = json,
     procedure = meta.eq
 );
 
+/*
 ("
     (""
         (widget)"",widget
@@ -460,6 +460,16 @@ create operator = (
 */
 
 -- {"pk_column_id":{"relation_id":{"schema_id":{"name":"bundle"},"name":"bundle"},"name":"id"}
+
+create function meta.row_id(value json) returns meta.row_id as $$
+    select
+    row(
+        meta.column_id(value->'pk_column_id'),
+        value->>'pk_value'
+    )::meta.row_id
+$$ immutable language sql;
+
+/*
 create function meta.row_id(value json) returns meta.row_id as $$
     select 
     row(
@@ -475,6 +485,7 @@ create function meta.row_id(value json) returns meta.row_id as $$
         value->'pk_value'
     )::meta.row_id
 $$ immutable language sql;
+*/
 
 create cast (json as meta.row_id)
 with function meta.row_id(json)
@@ -528,6 +539,32 @@ begin
 exception when others then return null;
 end
 $$ language plpgsql;
+
+
+create function meta.eq(
+    leftarg meta.field_id,
+    rightarg json
+) returns boolean as $$
+    select (leftarg).row_id = rightarg->'row_id' and
+           (leftarg).column_id = rightarg->'column_id';
+$$ language sql;
+
+
+create operator = (
+    leftarg = meta.field_id,
+    rightarg = json,
+    procedure = meta.eq
+);
+
+create function meta.field_id(value json) returns meta.field_id as $$
+    -- select row(row(value->'schema_id'->>'name'), value->>'name')::meta.relation_id
+    select row(meta.row_id(value->'row_id'), meta.column_id(value->'column_id'))::meta.field_id
+$$ immutable language sql;
+
+
+create cast (json as meta.field_id)
+with function meta.field_id(json)
+as assignment;
 
 /******************************************************************************
  * meta.function_id
