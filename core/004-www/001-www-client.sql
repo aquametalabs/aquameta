@@ -333,7 +333,7 @@ begin
         where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
         exclude:= coalesce(rowset->>'exclude', 'false');
 
-        position := coalesce(rowset->>'position'j '0');
+        position := coalesce(rowset->>'position', '0');
 
         -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, local_id: %, related_label: %, related_field: %, where_clause: %',
         --    label, schema_name, relation_name, local_id, related_label, related_field, where_clause;
