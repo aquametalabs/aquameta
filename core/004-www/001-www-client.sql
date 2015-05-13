@@ -278,6 +278,7 @@ declare
     where_clause text;
 
     position integer;
+    exclude boolean;
 
     rowset json;
     q text;
@@ -288,14 +289,16 @@ begin
     tmp := quote_ident(temp_table_name);
     execute 'create temp table '
         || tmp
-        || '(label text, row_id text, position integer, row json)';
+        || '(label text, row_id text, position integer, exclude boolean, row json)';
 
     -- load up the starting relation
     schema_name := quote_ident(start_rowset->>'schema_name');
     relation_name := quote_ident(start_rowset->>'relation_name');
     label := quote_ident(start_rowset->>'label');
     local_id:= quote_ident(start_rowset->>'local_id');
-    position := 0;
+    exclude:= coalesce(start_rowset->>'exclude', 'false');
+
+    position := coalesce(start_rowset->>'position', '0');
 
     where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
 
@@ -305,7 +308,8 @@ begin
     q := 'insert into ' || tmp
         || ' select ''' || label || ''','
         || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text)::text, '
-        || '     0,'
+        || '     ' || position || ', '
+        || '     ' || exclude || ','
         || '     row_to_json(' || label || ')'
         || ' from ' || schema_name || '.' || relation_name || ' ' || label
         || ' ' || where_clause;
@@ -327,8 +331,9 @@ begin
         related_field := quote_ident(rowset->>'related_field');
 
         where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
+        exclude:= coalesce(rowset->>'exclude', 'false');
 
-        position := i + 1;
+        position := coalesce(rowset->>'position'j '0');
 
         -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, local_id: %, related_label: %, related_field: %, where_clause: %',
         --    label, schema_name, relation_name, local_id, related_label, related_field, where_clause;
@@ -338,6 +343,7 @@ begin
             || ' select ''' || label || ''','
             || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
             || '     ' || position || ', '
+            || '     ' || exclude || ', '
             || '     row_to_json(' || label || ')'
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
             || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
@@ -347,17 +353,19 @@ begin
         execute q;
 
     end loop;
+
+    delete from tmp where exclude = true;
 end;
 $$ language plpgsql;
 
 
 
 /*******************************************************************************
-* bundle.compare
+* bundle.remote_compare_commits
 * diffs the set of local commits with the set of remote commits
 *******************************************************************************/
 
-create or replace function bundle.compare(in remote_http_id uuid)
+create or replace function bundle.remote_compare_commits(in remote_http_id uuid)
 returns table(local_commit_id uuid, remote_commit_id uuid)
 as $$
 declare
@@ -383,13 +391,32 @@ end;
 $$ language  plpgsql;
 
 
+create or replace function bundle.remote_has_bundle(in remote_http_id uuid, out has_bundle boolean)
+as $$
+declare
+    local_bundle_id uuid;
+begin
+    select into has_bundle count(*) > 0 from (
+        select (json_array_elements(
+            www_client.http_get(
+                r.endpoint_url
+                    || '/bundle/table/bundle/rows/'
+                    || r.bundle_id
+            )::json->'result')->'row'->>'id')::uuid as id
+        from bundle.remote_http r
+        where r.id = remote_http_id
+    ) has;
+end;
+$$ language  plpgsql;
+
+
 
 /*******************************************************************************
 * bundle.push
 * transfer to a remote repository any local commits not present in the remote
 *******************************************************************************/
 
-create or replace function bundle.push(in remote_http_id uuid)
+create or replace function bundle.remote_push(in remote_http_id uuid)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
@@ -401,13 +428,13 @@ begin
 
     perform bundle.construct_join_graph(
         '_bundle_push_temp',
-        ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''" }')::json,
+        ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }')::json,
         (
             '[
-                {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id", "where_clause": "c.id in (select comp.local_commit_id from bundle.compare(''' || remote_http_id::text || '''::uuid) comp where comp.remote_commit_id is null)"},
-                {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"},
-                {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id"},
-                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id"}
+                {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id", "where_clause": "c.id in (select comp.local_commit_id from bundle.remote_compare_commits(''' || remote_http_id::text || '''::uuid) comp where comp.remote_commit_id is null)", "position": 5},
+                {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id", "position": 2},
+                {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id", "position": 3},
+                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id", "position": 4}
              ]'
         )::json
     );
@@ -423,13 +450,11 @@ begin
         remote_http_id,
         array_to_json(
             array_agg(
-                row_to_json(
-                    _bundle_push_temp
-                )
+                row_to_json(b)
             )
         )
     )
-    from _bundle_push_temp order by position;
+    from (select * from _bundle_push_temp order by position) as b;
 
     drop table _bundle_push_temp;
 end;
