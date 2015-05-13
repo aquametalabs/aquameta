@@ -277,6 +277,8 @@ declare
 
     where_clause text;
 
+    position integer;
+
     rowset json;
     q text;
     ct integer;
@@ -286,13 +288,14 @@ begin
     tmp := quote_ident(temp_table_name);
     execute 'create temp table '
         || tmp
-        || '(label text, row_id text, row json)';
+        || '(label text, row_id text, position integer, row json)';
 
     -- load up the starting relation
     schema_name := quote_ident(start_rowset->>'schema_name');
     relation_name := quote_ident(start_rowset->>'relation_name');
     label := quote_ident(start_rowset->>'label');
     local_id:= quote_ident(start_rowset->>'local_id');
+    position := 0;
 
     where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
 
@@ -302,6 +305,7 @@ begin
     q := 'insert into ' || tmp
         || ' select ''' || label || ''','
         || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text)::text, '
+        || '     0,'
         || '     row_to_json(' || label || ')'
         || ' from ' || schema_name || '.' || relation_name || ' ' || label
         || ' ' || where_clause;
@@ -324,6 +328,8 @@ begin
 
         where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
 
+        position := i + 1;
+
         -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, local_id: %, related_label: %, related_field: %, where_clause: %',
         --    label, schema_name, relation_name, local_id, related_label, related_field, where_clause;
 
@@ -331,6 +337,7 @@ begin
         q := 'insert into ' || tmp
             || ' select ''' || label || ''','
             || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
+            || '     ' || position || ', '
             || '     row_to_json(' || label || ')'
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
             || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
@@ -422,7 +429,7 @@ begin
             )
         )
     )
-    from _bundle_push_temp;
+    from _bundle_push_temp order by position;
 
     drop table _bundle_push_temp;
 end;
