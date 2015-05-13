@@ -802,7 +802,16 @@ create view meta.function as
                    ),
                    ', '
                )
-           || ')')::regprocedure) from 1 for 6) = 'SETOF ' as returns_set
+           || ')')::regprocedure) from 1 for 6) = 'SETOF '
+
+            -- FIXME: this circumvents information_schema and uses
+            -- pg_catalog because pg_proc.proretset is not used in info_schema,
+            -- so it doesn't have enough information to determine whether this
+            -- record returns a setof.  not enough info?  and limit 1 is a
+            -- hack.  this whole function needs a rewrite, so working around 
+            -- it for now.
+               or (select proretset = 't' from pg_proc join pg_namespace on pg_proc.pronamespace = pg_namespace.oid where proname = q.name and nspname = q.schema_name limit 1) 
+           as returns_set
 
     from (
         select meta.function_id(
