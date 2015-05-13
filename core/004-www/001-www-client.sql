@@ -354,7 +354,7 @@ begin
 
     end loop;
 
-    delete from tmp where exclude = true;
+    execute 'delete from ' || tmp || ' where exclude = true';
 end;
 $$ language plpgsql;
 
@@ -440,8 +440,8 @@ begin
     );
 
 
-    select into ct count(*) from _bundle_push_temp;
-    raise notice '######################### PUSHING % rows', ct;
+    -- select into ct count(*) from _bundle_push_temp;
+    -- raise notice '######################### PUSHING % rows', ct;
 
      --   {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
 
