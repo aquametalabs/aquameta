@@ -151,7 +151,7 @@ create or replace function www.rows_insert(
         raise notice '%', json_array_length(args);
         for i in 0..json_array_length(args) - 1 loop
             row_id := (args->i->>'row_id')::meta.row_id;
-            raise notice '########################### inserting row %: %', i, row_id;
+            -- raise notice '########################### inserting row %: %', i, row_id;
             -- raise notice '% =  %', row_id, args->i;
             -- args
             perform row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
@@ -299,7 +299,7 @@ create or replace function www.row_update(
     args json
 ) returns json as $$ -- FIXME: use json_to_row upon 9.4 release, alleviates all the destructuring below
     begin
-        raise notice 'ROW_UPDATE ARGS: %, %, %, %, %', _schema_name, relation_type, _relation_name, pk, args::text;
+        -- raise notice 'ROW_UPDATE ARGS: %, %, %, %, %', _schema_name, relation_type, _relation_name, pk, args::text;
         execute (
             select 'update ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || ' as r
                     set ' || (
