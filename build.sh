@@ -1,6 +1,6 @@
 # dropdb aquameta
 echo "Creating database ..."
-createdb aquameta
+createdb --encoding UNICODE aquameta
 
 echo "Loading core/*.sql ..."
 cat core/0*/0*.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
