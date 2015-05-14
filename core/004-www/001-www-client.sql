@@ -287,7 +287,7 @@ begin
     -- raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
     -- create temp table
     tmp := quote_ident(temp_table_name);
-    execute 'create temp table '
+    execute 'create temp table if not exists '
         || tmp
         || '(label text, row_id text, position integer, exclude boolean, row json)';
 
@@ -376,6 +376,7 @@ begin
         with remote_commit as (select (json_array_elements(
                 www_client.http_get(
                     r.endpoint_url
+                    -- 'http://demo.aquameta.org/endpoint'
                         || '/bundle/table/commit/rows?bundle_id='
                         || r.bundle_id
                 )::json->'result')->'row'->>'id')::uuid as id
@@ -431,19 +432,14 @@ begin
         ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }')::json,
         (
             '[
-                {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id", "where_clause": "c.id in (select comp.local_commit_id from bundle.remote_compare_commits(''' || remote_http_id::text || '''::uuid) comp where comp.remote_commit_id is null)", "position": 5},
-                {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id", "position": 2},
-                {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id", "position": 3},
-                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id", "position": 4}
+                {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (select comp.local_commit_id from bundle.remote_compare_commits(''' || remote_http_id::text || '''::uuid) comp where comp.remote_commit_id is null)"},
+                {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
+                {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
+                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
+                {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
              ]'
         )::json
     );
-
-
-    -- select into ct count(*) from _bundle_push_temp;
-    -- raise notice '######################### PUSHING % rows', ct;
-
-     --   {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
     perform www_client.rows_insert (
