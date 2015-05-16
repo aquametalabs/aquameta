@@ -410,7 +410,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
         set local search_path=bundle,meta,public;
 
         raise notice '################################################## CHECKOUT SCHEMA % ###############################', commit_id;
-
+        -- insert the meta-rows in this commit to the database
         for commit_row in
             select
                 rr.row_id,
@@ -456,9 +456,6 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
 
 
-
-
-
         raise notice '################################################## DISABLING TRIGGERS % ###############################', commit_id;
         -- turn off constraints
         for commit_row in
@@ -480,8 +477,9 @@ create or replace function checkout (in commit_id uuid) returns void as $$
         end loop;
 
 
+
         raise notice '################################################## CHECKOUT DATA % ###############################', commit_id;
-        -- insert the rows
+        -- insert the non-meta rows
         for commit_row in
             select
                 rr.row_id,
@@ -527,7 +525,14 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 || ' enable trigger all';
         end loop;
 
+        -- point head_commit_id to this commit
+        update bundle.bundle set head_commit_id = commit_id where id in (select bundle_id from bundle.commit c where c.id = commit_id);
+
         return;
 
     end;
 $$ language plpgsql;
+
+
+
+commit;
