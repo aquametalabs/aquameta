@@ -28,7 +28,7 @@ set search_path=www_client;
 * urlencode
 * via http://stackoverflow.com/questions/10318014/javascript-encodeuri-like-function-in-postgresql
 *******************************************************************************/
-CREATE OR REPLACE FUNCTION urlencode(in_str text, OUT _result text)
+CREATE OR REPLACE FUNCTION www_client.urlencode(in_str text, OUT _result text)
     STRICT IMMUTABLE AS $urlencode$
 DECLARE
     _i      int4;
@@ -59,6 +59,41 @@ BEGIN
     RETURN ;
 END;
 $urlencode$ LANGUAGE plpgsql;
+
+
+
+/*******************************************************************************
+* array_to_querystring(args, vals)
+* converts an array of args and an array of values to a query_string suitbale for a URL
+*******************************************************************************/
+create or replace function www_client.array_to_querystring(args text[], vals text[], out querystring text) as $$
+begin
+    querystring := '';
+
+    raise notice 'qs: %', querystring;
+    for i in 1..array_length(args,1) loop
+        querystring := querystring 
+            || www_client.urlencode(args[i])
+            || '='
+            || www_client.urlencode(vals[i])
+            || '&';
+        raise notice 'qs: %', querystring;
+    end loop;
+
+end;
+$$ language plpgsql;
+
+
+
+/*******************************************************************************
+*
+*
+* HTTP CLIENT
+* Performs GET, POST, DELETE, PATCH operations over HTTP using python's liburl2
+*
+*
+*******************************************************************************/
+
 
 /*******************************************************************************
 * http_get
@@ -143,12 +178,13 @@ $$ language plpythonu;
 create or replace function www_client.rows_select(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
 as $$
 
-select www_client.http_get ((select endpoint_url from bundle.remote_http where id=http_remote_id)
+select www_client.http_get (
+    (select endpoint_url from bundle.remote_http where id=http_remote_id)
         || '/' || www_client.urlencode((relation_id.schema_id).name)
         || '/relation'
         || '/' || www_client.urlencode(relation_id.name)
         || '/rows'
-    )::json;
+)::json;
 
 $$ language sql;
 
@@ -175,14 +211,13 @@ create or replace function www_client.row_select(http_remote_id uuid, row_id met
 as $$
 
 select www_client.http_get (
-    (
-        select endpoint_url from bundle.remote_http where id=http_remote_id)
-            || '/' || (row_id::meta.schema_id).name
-            || '/table'
-            || '/' || (row_id::meta.relation_id).name
-            || '/row'
-            || '/' || row_id.pk_value
-    )::json;
+    (select endpoint_url from bundle.remote_http where id=http_remote_id)
+        || '/' || (row_id::meta.schema_id).name
+        || '/table'
+        || '/' || (row_id::meta.relation_id).name
+        || '/row'
+        || '/' || row_id.pk_value
+)::json;
 
 $$ language sql;
 
@@ -194,15 +229,14 @@ create or replace function www_client.field_select(http_remote_id uuid, field_id
 as $$
 
 select www_client.http_get (
-    (
-        select endpoint_url from bundle.remote_http where id=http_remote_id)
-            || '/' || (field_id::meta.schema_id).name
-            || '/table'
-            || '/' || (field_id::meta.relation_id).name
-            || '/row'
-            || '/' || (field_id.row_id).pk_value
-            || '/' || (field_id.column_id).name
-    );
+    (select endpoint_url from bundle.remote_http where id=http_remote_id)
+        || '/' || (field_id::meta.schema_id).name
+        || '/table'
+        || '/' || (field_id::meta.relation_id).name
+        || '/row'
+        || '/' || (field_id.row_id).pk_value
+        || '/' || (field_id.column_id).name
+);
 
 $$ language sql;
 
@@ -214,16 +248,39 @@ create or replace function www_client.row_delete(http_remote_id uuid, row_id met
 as $$
 
 select www_client.http_delete (
-    (
-        select endpoint_url from bundle.remote_http where id=http_remote_id)
-            || '/' || (row_id::meta.schema_id).name
-            || '/table'
-            || '/' || (row_id::meta.relation_id).name
-            || '/row'
-            || '/' || row_id.pk_value
-    );
+    (select endpoint_url from bundle.remote_http where id=http_remote_id)
+        || '/' || (row_id::meta.schema_id).name
+        || '/table'
+        || '/' || (row_id::meta.relation_id).name
+        || '/row'
+        || '/' || row_id.pk_value
+);
 
 $$ language sql;
+
+
+
+
+/*******************************************************************************
+* rows_function
+*******************************************************************************/
+create or replace function www_client.rows_function(http_remote_id uuid, function_id meta.function_id, arg_vals text[], out result text)
+as $$
+declare 
+    qs text;
+begin
+
+select into result www_client.http_get (
+    (select endpoint_url from bundle.remote_http where id=http_remote_id)
+        || '/' || (function_id).schema_id.name
+        || '/function'
+        || '/' || (function_id).name
+        || '/rows'
+        || '?' || www_client.array_to_querystring((function_id).parameters, arg_vals)
+);
+
+end;
+$$ language plpgsql;
 
 
 --
@@ -453,6 +510,66 @@ begin
     from (select * from _bundle_push_temp order by position) as b;
 
     drop table _bundle_push_temp;
+end;
+$$ language plpgsql;
+
+/*******************************************************************************
+* bundle.fetch
+* download from remote repository any commits not present in the local repository
+*******************************************************************************/
+
+create or replace function bundle.remote_fetch(in remote_http_id uuid)
+returns void -- table(_row_id meta.row_id)
+as $$
+declare
+    ct integer;
+    bundle_id uuid;
+    new_commits text;
+begin
+    raise notice '################################### FETCH ##########################';
+    select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
+
+    -- get a comm-separated list of new commits
+    select into new_commits coalesce(string_agg(quote_literal(remote_commit_id::text), ','),'') 
+        from bundle.remote_compare_commits(remote_http_id)
+        where local_commit_id is null;
+
+    raise notice 'NEW COMMITS: %', new_commits;
+
+    -- construct a join_graph on the remote server
+    select -- www.rows_insert(
+        www_client.rows_function(
+            remote_http_id, 
+            meta.function_id('bundle','construct_join_graph', ARRAY['temp_table_name', 'start_rowset', 'subrowsets']),
+            -- args
+            ARRAY[
+                '_bundle_push_temp',
+                '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }',
+                '[
+                    {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits || ')"},
+                    {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
+                    {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
+                    {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
+                    {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
+                 ]'
+            ]
+        )::json;
+--    );
+
+    /*
+    -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
+    perform www_client.rows_insert (
+        remote_http_id,
+        array_to_json(
+            array_agg(
+                row_to_json(b)
+            )
+        )
+    )
+    from (select * from _bundle_push_temp order by position) as b;
+
+    drop table _bundle_push_temp;
+    */
 end;
 $$ language plpgsql;
 
