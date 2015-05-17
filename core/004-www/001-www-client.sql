@@ -102,7 +102,9 @@ create or replace function www_client.http_get (url text) returns text
 as $$
 
 import urllib2
+import plpy
 
+plpy.notice('************ http_get('+url+')')
 req = urllib2.Request(url)
 response = urllib2.urlopen(req)
 raw_response = response.read()
@@ -443,7 +445,7 @@ begin
         select c.id as local_commit_id, rc.id as remote_id
         from bundle.commit c
             full outer join remote_commit rc on rc.id=c.id
-            where c.bundle_id = local_bundle_id;
+            where c.bundle_id = local_bundle_id or c.bundle_id is null;
 
 end;
 $$ language  plpgsql;
@@ -466,6 +468,37 @@ begin
     ) has;
 end;
 $$ language  plpgsql;
+
+
+
+/*******************************************************************************
+* bundle.construct_bundle_diff
+* puts in a temporary table the rows that form the commits specified, without 
+* duplication
+*******************************************************************************/
+
+create or replace function bundle.construct_bundle_diff(new_commits text[]) returns void as $$
+declare 
+    new_commits text;
+begin
+    select into new_commits coalesce(string_agg(quote_literal(remote_commit_id::text), ','),'');
+    select bundle.construct_join_graph( 
+            meta.function_id('bundle','construct_join_graph', ARRAY['temp_table_name', 'start_rowset', 'subrowsets']),
+            ARRAY[
+                '_bundle_push_temp',
+                '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }',
+                ('[
+                    {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits || ')"},
+                    {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
+                    {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
+                    {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
+                    {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
+                 ]')::jsonb::text
+            ]
+        )::json;
+
+end;
+$$ language plpgsql;
 
 
 
@@ -545,13 +578,13 @@ begin
             ARRAY[
                 '_bundle_push_temp',
                 '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }',
-                '[
+                ('[
                     {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits || ')"},
                     {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
                     {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
                     {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
                     {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
-                 ]'
+                 ]')::jsonb::text
             ]
         )::json;
 --    );
