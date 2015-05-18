@@ -149,6 +149,7 @@ create or replace function www.rows_insert(
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
         -- select into elements json_array_elements(args);
         raise notice '%', json_array_length(args);
+        alter table bundle.commit disable trigger all;
         for i in 0..json_array_length(args) - 1 loop
             row_id := (args->i->>'row_id')::meta.row_id;
             -- raise notice '########################### inserting row %: %', i, row_id;
@@ -159,6 +160,7 @@ create or replace function www.rows_insert(
             -- raise notice 'QUERY: %', q;
             -- execute q;
         end loop;
+        alter table bundle.commit enable trigger all;
     end
 $$
 language plpgsql;

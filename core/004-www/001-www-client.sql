@@ -74,8 +74,10 @@ begin
     for i in 1..array_length(args,1) loop
         querystring := querystring 
             || www_client.urlencode(args[i])
+            -- || args[i]
             || '='
             || www_client.urlencode(vals[i])
+            -- || vals[i]
             || '&';
         raise notice 'qs: %', querystring;
     end loop;
@@ -451,6 +453,11 @@ end;
 $$ language  plpgsql;
 
 
+/*******************************************************************************
+* bundle.remote_compare_commits
+* checks a remote to see if it also has a bundle with the same id installed
+*******************************************************************************/
+
 create or replace function bundle.remote_has_bundle(in remote_http_id uuid, out has_bundle boolean)
 as $$
 declare
@@ -473,29 +480,31 @@ $$ language  plpgsql;
 
 /*******************************************************************************
 * bundle.construct_bundle_diff
-* puts in a temporary table the rows that form the commits specified, without 
-* duplication
+* fills a temporary table with the commits specified, but only including NEW blobs
 *******************************************************************************/
 
-create or replace function bundle.construct_bundle_diff(new_commits text[]) returns void as $$
+create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text) returns void as $$
 declare 
-    new_commits text;
+    new_commits_str text;
 begin
-    select into new_commits coalesce(string_agg(quote_literal(remote_commit_id::text), ','),'');
-    select bundle.construct_join_graph( 
-            meta.function_id('bundle','construct_join_graph', ARRAY['temp_table_name', 'start_rowset', 'subrowsets']),
-            ARRAY[
-                '_bundle_push_temp',
-                '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }',
-                ('[
-                    {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits || ')"},
-                    {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
-                    {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
-                    {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
-                    {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
-                 ]')::jsonb::text
-            ]
-        )::json;
+    select into new_commits_str string_agg(q,',') from (
+    select quote_literal(unnest(new_commits)) q) as quoted;
+    raise notice '######## CONSTRUCTING BUNDLE DIFF FOR COMMITS %', new_commits_str;
+
+    perform bundle.construct_join_graph( 
+            -- meta.function_id('bundle','construct_join_graph', ARRAY['temp_table_name', 'start_rowset', 'subrowsets']),
+            -- 'some_temp_table'
+            -- ARRAY[
+            temp_table_name,
+            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": false }')::json,
+            ('[
+                {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits_str || ')"},
+                {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
+                {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
+                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
+                {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
+             ]')::json
+        );
 
 end;
 $$ language plpgsql;
@@ -545,7 +554,6 @@ begin
     drop table _bundle_push_temp;
 end;
 $$ language plpgsql;
-
 /*******************************************************************************
 * bundle.fetch
 * download from remote repository any commits not present in the local repository
