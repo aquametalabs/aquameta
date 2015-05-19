@@ -345,7 +345,7 @@ declare
     q text;
     ct integer;
 begin
-    -- raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
+    raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
     -- create temp table
     tmp := quote_ident(temp_table_name);
     execute 'create temp table if not exists '
@@ -483,7 +483,7 @@ $$ language  plpgsql;
 * fills a temporary table with the commits specified, but only including NEW blobs
 *******************************************************************************/
 
-create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text) returns void as $$
+create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text, out result text) as $$
 declare 
     new_commits_str text;
 begin
@@ -492,9 +492,6 @@ begin
     raise notice '######## CONSTRUCTING BUNDLE DIFF FOR COMMITS %', new_commits_str;
 
     perform bundle.construct_join_graph( 
-            -- meta.function_id('bundle','construct_join_graph', ARRAY['temp_table_name', 'start_rowset', 'subrowsets']),
-            -- 'some_temp_table'
-            -- ARRAY[
             temp_table_name,
             ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": false }')::json,
             ('[
@@ -506,8 +503,11 @@ begin
              ]')::json
         );
 
+    execute 'select row, row_id from ' || quote_ident(temp_table_name);
+
 end;
 $$ language plpgsql;
+
 
 
 
@@ -554,6 +554,11 @@ begin
     drop table _bundle_push_temp;
 end;
 $$ language plpgsql;
+
+
+
+
+
 /*******************************************************************************
 * bundle.fetch
 * download from remote repository any commits not present in the local repository
@@ -565,37 +570,26 @@ as $$
 declare
     ct integer;
     bundle_id uuid;
-    new_commits text;
+    new_commits uuid[];
 begin
     raise notice '################################### FETCH ##########################';
     select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
 
-    -- get a comm-separated list of new commits
-    select into new_commits coalesce(string_agg(quote_literal(remote_commit_id::text), ','),'') 
+    -- get the array of new remote commits
+    select into new_commits array_agg(remote_commit_id)
         from bundle.remote_compare_commits(remote_http_id)
         where local_commit_id is null;
 
-    raise notice 'NEW COMMITS: %', new_commits;
+    raise notice 'NEW COMMITS: %', new_commits::text;
 
-    -- construct a join_graph on the remote server
-    select -- www.rows_insert(
-        www_client.rows_function(
+    -- create a join_graph on the remote via the construct_bundle_diff function
+    perform www.rows_insert(
+        (select row, row_id from www_client.rows_function(
             remote_http_id, 
-            meta.function_id('bundle','construct_join_graph', ARRAY['temp_table_name', 'start_rowset', 'subrowsets']),
-            -- args
-            ARRAY[
-                '_bundle_push_temp',
-                '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }',
-                ('[
-                    {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits || ')"},
-                    {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
-                    {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
-                    {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
-                    {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
-                 ]')::jsonb::text
-            ]
-        )::json;
---    );
+            meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']), 
+            ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
+        ))
+    );
 
     /*
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
