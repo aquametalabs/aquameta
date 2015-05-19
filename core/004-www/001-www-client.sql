@@ -72,7 +72,7 @@ begin
 
     raise notice 'qs: %', querystring;
     for i in 1..array_length(args,1) loop
-        querystring := querystring 
+        querystring := querystring
             || www_client.urlencode(args[i])
             -- || args[i]
             || '='
@@ -266,11 +266,11 @@ $$ language sql;
 
 
 /*******************************************************************************
-* rows_function
+* rows_select_function
 *******************************************************************************/
-create or replace function www_client.rows_function(http_remote_id uuid, function_id meta.function_id, arg_vals text[], out result text)
+create or replace function www_client.rows_select_function(http_remote_id uuid, function_id meta.function_id, arg_vals text[], out result text)
 as $$
-declare 
+declare
     qs text;
 begin
 
@@ -293,7 +293,6 @@ $$ language plpgsql;
 -- row_update(remote_id uuid, row_id meta.row_id, args json)
 --
 -- rows_select(remote_id uuid, relation_id meta.relation_id, args json)
--- rows_select_function(remote_id uuid, function_id meta.function_id)
 --
 --
 --
@@ -350,7 +349,7 @@ begin
     tmp := quote_ident(temp_table_name);
     execute 'create temp table if not exists '
         || tmp
-        || '(label text, row_id text, position integer, exclude boolean, row json)';
+        || '(label text, row_id text, position integer, exclude boolean, row jsonb)';
 
     -- load up the starting relation
     schema_name := quote_ident(start_rowset->>'schema_name');
@@ -371,7 +370,7 @@ begin
         || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text)::text, '
         || '     ' || position || ', '
         || '     ' || exclude || ','
-        || '     row_to_json(' || label || ')'
+        || '     row_to_json(' || label || ')::jsonb'
         || ' from ' || schema_name || '.' || relation_name || ' ' || label
         || ' ' || where_clause;
 
@@ -405,7 +404,7 @@ begin
             || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
             || '     ' || position || ', '
             || '     ' || exclude || ', '
-            || '     row_to_json(' || label || ')'
+            || '     row_to_json(' || label || ')::jsonb'
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
             || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
             || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || local_id || '::text'
@@ -483,17 +482,20 @@ $$ language  plpgsql;
 * fills a temporary table with the commits specified, but only including NEW blobs
 *******************************************************************************/
 
-create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text, out result text) as $$
-declare 
+create type row_graph_row as (row_id text, row jsonb);
+
+create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text)
+returns setof row_graph_row as $$
+declare
     new_commits_str text;
 begin
     select into new_commits_str string_agg(q,',') from (
     select quote_literal(unnest(new_commits)) q) as quoted;
     raise notice '######## CONSTRUCTING BUNDLE DIFF FOR COMMITS %', new_commits_str;
 
-    perform bundle.construct_join_graph( 
+    perform bundle.construct_join_graph(
             temp_table_name,
-            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": false }')::json,
+            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }')::json,
             ('[
                 {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (' || new_commits_str || ')"},
                 {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
@@ -503,7 +505,7 @@ begin
              ]')::json
         );
 
-    execute 'select row, row_id from ' || quote_ident(temp_table_name);
+    return query execute format ('select row_id, row::jsonb from %I order by position', quote_ident(temp_table_name));
 
 end;
 $$ language plpgsql;
@@ -571,6 +573,7 @@ declare
     ct integer;
     bundle_id uuid;
     new_commits uuid[];
+    json_results text;
 begin
     raise notice '################################### FETCH ##########################';
     select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
@@ -582,14 +585,22 @@ begin
 
     raise notice 'NEW COMMITS: %', new_commits::text;
 
-    -- create a join_graph on the remote via the construct_bundle_diff function
-    perform www.rows_insert(
-        (select row, row_id from www_client.rows_function(
-            remote_http_id, 
-            meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']), 
-            ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
-        ))
+    select into json_results www_client.rows_select_function(
+        remote_http_id,
+        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
+        ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
     );
+
+    raise notice '############################ JSON %', json_results;
+
+    -- create a join_graph on the remote via the construct_bundle_diff function
+    select into json_results result::json->'result' from www_client.rows_select_function(
+        remote_http_id,
+        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
+        ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
+    );
+    raise notice '################# RESULTS: %', json_results;
+    perform www.rows_insert(json_results::json);
 
     /*
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql

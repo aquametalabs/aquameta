@@ -147,17 +147,16 @@ create or replace function www.rows_insert(
         q text;
     begin
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
-        -- select into elements json_array_elements(args);
-        raise notice '%', json_array_length(args);
+        raise notice 'TOTAL ROWS: %', json_array_length(args);
         alter table bundle.commit disable trigger all;
         for i in 0..json_array_length(args) - 1 loop
-            row_id := (args->i->>'row_id')::meta.row_id;
-            -- raise notice '########################### inserting row %: %', i, row_id;
-            -- raise notice '% =  %', row_id, args->i;
+            row_id := (args->i->'row'->>'row_id')::meta.row_id;
+            raise notice '########################### inserting row %: %', i, row_id;
+            raise notice '% =  %', row_id, args->i;
             -- args
-            perform row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
-            -- q := 'insert into ' || (row_id).pk_column_id.relation_id.name || ' select * from json_to_record (args->i->''row'')';
-            -- raise notice 'QUERY: %', q;
+            q := 'insert into ' || (row_id).pk_column_id.relation_id.name || ' select * from json_to_record (args->i->''row''->''row'')';
+            raise notice 'QUERY: %', q;
+            perform www.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row'->'row');
             -- execute q;
         end loop;
         alter table bundle.commit enable trigger all;
