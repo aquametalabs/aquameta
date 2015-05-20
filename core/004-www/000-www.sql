@@ -147,7 +147,8 @@ create or replace function www.rows_insert(
         q text;
     begin
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
-        raise notice 'TOTAL ROWS: %', json_array_length(args);
+        -- raise notice 'TOTAL ROWS: %', json_array_length(args);
+        raise notice 'da json: %', args;
         alter table bundle.commit disable trigger all;
         for i in 0..json_array_length(args) - 1 loop
             row_id := (args->i->'row'->>'row_id')::meta.row_id;

@@ -198,13 +198,16 @@ $$ language sql;
 *******************************************************************************/
 create or replace function www_client.rows_insert(http_remote_id uuid, args json, out response text)
 as $$
+begin
+
+raise notice 'WWW_CLIENT.ROWS_INSERT: %s', args;
 
 select www_client.http_post (
     (select endpoint_url || '/insert' from bundle.remote_http where id=http_remote_id),
     args::text -- fixme?  does a post expect x=7&y=p&z=3 ?
 );
-
-$$ language sql;
+end;
+$$ language plpgsql;
 
 
 
@@ -523,41 +526,43 @@ returns void -- table(_row_id meta.row_id)
 as $$
 declare
     ct integer;
+    new_commits uuid[];
     bundle_id uuid;
+    result json;
+    result2 json;
+    r row_graph_row;
 begin
     raise notice '################################### PUSH ##########################';
     select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
 
-    perform bundle.construct_join_graph(
-        '_bundle_push_temp',
-        ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }')::json,
-        (
-            '[
-                {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 5, "where_clause": "c.id in (select comp.local_commit_id from bundle.remote_compare_commits(''' || remote_http_id::text || '''::uuid) comp where comp.remote_commit_id is null)"},
-                {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
-                {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
-                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 6},
-                {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 5}
-             ]'
-        )::json
-    );
+    -- get the array of new remote commits
+    select into new_commits array_agg(local_commit_id)
+        from bundle.remote_compare_commits(remote_http_id)
+        where remote_commit_id is null;
+
+    raise notice 'NEW COMMITS: %', new_commits::text;
+
+    perform bundle.construct_bundle_diff(bundle_id, new_commits, 'bundle_push_1234');
+
+
+    -- build json object
+    select into result2 array_to_json(array_agg(('{ "row": ' || row_to_json(tmp)::text || ', "selector": "hi mom"}')::json)) from bundle_push_1234 tmp;
+    result := ('{"columns":[{"name":"row_id","type":"row_id"},{"name":"row","type":"json"}], "result": ' || result2 || '}')::json;
+
+    raise notice 'PUUUUUUUUUSH result: %', result::text;
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform www_client.rows_insert (
-        remote_http_id,
-        array_to_json(
-            array_agg(
-                row_to_json(b)
-            )
-        )
-    )
-    from (select * from _bundle_push_temp order by position) as b;
+    perform www_client.rows_insert (remote_http_id, result);
+    -- from (select * from bundle_push_1234 order by position) as b;
 
-    drop table _bundle_push_temp;
+    drop table _bundle_push_1234;
 end;
 $$ language plpgsql;
 
 
+/*
+{"columns":[{"name":"row_id","type":"text"},{"name":"row","type":"jsonb"}],"result":[{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset)\"\",id)\",58887a7f-3428-401c-a24e-5eaa0f5c378f)","row":{"id": "58887a7f-3428-401c-a24e-5eaa0f5c378f"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset)\"\",id)\",9e220a23-fdeb-4b12-97f3-8b61a7b39d89)","row":{"id": "9e220a23-fdeb-4b12-97f3-8b61a7b39d89"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset)\"\",id)\",233d73e2-6b04-4697-83af-1c3da4fb091e)","row":{"id": "233d73e2-6b04-4697-83af-1c3da4fb091e"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset_row)\"\",rowset_id)\",58887a7f-3428-401c-a24e-5eaa0f5c378f)","row":{"id": "d619218d-77ff-4951-8ccf-7cbf2ace20c0", "row_id": {"pk_value": "17a50da2-eba6-4295-8875-a6936ca4109e", "pk_column_id": {"name": "id", "relation_id": {"name": "widget", "schema_id": {"name": "widget"}}}}, "rowset_id": "58887a7f-3428-401c-a24e-5eaa0f5c378f"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset_row)\"\",rowset_id)\",58887a7f-3428-401c-a24e-5eaa0f5c378f)" |]}
+*/
 
 
 
