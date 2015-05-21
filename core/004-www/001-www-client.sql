@@ -179,7 +179,7 @@ $$ language plpythonu;
 /*******************************************************************************
 * rows_select
 *******************************************************************************/
-create or replace function www_client.rows_select(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
+create or replace function www_client.endpoint_rows_select(http_remote_id uuid, relation_id meta.relation_id, args json, out response json)
 as $$
 
 select www_client.http_get (
@@ -196,7 +196,7 @@ $$ language sql;
 /*******************************************************************************
 * rows_insert
 *******************************************************************************/
-create or replace function www_client.rows_insert(http_remote_id uuid, args json, out response text)
+create or replace function www_client.endpoint_rows_insert(http_remote_id uuid, args json, out response text)
 as $$
 begin
 
@@ -214,7 +214,7 @@ $$ language plpgsql;
 /*******************************************************************************
 * row_select
 *******************************************************************************/
-create or replace function www_client.row_select(http_remote_id uuid, row_id meta.row_id) returns json
+create or replace function www_client.endpoint_row_select(http_remote_id uuid, row_id meta.row_id) returns json
 as $$
 
 select www_client.http_get (
@@ -232,7 +232,7 @@ $$ language sql;
 /*******************************************************************************
 * field_select
 *******************************************************************************/
-create or replace function www_client.field_select(http_remote_id uuid, field_id meta.field_id) returns text
+create or replace function www_client.endpoint_field_select(http_remote_id uuid, field_id meta.field_id) returns text
 as $$
 
 select www_client.http_get (
@@ -251,7 +251,7 @@ $$ language sql;
 /*******************************************************************************
 * row_delete
 *******************************************************************************/
-create or replace function www_client.row_delete(http_remote_id uuid, row_id meta.row_id) returns text
+create or replace function www_client.endpoint_row_delete(http_remote_id uuid, row_id meta.row_id) returns text
 as $$
 
 select www_client.http_delete (
@@ -271,7 +271,7 @@ $$ language sql;
 /*******************************************************************************
 * rows_select_function
 *******************************************************************************/
-create or replace function www_client.rows_select_function(http_remote_id uuid, function_id meta.function_id, arg_vals text[], out result text)
+create or replace function www_client.endpoint_rows_select_function(http_remote_id uuid, function_id meta.function_id, arg_vals text[], out result text)
 as $$
 declare
     qs text;
@@ -552,7 +552,7 @@ begin
     raise notice 'PUUUUUUUUUSH result: %', result::text;
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform www_client.rows_insert (remote_http_id, result);
+    perform www_client.endpoint_rows_insert (remote_http_id, result);
     -- from (select * from bundle_push_1234 order by position) as b;
 
     drop table _bundle_push_1234;
@@ -590,7 +590,7 @@ begin
 
     raise notice 'NEW COMMITS: %', new_commits::text;
 
-    select into json_results www_client.rows_select_function(
+    select into json_results www_client.endpoint_rows_select_function(
         remote_http_id,
         meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
@@ -599,7 +599,7 @@ begin
     raise notice '############################ JSON %', json_results;
 
     -- create a join_graph on the remote via the construct_bundle_diff function
-    select into json_results result::json->'result' from www_client.rows_select_function(
+    select into json_results result::json->'result' from www_client.endpoint_rows_select_function(
         remote_http_id,
         meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
@@ -609,7 +609,7 @@ begin
 
     /*
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform www_client.rows_insert (
+    perform www_client.endpoint_rows_insert (
         remote_http_id,
         array_to_json(
             array_agg(
