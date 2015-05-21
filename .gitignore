@@ -1,3 +1,3 @@
 *.swp
-core/005-endpoint/servers/background_worker/pg_http.o
-core/005-endpoint/servers/background_worker/pg_http.so
+*pg_http.o
+*pg_http.so
