@@ -135,23 +135,24 @@ $$ language plpgsql;
 * diffs the set of local commits with the set of remote commits
 *******************************************************************************/
 
-create or replace function bundle.remote_compare_commits(in remote_http_id uuid)
+create or replace function bundle.remote_compare_commits(in bundle_endpoint_id uuid)
 returns table(local_commit_id uuid, remote_commit_id uuid)
 as $$
 declare
     local_bundle_id uuid;
 begin
-    select into local_bundle_id bundle_id from bundle.remote_http rh where rh.id = remote_http_id;
+    select into local_bundle_id bundle_id from bundle.bundle_endpoint rh where rh.id = bundle_endpoint_id;
     return query
         with remote_commit as (select (json_array_elements(
-                www_client.http_get(
-                    r.endpoint_url
+                http_client.http_get(
+                    e.url
                     -- 'http://demo.aquameta.org/endpoint'
                         || '/bundle/table/commit/rows?bundle_id='
-                        || r.bundle_id
+                        || be.bundle_id
                 )::json->'result')->'row'->>'id')::uuid as id
-            from bundle.remote_http r
-            where r.id = remote_http_id
+            from bundle.bundle_endpoint be
+            join endpoint.remote_endpoint e on be.endpoint_id=e.id
+            where be.id = bundle_endpoint_id
         )
         select c.id as local_commit_id, rc.id as remote_id
         from bundle.commit c
@@ -167,20 +168,20 @@ $$ language  plpgsql;
 * checks a remote to see if it also has a bundle with the same id installed
 *******************************************************************************/
 
-create or replace function bundle.remote_has_bundle(in remote_http_id uuid, out has_bundle boolean)
+create or replace function bundle.remote_has_bundle(in bundle_endpoint_id uuid, out has_bundle boolean)
 as $$
 declare
     local_bundle_id uuid;
 begin
     select into has_bundle count(*) > 0 from (
         select (json_array_elements(
-            www_client.http_get(
-                r.endpoint_url
+            http_client.http_get(
+                be.endpoint_url
                     || '/bundle/table/bundle/rows/'
-                    || r.bundle_id
+                    || be.bundle_id
             )::json->'result')->'row'->>'id')::uuid as id
-        from bundle.remote_http r
-        where r.id = remote_http_id
+        from bundle.bundle_endpoint be
+        where be.id = bundle_endpoint_id
     ) has;
 end;
 $$ language  plpgsql;
@@ -228,7 +229,7 @@ $$ language plpgsql;
 * transfer to a remote repository any local commits not present in the remote
 *******************************************************************************/
 
-create or replace function bundle.remote_push(in remote_http_id uuid)
+create or replace function bundle.remote_push(in bundle_endpoint_id uuid)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
@@ -240,11 +241,11 @@ declare
     r row_graph_row;
 begin
     raise notice '################################### PUSH ##########################';
-    select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
+    select into bundle_id be.bundle_id from bundle.bundle_endpoint be where be.id = bundle_endpoint_id;
 
     -- get the array of new remote commits
     select into new_commits array_agg(local_commit_id)
-        from bundle.remote_compare_commits(remote_http_id)
+        from bundle.remote_compare_commits(bundle_endpoint_id)
         where remote_commit_id is null;
 
     raise notice 'NEW COMMITS: %', new_commits::text;
@@ -259,7 +260,7 @@ begin
     raise notice 'PUUUUUUUUUSH result: %', result::text;
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform www_client.endpoint_rows_insert (remote_http_id, result);
+    perform http_client.endpoint_rows_insert (bundle_endpoint_id, result);
     -- from (select * from bundle_push_1234 order by position) as b;
 
     drop table _bundle_push_1234;
@@ -278,7 +279,7 @@ $$ language plpgsql;
 * download from remote repository any commits not present in the local repository
 *******************************************************************************/
 
-create or replace function bundle.remote_fetch(in remote_http_id uuid)
+create or replace function bundle.remote_fetch(in bundle_endpoint_id uuid)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
@@ -288,17 +289,17 @@ declare
     json_results text;
 begin
     raise notice '################################### FETCH ##########################';
-    select into bundle_id r.bundle_id from bundle.remote_http r where r.id = remote_http_id;
+    select into bundle_id be.bundle_id from bundle.bundle_endpoint be where be.id = bundle_endpoint_id;
 
     -- get the array of new remote commits
     select into new_commits array_agg(remote_commit_id)
-        from bundle.remote_compare_commits(remote_http_id)
+        from bundle.remote_compare_commits(bundle_endpoint_id)
         where local_commit_id is null;
 
     raise notice 'NEW COMMITS: %', new_commits::text;
 
-    select into json_results www_client.endpoint_rows_select_function(
-        remote_http_id,
+    select into json_results http_client.endpoint_rows_select_function(
+        bundle_endpoint_id,
         meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
     );
@@ -306,8 +307,8 @@ begin
     raise notice '############################ JSON %', json_results;
 
     -- create a join_graph on the remote via the construct_bundle_diff function
-    select into json_results result::json->'result' from www_client.endpoint_rows_select_function(
-        remote_http_id,
+    select into json_results result::json->'result' from http_client.endpoint_rows_select_function(
+        bundle_endpoint_id,
         meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
     );
@@ -316,8 +317,8 @@ begin
 
     /*
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform www_client.endpoint_rows_insert (
-        remote_http_id,
+    perform http_client.endpoint_rows_insert (
+        bundle_endpoint_id,
         array_to_json(
             array_agg(
                 row_to_json(b)
