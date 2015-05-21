@@ -116,53 +116,76 @@ return [r.status_code, r.headers, r.encoding, r.text]
 $$ language plpythonu;
 
 /*******************************************************************************
-* http_post
+* http_post text
 *******************************************************************************/
-create or replace function http_client.http_post(url text, data text)
-returns text
+create or replace function http_client.http_post (url text, data text) returns http_client.http_response
 as $$
-import urllib2
+import requests
+import plpy
 
-req = urllib2.Request(url, data)
-response = urllib2.urlopen(req)
-raw_response = response.read()
-return raw_response
+plpy.info ('************ http_post('+url+')')
+r = requests.post(url,data)
+return [r.status_code, r.headers, r.encoding, r.text]
 
 $$ language plpythonu;
 
+/*******************************************************************************
+* http_post json
+*******************************************************************************/
+create or replace function http_client.http_post (url text, data json) returns http_client.http_response
+as $$
+import requests
+import plpy
+import json
 
+plpy.info ('************ http_post('+url+')')
+r = requests.post(url,json.loads(data))
+return [r.status_code, r.headers, r.encoding, r.text]
+
+$$ language plpythonu;
 
 /*******************************************************************************
 * http_delete
 *******************************************************************************/
-create or replace function http_client.http_delete(url text)
-returns text
+create or replace function http_client.http_delete (url text) returns http_client.http_response
 as $$
-import urllib2
 
-req = urllib2.Request(url)
-req.get_method = lambda: 'DELETE'
-response = urllib2.urlopen(req)
-raw_response = response.read()
-return raw_response
+import requests
+import plpy
+
+plpy.info ('************ http_delete('+url+')')
+r = requests.delete(url)
+return [r.status_code, r.headers, r.encoding, r.text]
+
+$$ language plpythonu;
+
+/*******************************************************************************
+* http_patch text
+*******************************************************************************/
+create or replace function http_client.http_patch (url text, data text) returns http_client.http_response
+as $$
+import requests
+import plpy
+
+plpy.info ('************ http_patch('+url+')')
+r = requests.patch(url,data)
+return [r.status_code, r.headers, r.encoding, r.text]
 
 $$ language plpythonu;
 
 
-
 /*******************************************************************************
-* http_patch
+* http_patch json
 *******************************************************************************/
-create or replace function http_client.http_patch(url text, data text)
-returns text
+create or replace function http_client.http_patch (url text, data json) returns http_client.http_response
 as $$
-import urllib2
+import requests
+import plpy
+import json
 
-req = urllib2.Request(url, data)
-req.get_method = lambda: 'PATCH'
-response = urllib2.urlopen(req)
-raw_response = response.read()
-return raw_response
+plpy.info ('************ http_patch('+url+')')
+r = requests.patch(url,json.loads(data))
+return [r.status_code, r.headers, r.encoding, r.text]
 
 $$ language plpythonu;
 
