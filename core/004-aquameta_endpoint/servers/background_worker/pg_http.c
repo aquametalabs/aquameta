@@ -114,8 +114,8 @@ static int do_query (struct libwebsocket_context *context,
         query_params[3] = pss->request_body;
 
         res = PQexecParams(conn,
-                           pss->request_body ? "DECLARE curs CURSOR FOR select * from www.request($1, $2, $3, $4)"
-                                             : "DECLARE curs CURSOR FOR select * from www.request($1, $2, $3, null)",
+                           pss->request_body ? "DECLARE curs CURSOR FOR select * from endpoint.request($1, $2, $3, $4)"
+                                             : "DECLARE curs CURSOR FOR select * from endpoint.request($1, $2, $3, null)",
                            pss->request_body ? 4 : 3,
                            NULL,
                            query_params,
@@ -153,7 +153,7 @@ static int do_query (struct libwebsocket_context *context,
         query_params[0] = local_pss_path;
 
         res = PQexecParams(conn,
-                           "DECLARE curs CURSOR FOR select content, m.mimetype from www.resource r join www.mimetype m on r.mimetype_id=m.id where r.path = $1",
+                           "DECLARE curs CURSOR FOR select content, m.mimetype from endpoint.resource r join endpoint.mimetype m on r.mimetype_id=m.id where r.path = $1",
                            1,
                            NULL,
                            query_params,
@@ -191,7 +191,7 @@ static int do_query (struct libwebsocket_context *context,
             res = PQexec(conn, "CLOSE curs");
             PQclear(res);
             res = PQexecParams(conn,
-                               "DECLARE curs BINARY CURSOR FOR select content, m.mimetype from www.resource_binary r join www.mimetype m on r.mimetype_id=m.id where r.path = $1",
+                               "DECLARE curs BINARY CURSOR FOR select content, m.mimetype from endpoint.resource_binary r join endpoint.mimetype m on r.mimetype_id=m.id where r.path = $1",
                                1,
                                NULL,
                                query_params,

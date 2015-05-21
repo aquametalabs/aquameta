@@ -583,6 +583,7 @@ from bundle.untracked_row r
 group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_id::meta.schema_id;
 
 
+/*
 ------------------------------------------------------------------------------
 -- 9. REMOTE PUSH/PULL
 -- Other copies of this bundle that we push to and/or pull from.
@@ -602,6 +603,8 @@ create table remote_http (
     endpoint_url text,
     push boolean not null default 'f'
 );
+*/
 
 
 commit;
+
