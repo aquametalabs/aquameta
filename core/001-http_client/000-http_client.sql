@@ -97,20 +97,21 @@ $$ language plpgsql;
 *******************************************************************************/
 
 
+create type http_client.http_response as (status_code integer, headers text, encoding text, response_text text);
+
+
 /*******************************************************************************
 * http_get
 *******************************************************************************/
-create or replace function http_client.http_get (url text) returns text
+create or replace function http_client.http_get (url text) returns http_client.http_response
 as $$
 
-import urllib2
+import requests
 import plpy
 
-plpy.notice('************ http_get('+url+')')
-req = urllib2.Request(url)
-response = urllib2.urlopen(req)
-raw_response = response.read()
-return raw_response
+plpy.info ('************ http_get('+url+')')
+r = requests.get(url)
+return [r.status_code, r.headers, r.encoding, r.text]
 
 $$ language plpythonu;
 
