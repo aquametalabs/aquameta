@@ -8,15 +8,36 @@ select * from no_plan();
 create schema endpoint_test;
 set search_path=endpoint_test,public;
 
--- \set test_url '\'http://demo.aquameta.org/\''
-insert into endpoint.remote_endpoint(id,url) values ('67f7d009-52d8-4a01-9b13-00188c904249', 'http://demo.aquameta.org/endpoint');
+-- test remote
+insert into endpoint.remote_endpoint(id,url, name) 
+values ('67f7d009-52d8-4a01-9b13-00188c904249', 'http://demo.aquameta.org/endpoint', 'Test Server');
+
 -------------------------------------------------------------------------------
--- TEST 1: GET status_code
+-- TEST 1: rows_select
 -------------------------------------------------------------------------------
-/*
 select is (r.status_code, 200, 'GET status_code')
-from endpoint.rows_select('http://demo.aquameta.org/endpoint') r;
-*/
+from endpoint.client_rows_select('67f7d009-52d8-4a01-9b13-00188c904249', meta.relation_id('widget','input')) r;
+
+
+-------------------------------------------------------------------------------
+-- TEST 2: row_select
+-------------------------------------------------------------------------------
+select is (r.status_code, 200, 'GET status_code')
+from endpoint.client_row_select('67f7d009-52d8-4a01-9b13-00188c904249', meta.row_id('bundle','bundle','id','0c2aa87b-0a66-48cb-ac9d-733d0a740bde')) r;
+
+
+-------------------------------------------------------------------------------
+-- TEST 3: field_select
+-------------------------------------------------------------------------------
+select is (r.status_code, 200, 'GET status_code')
+from endpoint.client_field_select('67f7d009-52d8-4a01-9b13-00188c904249', meta.field_id('bundle','bundle','id','0c2aa87b-0a66-48cb-ac9d-733d0a740bde', 'name')) r;
+
+
+-------------------------------------------------------------------------------
+-- TEST 4: row_select
+-------------------------------------------------------------------------------
+select is (r.status_code, 200, 'GET status_code')
+from endpoint.client_rows_select_function('67f7d009-52d8-4a01-9b13-00188c904249', meta.function_id('bundle','commit_log',ARRAY['bundle_name']), ARRAY['com.aquameta.bundle']) r;
 
 
 

@@ -24,15 +24,16 @@ set search_path=endpoint;
 * table remote_endpoint, a known endpoint out in the universe
 *******************************************************************************/
 create table remote_endpoint (
-    id uuid default public.uuid_generate_v4() primary key,
-    url text
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name text,
+    url text not null
 );
 
 
 /*******************************************************************************
-* rows_select
+* client_rows_select
 *******************************************************************************/
-create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args json, out response http_client.http_response)
+create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, out response http_client.http_response)
 as $$
 
 select http_client.http_get (
@@ -47,7 +48,7 @@ $$ language sql;
 
 
 /*******************************************************************************
-* row_select
+* client_row_select
 *******************************************************************************/
 create or replace function endpoint.client_row_select(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
@@ -65,10 +66,9 @@ $$ language sql;
 
 
 /*******************************************************************************
-* field_select
+* client_field_select
 *******************************************************************************/
-/*
-create or replace function endpoint.client_field_select(remote_endpoint_id uuid, field_id meta.field_id) returns text
+create or replace function endpoint.client_field_select(remote_endpoint_id uuid, field_id meta.field_id, out response http_client.http_response)
 as $$
 
 select http_client.http_get (
@@ -82,14 +82,12 @@ select http_client.http_get (
 );
 
 $$ language sql;
-*/
 
 
 /*******************************************************************************
 * row_delete
 *******************************************************************************/
-/*
-create or replace function endpoint.client_row_delete(remote_endpoint_id uuid, row_id meta.row_id) returns text
+create or replace function endpoint.client_row_delete(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
 
 select http_client.http_delete (
@@ -102,7 +100,6 @@ select http_client.http_delete (
 );
 
 $$ language sql;
-*/
 
 
 
@@ -112,9 +109,6 @@ $$ language sql;
 *******************************************************************************/
 create or replace function endpoint.client_rows_select_function(remote_endpoint_id uuid, function_id meta.function_id, arg_vals text[], out http_client.http_response)
 as $$
-declare
-    qs text;
-begin
 
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
@@ -122,39 +116,32 @@ select http_client.http_get (
         || '/function'
         || '/' || (function_id).name
         || '/rows'
-        || '?' || endpoint.array_to_querystring((function_id).parameters, arg_vals)
+        || '?' || http_client.array_to_querystring((function_id).parameters, arg_vals)
 );
 
-end;
-$$ language plpgsql;
+$$ language sql;
 
 
 
 /*******************************************************************************
 * rows_insert
 *******************************************************************************/
-/*
 create or replace function endpoint.client_rows_insert(remote_endpoint_id uuid, args json, out response http_client.http_response)
 as $$
 begin
 
-    -- TOOD: fixme
 select http_client.http_post (
     (select url || '/insert' from endpoint.remote_endpoint where id=remote_endpoint_id),
-    args::text -- fixme?  does a post expect x=7&y=p&z=3 ?
+    args::text
 );
 end;
 $$ language plpgsql;
-*/
 
 
---
+-- TODO
 --
 -- row_insert(remote_id uuid, relation_id meta.relation_id, row_object json)
 -- row_update(remote_id uuid, row_id meta.row_id, args json)
---
--- rows_select(remote_id uuid, relation_id meta.relation_id, args json)
---
 --
 --
 

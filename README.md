@@ -31,5 +31,5 @@ postgres=# \q
 postgres@34f81a644855:~$
 ```
 3. Run `./build.sh` as the user who has superuser access
-4. Build and install the webserver.  See core/004-www/servers/background_worker/README.
+4. Build and install the webserver.  See core/004-aquameta_endpoint/servers/background_worker/README.
 5. http://localhost:8080/
