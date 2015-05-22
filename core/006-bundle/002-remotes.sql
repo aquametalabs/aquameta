@@ -29,45 +29,32 @@ returns table(local_commit_id uuid, remote_commit_id uuid)
 as $$
 declare
     local_bundle_id uuid;
+    remote_endpoint_id uuid;
 begin
     select into local_bundle_id bundle_id from bundle.remote r where r.id = remote_id;
+    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id;
+
+    raise notice 'compare: % % %', remote_id, local_bundle_id, remote_endpoint_id;
 
     return query
-    with remote_commit as (
-        select 
-        
-        
-        from endpoint.client_rows_select(
-            e.id,
-            meta.relation_id('bundle','commit'),
-            ARRAY['bundle_id'],
-            ARRAY[bundle_id]
-            -- ('{"bundle_id": "' || bundle_id || '"}')::json
-        ) c
-        join bundle.remote r on 
-        join endpoint.remote_endpoint e on r.endpoint_id=e.id
-        where r.id = remote_id
-    )
-
-    select (json_array_elements(
-                (result::json)->'result'->'row'->>'id')::uuid as id
-                http_client.http_get(
-                    e.url
-                    -- 'http://demo.aquameta.org/endpoint'
-                        || '/bundle/table/commit/rows?bundle_id='
-                        || r.bundle_id
-                )
-            from bundle.remote r
-            join endpoint.remote_endpoint e on r.endpoint_id=e.id
-            where r.id = remote_id
+        with remote_commit as (
+            select 
+                (json_array_elements((rc.response_text::json)->'result')->'row'->>'id')::uuid as id
+            from 
+                endpoint.client_rows_select(
+                    remote_endpoint_id,
+                    meta.relation_id('bundle','commit'),
+                    ARRAY['bundle_id'],
+                    ARRAY[local_bundle_id::text]
+            ) rc
         )
-        select c.id as local_commit_id, rc.id as remote_id
-        from bundle.commit c
-            full outer join remote_commit rc on rc.id=c.id
-            where c.bundle_id = local_bundle_id or c.bundle_id is null;
-
+        select lc.id, rc.id
+        from remote_commit rc
+        full outer join bundle.commit lc on lc.id = rc.id
+        where lc.bundle_id = local_bundle_id or lc.bundle_id is null;
 end;
 $$ language plpgsql;
+
 
 
 
@@ -104,7 +91,7 @@ $$ language plpgsql;
 *******************************************************************************/
 
 create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text)
-returns setof join_graph_row as $$
+returns setof endpoint.join_graph_row as $$
 declare
     new_commits_str text;
 begin
@@ -146,7 +133,7 @@ declare
     bundle_id uuid;
     result json;
     result2 json;
-    r join_graph_row;
+    r endpoint.join_graph_row;
 begin
     raise notice '################################### PUSH ##########################';
     select into bundle_id be.bundle_id from bundle.remote be where be.id = remote_id;

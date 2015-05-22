@@ -150,24 +150,45 @@ language sql;
 
 
 
-/******************************************************************************
+/*******************************************************************************
  *
  *
  * JOIN GRAPH
  * 
  * A multidimensional structure made up of rows from various tables connected
- * by their foreign keys, for non-tabular query results made up of rows.
+ * by their foreign keys, for non-tabular query results made up of rows, but
+ * serialized into a table of type join_graph_row.
  *
  *
- ******************************************************************************/
+ *
+ *******************************************************************************/
 
-create type join_graph_row as (label text, row_id text, row jsonb, position integer, exclude boolean);
+
 
 /*******************************************************************************
-* endpoint.construct_join_graph
-* constructs a join graph table containing any rows matching the specified 
-* JOIN pattern
-*******************************************************************************/
+ * TYPE join_graph_row
+ * 
+ * label - the table being joined on's label/alias -- customers c
+ * row_id - the meta.row_id for this row
+ * row - the jsonb serialized row, whatever row_to_json outputs
+ * position - the order in which the rows are inserted, if applicable 
+ * exclude - when true, these rows are excluded from the join graph
+ *******************************************************************************/
+create type join_graph_row as (
+    label text,
+    row_id meta.row_id,
+    row jsonb,
+    position integer,
+    exclude boolean
+);
+
+
+/*******************************************************************************
+ * FUNCTION endpoint.construct_join_graph
+ *
+ * constructs a join graph table containing any rows matching the specified 
+ * JOIN pattern
+ *******************************************************************************/
 
 /*
 sample usage:
@@ -283,6 +304,20 @@ $$ language plpgsql;
 
 
 
+/*******************************************************************************
+* FUNCTION endpoint_rows_to_join_graph (rows json)
+*
+* translates an endpoint response to a join graph
+*******************************************************************************/
+/*
+create or replace function endpoint_rows_to_join_graph (rows json) returns setof join_graph_row as $$
+    select
+    
+
+
+
+$$ language sql;
+*/
 
 
 

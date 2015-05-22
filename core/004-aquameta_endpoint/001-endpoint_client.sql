@@ -49,6 +49,35 @@ $$ language sql;
 
 
 /*******************************************************************************
+* rows_response_to_joingraph
+create type join_graph_row as (
+    label text,
+    row_id meta.row_id,
+    row jsonb,
+    position integer,
+    exclude boolean
+);
+create or replace function endpoint.rows_response_to_joingraph (response jsonb) returns setof endpoint.join_graph_row
+as $$
+
+select 
+    'x'::text, 
+    meta.row_id('a','b','c',r->'row'->>'id'), 
+    (r->'row')::jsonb,
+    0,
+    false
+from json_array_elements((response::json)->'result') r;
+
+
+$$ language sql;
+*******************************************************************************/
+
+
+
+
+
+
+/*******************************************************************************
 * client_row_select
 *******************************************************************************/
 create or replace function endpoint.client_row_select(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
@@ -117,7 +146,7 @@ select http_client.http_get (
         || '/function'
         || '/' || (function_id).name
         || '/rows'
-        || '?' || http_client.array_to_querystring((function_id).parameters, arg_vals)
+        || coalesce('?' || http_client.array_to_querystring((function_id).parameters, arg_vals),'')
 );
 
 $$ language sql;
