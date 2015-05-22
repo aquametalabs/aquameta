@@ -33,7 +33,7 @@ create table remote_endpoint (
 /*******************************************************************************
 * client_rows_select
 *******************************************************************************/
-create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, out response http_client.http_response)
+create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args text[], arg_vals text[], out response http_client.http_response)
 as $$
 
 select http_client.http_get (
@@ -42,6 +42,7 @@ select http_client.http_get (
         || '/relation'
         || '/' || http_client.urlencode(relation_id.name)
         || '/rows'
+        || coalesce('?' || http_client.array_to_querystring(args, arg_vals), '')
 );
 
 $$ language sql;

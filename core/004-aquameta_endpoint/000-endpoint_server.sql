@@ -17,6 +17,14 @@ create schema endpoint;
 
 set search_path = endpoint;
 
+/******************************************************************************
+ *
+ *
+ * DATA MODEL
+ *
+ *
+ ******************************************************************************/
+
 create table mimetype (
     id uuid default public.uuid_generate_v4() primary key,
     mimetype text not null
@@ -53,6 +61,14 @@ create table "resource" (
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
     content text not null
 );
+
+/******************************************************************************
+ *
+ *
+ * UTIL FUNCTIONS
+ *
+ *
+ ******************************************************************************/
 
 create function set_mimetype(
     _schema name,
@@ -131,6 +147,141 @@ create function pk_name(
           c.primary_key
 $$
 language sql;
+
+
+
+/******************************************************************************
+ *
+ *
+ * JOIN GRAPH
+ * 
+ * A multidimensional structure made up of rows from various tables connected
+ * by their foreign keys, for non-tabular query results made up of rows.
+ *
+ *
+ ******************************************************************************/
+
+create type join_graph_row as (label text, row_id text, row jsonb, position integer, exclude boolean);
+
+/*******************************************************************************
+* endpoint.construct_join_graph
+* constructs a join graph table containing any rows matching the specified 
+* JOIN pattern
+*******************************************************************************/
+
+/*
+sample usage:
+select endpoint.construct_join_graph('foo',
+    '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''e2edb6c9-cb76-4b57-9898-2e08debe99ee''" }',
+    '[
+        {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
+     ]');
+*/
+
+create or replace function endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof join_graph_row
+as $$
+declare
+    tmp text;
+
+    schema_name text;
+    relation_name text;
+    label text;
+    local_id text;
+
+    related_label text;
+    related_field text;
+
+    where_clause text;
+
+    position integer;
+    exclude boolean;
+
+    rowset json;
+    q text;
+    ct integer;
+begin
+    raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
+    -- create temp table
+    tmp := quote_ident(temp_table_name);
+    execute 'create temp table if not exists '
+        || tmp
+ --       || '(label text, row_id text, position integer, exclude boolean, row jsonb)';
+        || ' of join_graph_row';
+
+    -- load up the starting relation
+    schema_name := quote_ident(start_rowset->>'schema_name');
+    relation_name := quote_ident(start_rowset->>'relation_name');
+    label := quote_ident(start_rowset->>'label');
+    local_id:= quote_ident(start_rowset->>'local_id');
+    exclude:= coalesce(start_rowset->>'exclude', 'false');
+
+    position := coalesce(start_rowset->>'position', '0');
+
+    where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
+
+    -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, local_id: %, where_clause: %',
+    --    label, schema_name, relation_name, local_id, where_clause;
+
+    q := 'insert into ' || tmp || ' (label, row_id, position, exclude, row)  '
+        || ' select ''' || label || ''','
+        || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text)::text, '
+        || '     ' || position || ', '
+        || '     ' || exclude || ','
+        || '     row_to_json(' || label || ')::jsonb'
+        || ' from ' || schema_name || '.' || relation_name || ' ' || label
+        || ' ' || where_clause;
+
+        -- raise notice 'QUERY PHASE 1: %', q;
+    execute q;
+
+
+    -- load up sub-relations
+    for i in 0..(json_array_length(subrowsets) - 1) loop
+        rowset := subrowsets->i;
+
+        schema_name := quote_ident(rowset->>'schema_name');
+        relation_name := quote_ident(rowset->>'relation_name');
+        label := quote_ident(rowset->>'label');
+        local_id:= quote_ident(rowset->>'local_id');
+
+        related_label := quote_ident(rowset->>'related_label');
+        related_field := quote_ident(rowset->>'related_field');
+
+        where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
+        exclude:= coalesce(rowset->>'exclude', 'false');
+
+        position := coalesce(rowset->>'position', '0');
+
+        -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, local_id: %, related_label: %, related_field: %, where_clause: %',
+        --    label, schema_name, relation_name, local_id, related_label, related_field, where_clause;
+
+
+        q := 'insert into ' || tmp || ' ( label, row_id, position, exclude, row) '
+            || ' select ''' || label || ''','
+            || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
+            || '     ' || position || ', '
+            || '     ' || exclude || ', '
+            || '     row_to_json(' || label || ')::jsonb'
+            || ' from ' || schema_name || '.' || relation_name || ' ' || label
+            || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
+            || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || local_id || '::text'
+            || ' ' || where_clause;
+        -- raise notice 'QUERY PHASE 2: %', q;
+        execute q;
+
+    end loop;
+
+    execute 'delete from ' || tmp || ' where exclude = true';
+
+    execute 'select * from ' || tmp || ' order by position';
+end;
+$$ language plpgsql;
+
+
 
 
 
