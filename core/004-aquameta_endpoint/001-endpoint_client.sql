@@ -21,8 +21,9 @@ set search_path=endpoint;
 *******************************************************************************/
 
 /*******************************************************************************
-* table remote_endpoint, a known endpoint out in the universe
+* TABLE remote_endpoint, a known endpoint out in the universe
 *******************************************************************************/
+
 create table remote_endpoint (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text,
@@ -30,10 +31,12 @@ create table remote_endpoint (
 );
 
 
+
+
 /*******************************************************************************
-* client_rows_select
+* FUNCTION client_rows_select
 *******************************************************************************/
-create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args text[], arg_vals text[], out response http_client.http_response)
+create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args text[] default '{}', arg_vals text[] default '{}', out response http_client.http_response)
 as $$
 
 select http_client.http_get (
@@ -48,37 +51,9 @@ select http_client.http_get (
 $$ language sql;
 
 
-/*******************************************************************************
-* rows_response_to_joingraph
-create type join_graph_row as (
-    label text,
-    row_id meta.row_id,
-    row jsonb,
-    position integer,
-    exclude boolean
-);
-create or replace function endpoint.rows_response_to_joingraph (response jsonb) returns setof endpoint.join_graph_row
-as $$
-
-select 
-    'x'::text, 
-    meta.row_id('a','b','c',r->'row'->>'id'), 
-    (r->'row')::jsonb,
-    0,
-    false
-from json_array_elements((response::json)->'result') r;
-
-
-$$ language sql;
-*******************************************************************************/
-
-
-
-
-
 
 /*******************************************************************************
-* client_row_select
+* FUNCTION client_row_select
 *******************************************************************************/
 create or replace function endpoint.client_row_select(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
@@ -96,7 +71,7 @@ $$ language sql;
 
 
 /*******************************************************************************
-* client_field_select
+* FUNCTION client_field_select
 *******************************************************************************/
 create or replace function endpoint.client_field_select(remote_endpoint_id uuid, field_id meta.field_id, out response http_client.http_response)
 as $$
@@ -115,7 +90,7 @@ $$ language sql;
 
 
 /*******************************************************************************
-* row_delete
+* FUNCTION client_row_delete
 *******************************************************************************/
 create or replace function endpoint.client_row_delete(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
@@ -135,9 +110,9 @@ $$ language sql;
 
 
 /*******************************************************************************
-* rows_select_function
+* FUNCTION client_rows_select_function
 *******************************************************************************/
-create or replace function endpoint.client_rows_select_function(remote_endpoint_id uuid, function_id meta.function_id, arg_vals text[], out http_client.http_response)
+create or replace function endpoint.client_rows_select_function(remote_endpoint_id uuid, function_id meta.function_id, arg_vals text[] default '{}', out http_client.http_response)
 as $$
 
 select http_client.http_get (
@@ -154,7 +129,7 @@ $$ language sql;
 
 
 /*******************************************************************************
-* rows_insert
+* FUNCTION client_rows_insert
 *******************************************************************************/
 create or replace function endpoint.client_rows_insert(remote_endpoint_id uuid, args json, out response http_client.http_response)
 as $$
@@ -169,10 +144,48 @@ $$ language plpgsql;
 
 
 -- TODO
---
--- row_insert(remote_id uuid, relation_id meta.relation_id, row_object json)
--- row_update(remote_id uuid, row_id meta.row_id, args json)
---
---
+
+/*******************************************************************************
+* FUNCTION client_row_insert
+*******************************************************************************/
+
+/*******************************************************************************
+* FUNCTION client_row_update
+*******************************************************************************/
+
+
+
+
+
+/*******************************************************************************
+* FUNCTION rows_response_to_joingraph
+*
+* This guy converts a endpoint's JSON response (as returned by say 
+* endpoint.client_rows_select()) into our new join-graph format.  Long-term
+* endpoint.rows_select should start producing join-graph formatted results that
+* contain row_ids and a general overhaul.  This is the shim til we get there.
+*******************************************************************************/
+
+create or replace function endpoint.endpoint_response_to_joingraph (response jsonb) returns setof endpoint.join_graph_row
+as $$
+
+    select 
+        ('n/a'::text,
+        meta.row_id(
+            split_part(r->>'selector', '/', 1),
+            split_part(r->>'selector', '/', 3),
+            'id', -- FIXME: We don't know the pk from the response.  I suppose we could figure it out by looking at the name of the field with the same value as the selector pk value.....ha.  Refactor endpoint!
+            split_part(r->>'selector', '/', 5)
+        ), 
+        (r->'row')::jsonb,
+        0,
+        false)::endpoint.join_graph_row
+    from json_array_elements((response::json)->'result') r;
+
+$$ language sql;
+
+
+
+
 
 commit;

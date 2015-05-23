@@ -66,9 +66,14 @@ $urlencode$ LANGUAGE plpgsql;
 * array_to_querystring(args, vals)
 * converts an array of args and an array of values to a query_string suitbale for a URL
 *******************************************************************************/
-create or replace function http_client.array_to_querystring(args text[], vals text[], out querystring text) as $$
+create or replace function http_client.array_to_querystring(args text[] default '{}', vals text[] default '{}', out querystring text) as $$
 begin
     querystring := '';
+
+    -- array_length called on an empty array returns null
+    if args is null or array_length(args,1) is null or vals is null or array_length(vals,1) is null
+        then return;
+    end if;
 
     raise notice 'qs: %', querystring;
     for i in 1..array_length(args,1) loop

@@ -1,5 +1,5 @@
 /******************************************************************************
- * WWW
+ * ENDPOINT SERVER
  * HTTP request handler for a datum REST interface
  *
  * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
@@ -61,6 +61,9 @@ create table "resource" (
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
     content text not null
 );
+
+
+
 
 /******************************************************************************
  *
@@ -304,21 +307,16 @@ $$ language plpgsql;
 
 
 
-/*******************************************************************************
-* FUNCTION endpoint_rows_to_join_graph (rows json)
-*
-* translates an endpoint response to a join graph
-*******************************************************************************/
-/*
-create or replace function endpoint_rows_to_join_graph (rows json) returns setof join_graph_row as $$
-    select
-    
 
 
 
-$$ language sql;
-*/
-
+/******************************************************************************
+ *
+ *
+ * REQUEST HANDLERS
+ *
+ * functions called by endpoint.request, returning JSON/REST responses
+ ******************************************************************************/
 
 
 /****************************************************************************************************
@@ -911,9 +909,15 @@ create or replace function endpoint.request(
 $$ language plpgsql;
 
 
-/*
-these are very old and not thought out:
-*/
+/******************************************************************************
+ *
+ *
+ * AUTH?
+ *
+ * these are very old and not thought out.
+ ******************************************************************************/
+
+
 -- create schema auth;
 create function endpoint.login(encrypted_password character varying) RETURNS uuid
     LANGUAGE plpgsql STRICT SECURITY DEFINER

@@ -69,16 +69,22 @@ create or replace function bundle.remote_has_bundle(in remote_id uuid, out has_b
 as $$
 declare
     local_bundle_id uuid;
+    remote_endpoint_id uuid;
 begin
+    -- look up endpoint_id
+    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id;
+
+    -- 
     select into has_bundle count(*) > 0 from (
-        select (json_array_elements(
-            http_client.http_get(
-                r.endpoint_url
-                    || '/bundle/table/bundle/rows/'
-                    || r.bundle_id
-            )::json->'result')->'row'->>'id')::uuid as id
-        from bundle.remote r
-        where r.id = remote_id
+        select 
+            (json_array_elements((rc.response_text::json)->'result')->'row'->>'id') as id
+            from endpoint.client_rows_select(
+                    remote_endpoint_id,
+                    meta.relation_id('bundle','commit'),
+                    ARRAY['bundle_id'],
+                    ARRAY[local_bundle_id::text]
+            ) rc
+            where rc.id is not null
     ) has;
 end;
 $$ language plpgsql;
