@@ -1,3 +1,5 @@
+begin;
+
 set search_path=meta;
 
 drop table meta_meta_relation cascade;
@@ -275,3 +277,6 @@ select
     left join meta.function r13 on relation_update_trigger_function_id = r13.id
     left join meta.trigger r14 on relation_update_trigger_id = r14.id
 ;
+
+
+rollback;

@@ -18,23 +18,55 @@ set search_path=bundle;
 *
 *******************************************************************************/
 
+/*******************************************************************************
+* bundle.has_bundle
+* checks a remote to see if it also has a bundle with the same id installed
+*******************************************************************************/
+
+create or replace function bundle.remote_has_bundle(in _remote_id uuid, out has_bundle boolean)
+as $$
+declare
+    local_bundle_id uuid;
+    remote_endpoint_id uuid;
+begin
+    -- look up endpoint_id
+    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
+    select into local_bundle_id r.bundle_id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
+
+    -- 
+    select into has_bundle (count(*) = 1)::boolean from (
+        select 
+            (json_array_elements((rc.response_text::json)->'result')->'row'->>'id') as id
+            from endpoint.client_rows_select(
+                    remote_endpoint_id,
+                    meta.relation_id('bundle','bundle'),
+                    ARRAY['id'],
+                    ARRAY[local_bundle_id::text]
+            ) rc
+    ) has;
+end;
+$$ language plpgsql;
+
+
+
+
 
 /*******************************************************************************
 * bundle.remote_compare_commits
 * diffs the set of local commits with the set of remote commits
 *******************************************************************************/
 
-create or replace function bundle.remote_compare_commits(in remote_id uuid)
+create or replace function bundle.remote_compare_commits(in _remote_id uuid)
 returns table(local_commit_id uuid, remote_commit_id uuid)
 as $$
 declare
     local_bundle_id uuid;
     remote_endpoint_id uuid;
 begin
-    select into local_bundle_id bundle_id from bundle.remote r where r.id = remote_id;
-    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id;
+    select into local_bundle_id bundle_id from bundle.remote r where r.id = _remote_id;
+    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
 
-    raise notice 'compare: % % %', remote_id, local_bundle_id, remote_endpoint_id;
+    raise notice 'compare: % % %', _remote_id, local_bundle_id, remote_endpoint_id;
 
     return query
         with remote_commit as (
@@ -58,36 +90,6 @@ $$ language plpgsql;
 
 
 
-
-
-/*******************************************************************************
-* bundle.has_bundle
-* checks a remote to see if it also has a bundle with the same id installed
-*******************************************************************************/
-
-create or replace function bundle.remote_has_bundle(in remote_id uuid, out has_bundle boolean)
-as $$
-declare
-    local_bundle_id uuid;
-    remote_endpoint_id uuid;
-begin
-    -- look up endpoint_id
-    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id;
-
-    -- 
-    select into has_bundle count(*) > 0 from (
-        select 
-            (json_array_elements((rc.response_text::json)->'result')->'row'->>'id') as id
-            from endpoint.client_rows_select(
-                    remote_endpoint_id,
-                    meta.relation_id('bundle','commit'),
-                    ARRAY['bundle_id'],
-                    ARRAY[local_bundle_id::text]
-            ) rc
-            where rc.id is not null
-    ) has;
-end;
-$$ language plpgsql;
 
 
 

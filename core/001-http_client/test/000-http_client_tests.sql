@@ -50,3 +50,9 @@ from http_client.http_patch('http://httpbin.org/patch', '{"hi": "mom"}'::json) r
 -------------------------------------------------------------------------------
 select is (r.status_code, 200, 'DELETE status_code')
 from http_client.http_delete('http://httpbin.org/delete') r;
+
+
+
+
+
+rollback;

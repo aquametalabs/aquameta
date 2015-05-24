@@ -206,7 +206,7 @@ select endpoint.construct_join_graph('foo',
      ]');
 */
 
-create or replace function endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof join_graph_row
+create or replace function endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof endpoint.join_graph_row
 as $$
 declare
     tmp text;
@@ -234,7 +234,7 @@ begin
     execute 'create temp table if not exists '
         || tmp
  --       || '(label text, row_id text, position integer, exclude boolean, row jsonb)';
-        || ' of join_graph_row';
+|| ' of endpoint.join_graph_row';
 
     -- load up the starting relation
     schema_name := quote_ident(start_rowset->>'schema_name');
