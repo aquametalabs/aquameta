@@ -75,7 +75,7 @@ begin
         then return;
     end if;
 
-    raise notice 'qs: %', querystring;
+    -- raise notice 'qs: %', querystring;
     for i in 1..array_length(args,1) loop
         querystring := querystring
             || http_client.urlencode(args[i])
@@ -84,7 +84,7 @@ begin
             || http_client.urlencode(vals[i])
             -- || vals[i]
             || '&';
-        raise notice 'qs: %', querystring;
+        -- raise notice 'qs: %', querystring;
     end loop;
 
 end;

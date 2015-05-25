@@ -33,6 +33,12 @@ begin
     select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
     select into local_bundle_id r.bundle_id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
 
+    raise notice 'remote has bundle: % % %', _remote_id, remote_endpoint_id, local_bundle_id;
+    if _remote_id is null or remote_endpoint_id is null or local_bundle_id is null then 
+        has_bundle := false; 
+        return; 
+    end if;
+
     -- 
     select into has_bundle (count(*) = 1)::boolean from (
         select 
@@ -119,7 +125,7 @@ begin
              ]')::json
         );
 
-    return query execute format ('select row_id, row::jsonb from %I order by position', quote_ident(temp_table_name));
+    return query execute format ('select label, row_id, row::jsonb, position, exclude from %I order by position', quote_ident(temp_table_name));
 
 end;
 $$ language plpgsql;
@@ -130,9 +136,13 @@ $$ language plpgsql;
 /*******************************************************************************
 * bundle.push
 * transfer to a remote repository any local commits not present in the remote
+*
+* 1. run compare_commits() to create new_commits array, commits that shall be pushed
+* 2. construct_bundle_diff() to create a join_graph_row table containing new commit rows
+* 3. 
 *******************************************************************************/
 
-create or replace function bundle.remote_push(in remote_id uuid)
+create or replace function bundle.remote_push(in remote_id uuid, in create_bundle boolean default false)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
@@ -144,21 +154,16 @@ declare
     r endpoint.join_graph_row;
 begin
     raise notice '################################### PUSH ##########################';
-    select into bundle_id be.bundle_id from bundle.remote be where be.id = remote_id;
+    select into bundle_id r.bundle_id from bundle.remote r where r.id = remote_id;
 
-    -- get the array of new remote commits
+    -- 1. get the array of new remote commits
     select into new_commits array_agg(local_commit_id)
         from bundle.remote_compare_commits(remote_id)
         where remote_commit_id is null;
-
     raise notice 'NEW COMMITS: %', new_commits::text;
 
+    -- 2. construct bundle diff
     perform bundle.construct_bundle_diff(bundle_id, new_commits, 'bundle_push_1234');
-
-
-    -- build json object
-    select into result2 array_to_json(array_agg(('{ "row": ' || row_to_json(tmp)::text || ', "selector": "hi mom"}')::json)) from bundle_push_1234 tmp;
-    result := ('{"columns":[{"name":"row_id","type":"row_id"},{"name":"row","type":"json"}], "result": ' || result2 || '}')::json;
 
     raise notice 'PUUUUUUUUUSH result: %', result::text;
 

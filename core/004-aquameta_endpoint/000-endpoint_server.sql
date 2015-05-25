@@ -233,7 +233,6 @@ begin
     tmp := quote_ident(temp_table_name);
     execute 'create temp table if not exists '
         || tmp
- --       || '(label text, row_id text, position integer, exclude boolean, row jsonb)';
 || ' of endpoint.join_graph_row';
 
     -- load up the starting relation
@@ -250,12 +249,12 @@ begin
     -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, local_id: %, where_clause: %',
     --    label, schema_name, relation_name, local_id, where_clause;
 
-    q := 'insert into ' || tmp || ' (label, row_id, position, exclude, row)  '
+    q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
         || ' select ''' || label || ''','
-        || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text)::text, '
+        || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
+        || '     row_to_json(' || label || ')::jsonb, '
         || '     ' || position || ', '
-        || '     ' || exclude || ','
-        || '     row_to_json(' || label || ')::jsonb'
+        || '     ' || exclude
         || ' from ' || schema_name || '.' || relation_name || ' ' || label
         || ' ' || where_clause;
 
@@ -284,12 +283,12 @@ begin
         --    label, schema_name, relation_name, local_id, related_label, related_field, where_clause;
 
 
-        q := 'insert into ' || tmp || ' ( label, row_id, position, exclude, row) '
+        q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
             || ' select ''' || label || ''','
             || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
+            || '     row_to_json(' || label || ')::jsonb, '
             || '     ' || position || ', '
-            || '     ' || exclude || ', '
-            || '     row_to_json(' || label || ')::jsonb'
+            || '     ' || exclude
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
             || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
             || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || local_id || '::text'

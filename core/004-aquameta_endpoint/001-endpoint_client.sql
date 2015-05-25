@@ -158,7 +158,7 @@ $$ language plpgsql;
 
 
 /*******************************************************************************
-* FUNCTION rows_response_to_joingraph
+* FUNCTION endpoint_response_to_joingraph
 *
 * This guy converts a endpoint's JSON response (as returned by say 
 * endpoint.client_rows_select()) into our new join-graph format.  Long-term
@@ -185,7 +185,22 @@ as $$
 $$ language sql;
 
 
+/*******************************************************************************
+* FUNCTION join_graph_to_rows_insert
+*
+* converts a join_graph_row table to the json object that rows_insert expects,
+* basically an array of row_to_json on each row in the join_graph.
+*******************************************************************************/
 
+/*
+create or replace function endpoint.join_graph_to_rows_insert (join_graph_table text) returns rows_insert_json jsonb
+as $$
+     -- build json object
+    select into result2 array_to_json(array_agg(('{ "row": ' || row_to_json(tmp)::text || ', "selector": "hi mom"}')::json)) from bundle_push_1234 tmp;
+    result := ('{"columns":[{"name":"row_id","type":"row_id"},{"name":"row","type":"json"}], "result": ' || result2 || '}')::json;
+
+$$ language plpgsql;
+*/
 
 
 commit;

@@ -60,8 +60,7 @@ select endpoint.construct_join_graph('test_join_graph',
         {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
      ]');
 
-select isnt (count(*), 0, 'join graph has rows')
-from test_join_graph;
+select isnt (count(*)::integer, 0, 'join graph has rows') from test_join_graph;
 
 
 
