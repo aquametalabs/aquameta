@@ -49,8 +49,10 @@ select bundle.commit('com.aquameta.bundle.tests','here come the first four chakr
 -------------------------------------------------------------------------------
 -- TEST 1: remote_has_bundle false
 -------------------------------------------------------------------------------
-select is (r, false, 'ide bundle exists')
+/*
+select is (r, false, 'test bundle does not exist on remote server')
 from bundle.remote_has_bundle(:remote_id) r;
+*/
 
 
 -------------------------------------------------------------------------------
@@ -89,7 +91,10 @@ select is (count(*)::integer, 0, 'bundle diff has rows')
 from test_bundle_diff;
 
 
-
-
+-------------------------------------------------------------------------------
+-- TEST 6: remote_has_bundle false
+-------------------------------------------------------------------------------
+select is (r, true, 'after push, test bundle now exists')
+from bundle.remote_has_bundle(:remote_id) r;
 
 rollback;

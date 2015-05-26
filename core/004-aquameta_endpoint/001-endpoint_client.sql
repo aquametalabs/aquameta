@@ -131,16 +131,14 @@ $$ language sql;
 /*******************************************************************************
 * FUNCTION client_rows_insert
 *******************************************************************************/
-create or replace function endpoint.client_rows_insert(remote_endpoint_id uuid, args json, out response http_client.http_response)
+create or replace function endpoint.client_rows_insert(remote_endpoint_id uuid, args jsonb, out response http_client.http_response)
 as $$
-begin
 
 select http_client.http_post (
     (select url || '/insert' from endpoint.remote_endpoint where id=remote_endpoint_id),
     args::text
 );
-end;
-$$ language plpgsql;
+$$ language sql;
 
 
 -- TODO
@@ -153,6 +151,37 @@ $$ language plpgsql;
 * FUNCTION client_row_update
 *******************************************************************************/
 
+
+
+/*******************************************************************************
+ *
+ *
+ * JOIN GRAPH CLIENT
+ * 
+ * A multidimensional structure made up of rows from various tables connected
+ * by their foreign keys, for non-tabular query results made up of rows, but
+ * serialized into a table of type join_graph_row.
+ *
+ *
+ *
+ *******************************************************************************/
+
+
+/*******************************************************************************
+* FUNCTION join_graph_to_json
+*
+* converts a join_graph_row table to the json object that rows_insert expects,
+* basically an array of row_to_json on each row in the join_graph.
+*******************************************************************************/
+
+create or replace function endpoint.join_graph_to_json(join_graph_table text, out join_graph_json jsonb)
+as $$
+begin
+     -- build json object
+    execute 'select json_agg(row_to_json(jgt))::jsonb from ' || quote_ident(join_graph_table) || ' jgt' 
+    into join_graph_json;
+end;
+$$ language plpgsql;
 
 
 
@@ -185,22 +214,10 @@ as $$
 $$ language sql;
 
 
-/*******************************************************************************
-* FUNCTION join_graph_to_rows_insert
-*
-* converts a join_graph_row table to the json object that rows_insert expects,
-* basically an array of row_to_json on each row in the join_graph.
-*******************************************************************************/
-
 /*
-create or replace function endpoint.join_graph_to_rows_insert (join_graph_table text) returns rows_insert_json jsonb
-as $$
-     -- build json object
-    select into result2 array_to_json(array_agg(('{ "row": ' || row_to_json(tmp)::text || ', "selector": "hi mom"}')::json)) from bundle_push_1234 tmp;
-    result := ('{"columns":[{"name":"row_id","type":"row_id"},{"name":"row","type":"json"}], "result": ' || result2 || '}')::json;
 
-$$ language plpgsql;
+    execute 'select into join_graph_table array_to_json(array_agg((''{ "row": '' || row_to_json(tmp)::text || '', "selector": "hi mom"}'')::json)) from bundle_push_1234 tmp;
+    -- result := ('{"columns":[{"name":"row_id","type":"row_id"},{"name":"row","type":"json"}], "result": ' || result2 || '}')::json;
 */
-
 
 commit;

@@ -334,7 +334,7 @@ create or replace function endpoint.rows_insert(
         raise notice 'da json: %', args;
         -- alter table bundle.commit disable trigger all;
         for i in 0..json_array_length(args) - 1 loop
-            row_id := (args->i->'row'->>'row_id')::meta.row_id;
+            row_id := (args->i->'row_id')::meta.row_id;
             raise notice '########################### inserting row %: %', i, row_id;
             raise notice '% =  %', row_id, args->i;
             -- args

@@ -139,7 +139,9 @@ $$ language plpgsql;
 *
 * 1. run compare_commits() to create new_commits array, commits that shall be pushed
 * 2. construct_bundle_diff() to create a join_graph_row table containing new commit rows
-* 3. 
+* 3. serialize this table to json via join_graph_to_json()
+* 4. ship the json via client_rows_insert to the remote's rows_insert method
+* 5. the remote deserializes and inserts the rows
 *******************************************************************************/
 
 create or replace function bundle.remote_push(in remote_id uuid, in create_bundle boolean default false)
