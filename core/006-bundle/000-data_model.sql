@@ -154,7 +154,7 @@ create table commit (
     message text
 );
 -- circular
-alter table bundle add head_commit_id uuid references commit(id) on delete cascade;
+alter table bundle add head_commit_id uuid references commit(id) on delete set null;
 
 
 ------------------------------------------------------------------------------

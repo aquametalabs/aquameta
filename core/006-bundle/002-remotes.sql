@@ -186,17 +186,18 @@ $$ language plpgsql;
 * download from remote repository any commits not present in the local repository
 *******************************************************************************/
 
-create or replace function bundle.remote_fetch(in remote_id uuid)
+create or replace function bundle.remote_fetch(in remote_id uuid, create_bundle boolean default false)
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
-    ct integer;
     bundle_id uuid;
+    endpoint_id uuid;
     new_commits uuid[];
-    json_results text;
+    json_results jsonb;
 begin
     raise notice '################################### FETCH ##########################';
-    select into bundle_id be.bundle_id from bundle.remote be where be.id = remote_id;
+    select into bundle_id r.bundle_id from bundle.remote r where r.id = remote_id;
+    select into endpoint_id r.endpoint_id from bundle.remote r where r.id = remote_id;
 
     -- get the array of new remote commits
     select into new_commits array_agg(remote_commit_id)
@@ -205,37 +206,16 @@ begin
 
     raise notice 'NEW COMMITS: %', new_commits::text;
 
-    select into json_results http_client.endpoint_rows_select_function(
-        remote_id,
-        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','false']),
-        ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
-    );
-
-    raise notice '############################ JSON %', json_results;
-
     -- create a join_graph on the remote via the construct_bundle_diff function
-    select into json_results result::json->'result' from http_client.endpoint_rows_select_function(
-        remote_id,
-        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','false']),
-        ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
+    select into json_results response_text::jsonb from endpoint.client_rows_select_function(
+        endpoint_id,
+        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','create_bundle']),
+        ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text, false::text]
     );
     raise notice '################# RESULTS: %', json_results;
-    perform www.rows_insert(json_results::json);
-
-    /*
-    -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform endpoint.client_rows_insert (
-        remote_id,
-        array_to_json(
-            array_agg(
-                row_to_json(b)
-            )
-        )
-    )
-    from (select * from _bundle_push_temp order by position) as b;
+    perform endpoint.rows_insert(endpoint.endpoint_response_to_joingraph(json_results)::json);
 
     drop table _bundle_push_temp;
-    */
 end;
 $$ language plpgsql;
 

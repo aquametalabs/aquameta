@@ -27,6 +27,21 @@ insert into bundle.bundle (id, name) values (:bundle_id, 'com.aquameta.bundle.te
 insert into endpoint.remote_endpoint(id,url, name) values (:remote_endpoint_id, 'http://demo.aquameta.org/endpoint', 'Test Server');
 insert into bundle.remote(id, endpoint_id, bundle_id) values (:remote_id, :remote_endpoint_id, :bundle_id);
 
+
+-------------------------------------------------------------------------------
+-- TEST 1: remote_has_bundle false
+-------------------------------------------------------------------------------
+select is (r, false, 'test bundle does not exist on remote server')
+from bundle.remote_has_bundle(:remote_id) r;
+
+
+-------------------------------------------------------------------------------
+-- TEST 2: remote_compare_commits
+-------------------------------------------------------------------------------
+select is (count(*)::integer, 0, 'new repo compare commits has no rows')
+from bundle.remote_compare_commits(:remote_id);
+
+
 -- test data
 insert into bundle_remotes_test.chakra (id, position, name, color, tone_hz) values
     (1, 1, 'Root',         'red', 172.06),
@@ -45,21 +60,11 @@ select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','
 select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',4::text);
 select bundle.commit('com.aquameta.bundle.tests','here come the first four chakras');
 
-
--------------------------------------------------------------------------------
--- TEST 1: remote_has_bundle false
--------------------------------------------------------------------------------
-/*
-select is (r, false, 'test bundle does not exist on remote server')
-from bundle.remote_has_bundle(:remote_id) r;
-*/
-
-
 -------------------------------------------------------------------------------
 -- TEST 2: remote_compare_commits
 -------------------------------------------------------------------------------
-select is (count(*)::integer, 0, 'new repo compare commits has no rows')
-from bundle.remote_compare_commits(:remote_id);
+select is (count(*)::integer, 1, 'new repo compare commits has no rows')
+from bundle.remote_compare_commits(:remote_id) where local_commit_id is not null and remote_commit_id is null;
 
 
 -------------------------------------------------------------------------------
@@ -78,9 +83,15 @@ select is (count(*)::integer, 1, 'after push, remote_compare_commits = 1')
 from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null;
 
 
+-------------------------------------------------------------------------------
+-- TEST 5: remote_has_bundle false
+-------------------------------------------------------------------------------
+select is (r, true, 'after push, test bundle now exists')
+from bundle.remote_has_bundle(:remote_id) r;
+
 
 -------------------------------------------------------------------------------
--- TEST 5: new commit
+-- TEST 6: new commit
 -------------------------------------------------------------------------------
 select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',5::text);
 select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',6::text);
@@ -88,19 +99,26 @@ select bundle.commit('com.aquameta.bundle.tests','next two chakras');
 
 
 -------------------------------------------------------------------------------
--- TEST 4: remote_push with create_bundle true makes compare = 1
+-- TEST 7: remote_push with create_bundle true makes compare = 1
 -------------------------------------------------------------------------------
 drop table test_bundle_diff;
 select bundle.remote_push(:remote_id, false);
-select is (count(*)::integer, 2, 'after second push, remote_compare_commits = 2')
-from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null;
-
+select is (count(*)::integer, 2, 'after second push, remote_commits = 2 and local_commits = 2')
+from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null and local_commit_id is not null;
 
 
 -------------------------------------------------------------------------------
--- TEST 6: remote_has_bundle false
+-- TEST 8: delete the local commits and compare
 -------------------------------------------------------------------------------
-select is (r, true, 'after push, test bundle now exists')
-from bundle.remote_has_bundle(:remote_id) r;
+delete from bundle.commit where bundle_id = :bundle_id;
+select is (count(*)::integer, 2, 'after deleting local commits, remote_commits = 2 and local = 0')
+from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null and local_commit_id is null;
 
-rollback;
+
+-------------------------------------------------------------------------------
+-- TEST 9: fetch pushed commits
+-------------------------------------------------------------------------------
+select bundle.remote_fetch(:remote_id, false);
+select is (count(*)::integer, 2, 'after pull, remote_compare_commits = 2')
+from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null and local_commit_id is not null;
+

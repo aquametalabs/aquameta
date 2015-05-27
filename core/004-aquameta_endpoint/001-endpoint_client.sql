@@ -195,20 +195,10 @@ $$ language plpgsql;
 * contain row_ids and a general overhaul.  This is the shim til we get there.
 *******************************************************************************/
 
-create or replace function endpoint.endpoint_response_to_joingraph (response jsonb) returns setof endpoint.join_graph_row
+create or replace function endpoint.endpoint_response_to_joingraph (response jsonb, out joingraph_json json)
 as $$
 
-    select 
-        ('n/a'::text,
-        meta.row_id(
-            split_part(r->>'selector', '/', 1),
-            split_part(r->>'selector', '/', 3),
-            'id', -- FIXME: We don't know the pk from the response.  I suppose we could figure it out by looking at the name of the field with the same value as the selector pk value.....ha.  Refactor endpoint!
-            split_part(r->>'selector', '/', 5)
-        ), 
-        (r->'row')::jsonb,
-        0,
-        false)::endpoint.join_graph_row
+    select json_agg(r->'row')
     from json_array_elements((response::json)->'result') r;
 
 $$ language sql;
