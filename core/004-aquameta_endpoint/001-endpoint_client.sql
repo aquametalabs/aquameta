@@ -178,7 +178,7 @@ create or replace function endpoint.join_graph_to_json(join_graph_table text, ou
 as $$
 begin
      -- build json object
-    execute 'select json_agg(row_to_json(jgt))::jsonb from ' || quote_ident(join_graph_table) || ' jgt' 
+    execute 'select json_agg(row_to_json(jgt))::jsonb from (select * from ' || quote_ident(join_graph_table) || ' jgt2 order by jgt2.position) jgt' 
     into join_graph_json;
 end;
 $$ language plpgsql;

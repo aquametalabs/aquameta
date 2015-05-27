@@ -68,13 +68,12 @@ from bundle.remote_compare_commits(:remote_id);
 select bundle.construct_bundle_diff(:bundle_id, (select array_agg(id) from bundle.commit where bundle_id=:bundle_id), 'test_bundle_diff');
 select isnt (count(*)::integer, 0, 'bundle diff has rows')
 from test_bundle_diff;
-drop table test_bundle_diff;
 
 
 -------------------------------------------------------------------------------
 -- TEST 4: remote_push with create_bundle true makes compare = 1
 -------------------------------------------------------------------------------
-select bundle.remote_push(:remote_id, true);
+select bundle.remote_push(:remote_id, true, true);
 select is (count(*)::integer, 1, 'after push, remote_compare_commits = 1')
 from bundle.remote_compare_commits(:remote_id);
 
@@ -87,8 +86,15 @@ select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','
 select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',6::text);
 select bundle.commit('com.aquameta.bundle.tests','next two chakras');
 
-select is (count(*)::integer, 0, 'bundle diff has rows')
-from test_bundle_diff;
+
+-------------------------------------------------------------------------------
+-- TEST 4: remote_push with create_bundle true makes compare = 1
+-------------------------------------------------------------------------------
+drop table test_bundle_diff;
+select bundle.remote_push(:remote_id, true, false);
+select is (count(*)::integer, 2, 'after second push, remote_compare_commits = 2')
+from bundle.remote_compare_commits(:remote_id);
+
 
 
 -------------------------------------------------------------------------------

@@ -104,7 +104,7 @@ $$ language plpgsql;
 * fills a temporary table with the commits specified, but only including NEW blobs
 *******************************************************************************/
 
-create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text)
+create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text, create_bundle boolean default false)
 returns setof endpoint.join_graph_row as $$
 declare
     new_commits_str text;
@@ -115,7 +115,7 @@ begin
 
     perform endpoint.construct_join_graph(
             temp_table_name,
-            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": true }')::json,
+            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": ' || (not create_boolean)::text || '}')::json,
             ('[
                 {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 6, "where_clause": "c.id in (' || new_commits_str || ')"},
                 {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
@@ -148,15 +148,14 @@ create or replace function bundle.remote_push(in remote_id uuid, in create_bundl
 returns void -- table(_row_id meta.row_id)
 as $$
 declare
-    ct integer;
     new_commits uuid[];
     bundle_id uuid;
-    result json;
-    result2 json;
-    r endpoint.join_graph_row;
+    result jsonb;
+    endpoint_id uuid;
 begin
     raise notice '################################### PUSH ##########################';
     select into bundle_id r.bundle_id from bundle.remote r where r.id = remote_id;
+    select into endpoint_id e.id from bundle.remote r join endpoint.remote_endpoint e on r.endpoint_id = e.id where r.id = remote_id;
 
     -- 1. get the array of new remote commits
     select into new_commits array_agg(local_commit_id)
@@ -165,22 +164,20 @@ begin
     raise notice 'NEW COMMITS: %', new_commits::text;
 
     -- 2. construct bundle diff
-    perform bundle.construct_bundle_diff(bundle_id, new_commits, 'bundle_push_1234');
+    perform bundle.construct_bundle_diff(bundle_id, new_commits, 'bundle_push_1234', create_bundle);
+
+    -- 3. join_graph_to_json()
+    select into result endpoint.join_graph_to_json('bundle_push_1234');
 
     raise notice 'PUUUUUUUUUSH result: %', result::text;
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform http_client.endpoint_rows_insert (remote_id, result);
+    perform endpoint.client_rows_insert (endpoint_id, result);
     -- from (select * from bundle_push_1234 order by position) as b;
 
-    drop table _bundle_push_1234;
+    drop table bundle_push_1234;
 end;
 $$ language plpgsql;
-
-
-/*
-{"columns":[{"name":"row_id","type":"text"},{"name":"row","type":"jsonb"}],"result":[{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset)\"\",id)\",58887a7f-3428-401c-a24e-5eaa0f5c378f)","row":{"id": "58887a7f-3428-401c-a24e-5eaa0f5c378f"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset)\"\",id)\",9e220a23-fdeb-4b12-97f3-8b61a7b39d89)","row":{"id": "9e220a23-fdeb-4b12-97f3-8b61a7b39d89"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset)\"\",id)\",233d73e2-6b04-4697-83af-1c3da4fb091e)","row":{"id": "233d73e2-6b04-4697-83af-1c3da4fb091e"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset_row)\"\",rowset_id)\",58887a7f-3428-401c-a24e-5eaa0f5c378f)","row":{"id": "d619218d-77ff-4951-8ccf-7cbf2ace20c0", "row_id": {"pk_value": "17a50da2-eba6-4295-8875-a6936ca4109e", "pk_column_id": {"name": "id", "relation_id": {"name": "widget", "schema_id": {"name": "widget"}}}}, "rowset_id": "58887a7f-3428-401c-a24e-5eaa0f5c378f"}}, "selector": "bundle/function/construct_bundle_diff/rows/?" },{ "row": {"row_id":"(\"(\"\"(\"\"\"\"(bundle)\"\"\"\",rowset_row)\"\",rowset_id)\",58887a7f-3428-401c-a24e-5eaa0f5c378f)" |]}
-*/
 
 
 
@@ -210,7 +207,7 @@ begin
 
     select into json_results http_client.endpoint_rows_select_function(
         remote_id,
-        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
+        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','false']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
     );
 
@@ -219,7 +216,7 @@ begin
     -- create a join_graph on the remote via the construct_bundle_diff function
     select into json_results result::json->'result' from http_client.endpoint_rows_select_function(
         remote_id,
-        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name']),
+        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','false']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text]
     );
     raise notice '################# RESULTS: %', json_results;
@@ -227,7 +224,7 @@ begin
 
     /*
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
-    perform http_client.endpoint_rows_insert (
+    perform endpoint.client_rows_insert (
         remote_id,
         array_to_json(
             array_agg(
