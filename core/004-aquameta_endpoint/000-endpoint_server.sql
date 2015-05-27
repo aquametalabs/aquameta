@@ -231,7 +231,7 @@ begin
     raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
     -- create temp table
     tmp := quote_ident(temp_table_name);
-    execute 'create temp table if not exists '
+    execute 'create temp table '
         || tmp
 || ' of endpoint.join_graph_row';
 
@@ -250,7 +250,7 @@ begin
     --    label, schema_name, relation_name, local_id, where_clause;
 
     q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
-        || ' select ''' || label || ''','
+        || ' select distinct ''' || label || ''','
         || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
         || '     row_to_json(' || label || ')::jsonb, '
         || '     ' || position || ', '
@@ -284,7 +284,7 @@ begin
 
 
         q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
-            || ' select ''' || label || ''','
+            || ' select distinct ''' || label || ''','
             || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
             || '     row_to_json(' || label || ')::jsonb, '
             || '     ' || position || ', '
@@ -332,18 +332,22 @@ create or replace function endpoint.rows_insert(
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
         -- raise notice 'TOTAL ROWS: %', json_array_length(args);
         raise notice 'da json: %', args;
-        -- alter table bundle.commit disable trigger all;
+
+
+
+        alter table bundle.commit disable trigger all;
         for i in 0..json_array_length(args) - 1 loop
             row_id := (args->i->'row_id')::meta.row_id;
-            raise notice '########################### inserting row %: %', i, row_id;
-            raise notice '% =  %', row_id, args->i;
-            -- args
-            q := 'insert into ' || (row_id).pk_column_id.relation_id.name || ' select * from json_to_record (args->i->''row''->''row'')';
+            raise notice '########################### inserting row %: % @@@@@ %', i, row_id, args->i;
+            raise notice '% =  %', row_id, args->i->'row';
+
+            q := 'insert into ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id).pk_column_id.relation_id.name) || ' select * from json_to_record (' || quote_literal(args->i->'row') || ')';
             raise notice 'QUERY: %', q;
-            perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row'->'row');
             -- execute q;
+
+            perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
         end loop;
-        -- alter table bundle.commit enable trigger all;
+        alter table bundle.commit enable trigger all;
     end
 $$
 language plpgsql;
@@ -366,7 +370,7 @@ create function endpoint.row_insert(
     begin
         return query execute '
             with inserted_row as (
-                insert into ' || _schema_name || '.' || _relation_name || ' (' || ( --FIXME quote!
+                insert into ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || ' (' || (
                     select string_agg(quote_ident(json_object_keys), ',' order by json_object_keys)
                     from json_object_keys(args)
 
