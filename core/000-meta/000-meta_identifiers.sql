@@ -508,6 +508,12 @@ end;
 $$ language plpgsql;
 
 
+/*
+create cast (meta.row_id as json)
+    with function meta.row_id_to_json(row_id)
+as assignment;
+*/
+
 /******************************************************************************
  * meta.field_id
  *****************************************************************************/

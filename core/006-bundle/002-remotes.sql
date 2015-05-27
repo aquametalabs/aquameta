@@ -115,7 +115,7 @@ begin
 
     perform endpoint.construct_join_graph(
             temp_table_name,
-            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": ' || (not create_boolean)::text || '}')::json,
+            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": ' || (not create_bundle)::text || '}')::json,
             ('[
                 {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 6, "where_clause": "c.id in (' || new_commits_str || ')"},
                 {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},

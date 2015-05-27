@@ -73,9 +73,9 @@ from test_bundle_diff;
 -------------------------------------------------------------------------------
 -- TEST 4: remote_push with create_bundle true makes compare = 1
 -------------------------------------------------------------------------------
-select bundle.remote_push(:remote_id, true, true);
+select bundle.remote_push(:remote_id, true);
 select is (count(*)::integer, 1, 'after push, remote_compare_commits = 1')
-from bundle.remote_compare_commits(:remote_id);
+from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null;
 
 
 
@@ -91,9 +91,9 @@ select bundle.commit('com.aquameta.bundle.tests','next two chakras');
 -- TEST 4: remote_push with create_bundle true makes compare = 1
 -------------------------------------------------------------------------------
 drop table test_bundle_diff;
-select bundle.remote_push(:remote_id, true, false);
+select bundle.remote_push(:remote_id, false);
 select is (count(*)::integer, 2, 'after second push, remote_compare_commits = 2')
-from bundle.remote_compare_commits(:remote_id);
+from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null;
 
 
 

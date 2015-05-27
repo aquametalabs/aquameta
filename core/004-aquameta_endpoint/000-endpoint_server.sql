@@ -444,8 +444,9 @@ $$ immutable language plpgsql;
  * FUNCTION is_json_object                                                                          *
  ****************************************************************************************************/
 
-create function endpoint.is_json_object(value text) returns boolean as $$
+create or replace function endpoint.is_json_object(value text) returns boolean as $$
 begin
+    if value is null then return false; end if;
     perform json_object_keys(value::json);
     return true;
 
