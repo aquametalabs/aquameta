@@ -535,4 +535,11 @@ $$ language plpgsql;
 
 
 
+create or replace function bundle.delete (in _bundle_id uuid) returns void as $$
+    -- TODO: delete blobs
+    delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
+    delete from bundle.bundle where id = _bundle_id;
+$$ language sql;
+
+
 commit;
