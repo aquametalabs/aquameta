@@ -346,7 +346,7 @@ create or replace function endpoint.rows_insert(
             raise notice '% =  %', row_id, args->i->'row';
 
             q := 'insert into ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id).pk_column_id.relation_id.name) || ' select * from json_to_record (' || quote_literal(args->i->'row') || ')';
-            raise notice 'QUERY: %', q;
+            raise notice '(NOT) QUERY: %', q;
             -- execute q;
 
             perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
@@ -369,15 +369,17 @@ language plpgsql;
  ****************************************************************************************************/
 
 --
-create function endpoint.row_insert(
+create or replace function endpoint.row_insert(
     _schema_name text,
     relation_type text,
     _relation_name text,
     args json
 
 ) returns setof json as $$
+    declare
+       q text;
     begin
-        return query execute '
+        q := '
             with inserted_row as (
                 insert into ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || ' (' || (
                     select string_agg(quote_ident(json_object_keys), ',' order by json_object_keys)
@@ -393,7 +395,6 @@ create function endpoint.row_insert(
                                         ($4->' || quote_literal(json_object_keys) || ')::text
                                     else ($4->>' || quote_literal(json_object_keys) || ')::text
                                end::' || case when endpoint.is_json_object((args->>json_object_keys)) then 'json::'
--- start of composite detection:                                              when t.composite = true then
                                               else ''
                                          end || c.type_name, ',
                                '
@@ -416,7 +417,11 @@ create function endpoint.row_insert(
                 }]
             }'')::json
             from inserted_row
-        ' using _schema_name,
+        '; 
+
+        raise notice 'ROW_INSERT ############: %', q;
+        return query execute q
+	using _schema_name,
                 relation_type,
                 _relation_name,
                 args;

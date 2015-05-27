@@ -72,7 +72,7 @@ static int do_query (struct libwebsocket_context *context,
     char *response_mimetype;
 
     const char *query_params[4];
-    unsigned char resp_header_buf[1024]; //TODO: create constant for headers buffer size
+    unsigned char resp_header_buf[1024 * 8]; //TODO: create constant for headers buffer size
     unsigned char *resp_header = resp_header_buf;
     int resp_header_len;
     int pq_dirty = 0;
