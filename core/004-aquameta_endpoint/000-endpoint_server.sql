@@ -333,9 +333,13 @@ create or replace function endpoint.rows_insert(
         -- raise notice 'TOTAL ROWS: %', json_array_length(args);
         raise notice 'da json: %', args;
 
+        -- disable triggers
+        for i in 0..json_array_length(args) - 1 loop
+            row_id := (args->i->'row_id')::meta.row_id;
+            execute 'alter table ' || (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id) || ' disable trigger all';
+        end loop;
 
-
-        alter table bundle.commit disable trigger all;
+        -- insert rows
         for i in 0..json_array_length(args) - 1 loop
             row_id := (args->i->'row_id')::meta.row_id;
             raise notice '########################### inserting row %: % @@@@@ %', i, row_id, args->i;
@@ -347,7 +351,12 @@ create or replace function endpoint.rows_insert(
 
             perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
         end loop;
-        alter table bundle.commit enable trigger all;
+
+        -- enable triggers
+        for i in 0..json_array_length(args) - 1 loop
+            row_id := (args->i->'row_id')::meta.row_id;
+            execute 'alter table ' || (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id) || ' enable trigger all';
+        end loop;
     end
 $$
 language plpgsql;
