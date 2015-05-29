@@ -24,12 +24,10 @@ RUN cd /s && git clone https://github.com/qpfiffer/libwebsockets.git && \
 ADD . /s/aquameta/
 RUN cd aquameta/http/background_worker && make && make install
 
-# create extension
-# RUN echo "create extension pg_http" | psql aquameta
-# createdb aquameta
 #Add the following line is in your postgresql.conf:
 #shared_preload_libraries = 'pg_http'
-#cat sql/0*.sql|psql aquameta
+
+RUN cd /s/aquameta && ./build.sh
 
 # XXX set unpriv'd user
 

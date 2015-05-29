@@ -13,7 +13,6 @@ begin;
 create extension if not exists "uuid-ossp";
 create extension if not exists "pg_http";
 
-drop schema if exists endpoint cascade;
 create schema endpoint;
 
 set search_path = endpoint;
@@ -315,7 +314,10 @@ $$ language plpgsql;
  *
  * REQUEST HANDLERS
  *
- * functions called by endpoint.request, returning JSON/REST responses
+ * Functions called by endpoint.request, returning JSON/REST responses
+ *
+ *
+ *
  ******************************************************************************/
 
 

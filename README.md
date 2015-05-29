@@ -6,7 +6,7 @@ Copyright (c) 2015.  All rights reserved.
 
 A web application development platform built entirely in PostgreSQL.
 
-http://aquameta.com/
+[http://aquameta.com/](http://aquameta.com/)
 
 ## Prototype!
 
@@ -18,6 +18,7 @@ project, and need a complete refactor.
 
 http://blog.aquameta.com/2015/04/16/introducing-aquameta/
 
+Join #aquameta on irc.freenode.net.
 
 
 ## Build

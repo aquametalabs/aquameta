@@ -541,5 +541,12 @@ create or replace function bundle.delete (in _bundle_id uuid) returns void as $$
     delete from bundle.bundle where id = _bundle_id;
 $$ language sql;
 
+create or replace function bundle.delete_commit (in _commit_id uuid) returns void as $$
+    -- TODO: delete blobs
+    -- TODO: delete commits in order?
+    delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
+    delete from bundle.commit c where c.id = _commit_id;
+$$ language sql;
+
 
 commit;

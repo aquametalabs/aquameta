@@ -110,7 +110,7 @@ from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not nul
 -------------------------------------------------------------------------------
 -- TEST 8: delete the local commits and compare
 -------------------------------------------------------------------------------
-delete from bundle.commit where bundle_id = :bundle_id;
+select bundle.delete_commit(c.id) from bundle.bundle b join bundle.commit c on c.bundle_id=b.id where b.id = :bundle_id;
 select is (count(*)::integer, 2, 'after deleting local commits, remote_commits = 2 and local = 0')
 from bundle.remote_compare_commits(:remote_id) where remote_commit_id is not null and local_commit_id is null;
 
