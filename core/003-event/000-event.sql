@@ -11,7 +11,6 @@ begin;
 
 create extension if not exists "uuid-ossp" schema public;
 
-drop schema if exists event cascade;
 create schema event;
 
 -- a kind of event mailbox, which can subscribe to database change events.  

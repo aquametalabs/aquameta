@@ -8,7 +8,6 @@
  ******************************************************************************/
 begin;
 
-drop schema if exists semantics cascade;
 create schema semantics;
 set search_path=semantics;
 

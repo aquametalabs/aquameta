@@ -11,7 +11,6 @@
 * TABLE widget
 *******************************************************************************/
 
-drop schema if exists widget cascade;
 create schema widget;
 set search_path=widget;
 
