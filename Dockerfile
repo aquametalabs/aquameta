@@ -12,7 +12,7 @@ ENV REFRESHED_AT 2015-02-23
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 plpython-postgres-9.4 postgresql-server-dev-9.4
 
 RUN mkdir -p /s/aquameta
 
@@ -25,7 +25,7 @@ ADD . /s/aquameta/
 RUN cd aquameta/http/background_worker && make && make install
 
 # create extension
-#RUN echo "create extension pg_http" | psql
+# RUN echo "create extension pg_http" | psql aquameta
 # createdb aquameta
 #Add the following line is in your postgresql.conf:
 #shared_preload_libraries = 'pg_http'
