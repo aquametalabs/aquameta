@@ -215,7 +215,7 @@ begin
     raise notice '################# RESULTS: %', json_results;
     perform endpoint.rows_insert(endpoint.endpoint_response_to_joingraph(json_results)::json);
 
-    drop table _bundle_push_temp;
+    -- drop table bundle_diff_1234;
 end;
 $$ language plpgsql;
 
