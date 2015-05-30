@@ -88,7 +88,8 @@ static int do_query (struct libwebsocket_context *context,
     memcpy(local_pss_path, pss->path, ps_path_siz);
     free(pss->path);
 
-    elog(LOG, "%s %s %s", pss->method, local_pss_path, pss->request_body);
+    // elog(LOG, "%s %s %s", pss->method, local_pss_path, pss->request_body);
+    elog(LOG, "%s %s", pss->method, local_pss_path);
 
     conn = PQconnectdb("dbname=aquameta");
 
@@ -400,7 +401,7 @@ static int data_callback (struct libwebsocket_context *context,
                 } while (c);
             }
 
-            elog(LOG, "%s", hdr_hstore);
+            // elog(LOG, "%s", hdr_hstore);
 
             pss->headers = hdr_hstore;
 
