@@ -249,7 +249,7 @@ begin
 
     where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
 
-    raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
+    -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
         label, schema_name, relation_name, join_local_field, where_clause;
 
     q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
@@ -261,7 +261,7 @@ begin
         || ' from ' || schema_name || '.' || relation_name || ' ' || label
         || ' ' || where_clause;
 
-        raise notice 'QUERY PHASE 1: %', q;
+        -- raise notice 'QUERY PHASE 1: %', q;
     execute q;
 
 
@@ -283,7 +283,7 @@ begin
 
         position := coalesce(rowset->>'position', '0');
 
-        raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
+        -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
         label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
 
 
@@ -297,7 +297,7 @@ begin
             || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
             || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || join_local_field || '::text'
             || ' ' || where_clause;
-        raise notice 'QUERY PHASE 2: %', q;
+        -- raise notice 'QUERY PHASE 2: %', q;
         execute q;
 
     end loop;
@@ -337,14 +337,14 @@ create or replace function endpoint.rows_insert(
         q text;
     begin
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
-        -- raise notice 'TOTAL ROWS: %', json_array_length(args);
-        raise notice 'da json: %', args;
+        raise notice 'TOTAL ROWS: %', json_array_length(args);
+        -- raise notice 'da json: %', args;
 
         -- insert rows
         for i in 0..json_array_length(args) - 1 loop
             row_id := (args->i->'row_id')::meta.row_id;
-            raise notice '########################### inserting row %: % @@@@@ %', i, row_id, args->i;
-            raise notice '% =  %', row_id, args->i->'row';
+            -- raise notice '########################### inserting row %: % @@@@@ %', i, row_id, args->i;
+            -- raise notice '% =  %', row_id, args->i->'row';
 
             -- disable triggers (except blob... hack hack)
             if row_id::meta.relation_id != meta.relation_id('bundle','blob') then
@@ -352,7 +352,7 @@ create or replace function endpoint.rows_insert(
             end if;
 
             q := 'insert into ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id).pk_column_id.relation_id.name) || ' select * from json_to_record (' || quote_literal(args->i->'row') || ')';
-            raise notice '(NOT) QUERY: %', q;
+            -- raise notice '(NOT) QUERY: %', q;
             -- execute q;
 
             perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
@@ -425,7 +425,7 @@ create or replace function endpoint.row_insert(
             from inserted_row
         '; 
 
-        raise notice 'ROW_INSERT ############: %', q;
+        -- raise notice 'ROW_INSERT ############: %', q;
         return query execute q
 	using _schema_name,
                 relation_type,
@@ -863,12 +863,13 @@ create or replace function endpoint.request(
         select string_to_array(path, '/') into path_parts;
         select array_length(path_parts, 1) into parts;
 
-        raise notice '##### data: %', data::text;
-        raise notice '##### verb: %', verb::text;
-        raise notice '##### path: %', path::text;
-        raise notice '##### headers: %', headers::text;
-        raise notice '##### path_parts: %', path_parts::text;
-        raise notice '##### parts: %', parts::text;
+        raise notice '###### endpoint.request % %', verb, path;
+        -- raise notice '##### data: %', data::text;
+        -- raise notice '##### verb: %', verb::text;
+        -- raise notice '##### path: %', path::text;
+        -- raise notice '##### headers: %', headers::text;
+        -- raise notice '##### path_parts: %', path_parts::text;
+        -- raise notice '##### parts: %', parts::text;
 
         with unnested as (
             select string_to_array(
@@ -881,10 +882,10 @@ create or replace function endpoint.request(
         select ('{' || string_agg('"' || replace(arg_parts[1], '"', '\"') || '":"' || replace(arg_parts[2], '"', '\"') || '"', ',') || '}')
         from unnested
         into args_text;
-        raise notice '##### args: %', args_text;
+        -- raise notice '##### args: %', args_text;
         args := args_text::json;
         data2 := data; --FIXME use inout for efficiency
-        raise notice '##### data2: %', data2::text;
+        -- raise notice '##### data2: %', data2::text;
 
         if verb = 'GET' then
             if parts = 5 then
@@ -908,7 +909,7 @@ create or replace function endpoint.request(
 
         elsif verb = 'POST' then
             if path_parts[2] = 'insert' then
-                raise notice 'INSERT MULTIPLE';
+                -- raise notice 'INSERT MULTIPLE';
                 return query select 200, 'OK'::text, (select endpoint.rows_insert(data2::json))::text;
             else
                 return query select 200, 'OK'::text, (select endpoint.row_insert(path_parts[2], path_parts[3], path_parts[4], data2::json))::text;

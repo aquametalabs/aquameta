@@ -33,7 +33,7 @@ begin
     select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
     select into local_bundle_id r.bundle_id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
 
-    raise notice 'remote has bundle: % % %', _remote_id, remote_endpoint_id, local_bundle_id;
+    raise notice '########### remote has bundle: % % %', _remote_id, remote_endpoint_id, local_bundle_id;
     if _remote_id is null or remote_endpoint_id is null or local_bundle_id is null then 
         has_bundle := false; 
         return; 
@@ -72,7 +72,7 @@ begin
     select into local_bundle_id bundle_id from bundle.remote r where r.id = _remote_id;
     select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
 
-    raise notice 'compare: % % %', _remote_id, local_bundle_id, remote_endpoint_id;
+    raise notice '########## bundle compare: % % %', _remote_id, local_bundle_id, remote_endpoint_id;
 
     return query
         with remote_commit as (
@@ -169,7 +169,7 @@ begin
     -- 3. join_graph_to_json()
     select into result endpoint.join_graph_to_json('bundle_push_1234');
 
-    raise notice 'PUUUUUUUUUSH result: %', result::text;
+    -- raise notice 'PUUUUUUUUUSH result: %', result::text;
 
     -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
     perform endpoint.client_rows_insert (endpoint_id, result);
@@ -212,7 +212,7 @@ begin
         meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','create_bundle']),
         ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text, false::text]
     );
-    raise notice '################# RESULTS: %', json_results;
+    -- raise notice '################# RESULTS: %', json_results;
     perform endpoint.rows_insert(endpoint.endpoint_response_to_joingraph(json_results)::json);
 
     -- drop table bundle_diff_1234;
