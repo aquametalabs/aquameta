@@ -115,13 +115,13 @@ begin
 
     perform endpoint.construct_join_graph(
             temp_table_name,
-            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": ' || (not create_bundle)::text || '}')::json,
+            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "pk_field": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": ' || (not create_bundle)::text || '}')::json,
             ('[
-                {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "local_id": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 6, "where_clause": "c.id in (' || new_commits_str || ')"},
-                {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "local_id": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
-                {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "local_id": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
-                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 5},
-                {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "local_id": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 4}
+                {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "join_pk_field": "id", "join_local_field": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 6, "where_clause": "c.id in (' || new_commits_str || ')"},
+                {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "join_pk_field": "id", "join_local_field": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
+                {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "join_pk_field": "id", "join_local_field": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
+                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "join_pk_field": "id", "join_local_field": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 5},
+                {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "join_pk_field": "hash", "join_local_field": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 4}
              ]')::json
         );
 

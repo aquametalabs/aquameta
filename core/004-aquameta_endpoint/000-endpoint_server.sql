@@ -196,13 +196,13 @@ create type join_graph_row as (
 /*
 sample usage:
 select endpoint.construct_join_graph('foo',
-    '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "local_id": "id", "where_clause": "b.id = ''e2edb6c9-cb76-4b57-9898-2e08debe99ee''" }',
+    '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "join_local_field": "id", "where_clause": "b.id = ''e2edb6c9-cb76-4b57-9898-2e08debe99ee''" }',
     '[
-        {"schema_name": "bundle", "relation_name": "commit", "label": "c", "local_id": "bundle_id", "related_label": "b", "related_field": "id"},
-        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "local_id": "id", "related_label": "c", "related_field": "rowset_id"},
-        {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "local_id": "rowset_id", "related_label": "r", "related_field": "id"},
-        {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "local_id": "rowset_row_id", "related_label": "rr", "related_field": "id"},
-        {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "local_id": "hash", "related_label": "rrf", "related_field": "value_hash"}
+        {"schema_name": "bundle", "relation_name": "commit", "label": "c", "join_local_field": "bundle_id", "related_label": "b", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset", "label": "r", "join_local_field": "id", "related_label": "c", "related_field": "rowset_id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row", "label": "rr", "join_local_field": "rowset_id", "related_label": "r", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "join_local_field": "rowset_row_id", "related_label": "rr", "related_field": "id"},
+        {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "join_local_field": "hash", "related_label": "rrf", "related_field": "value_hash"}
      ]');
 */
 
@@ -214,7 +214,9 @@ declare
     schema_name text;
     relation_name text;
     label text;
-    local_id text;
+    pk_field text;
+    join_pk_field text;
+    join_local_field text;
 
     related_label text;
     related_field text;
@@ -239,26 +241,27 @@ begin
     schema_name := quote_ident(start_rowset->>'schema_name');
     relation_name := quote_ident(start_rowset->>'relation_name');
     label := quote_ident(start_rowset->>'label');
-    local_id:= quote_ident(start_rowset->>'local_id');
+    join_local_field := quote_ident(start_rowset->>'join_local_field');
+    pk_field:= quote_ident(start_rowset->>'pk_field');
     exclude:= coalesce(start_rowset->>'exclude', 'false');
 
     position := coalesce(start_rowset->>'position', '0');
 
     where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
 
-    -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, local_id: %, where_clause: %',
-    --    label, schema_name, relation_name, local_id, where_clause;
+    raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
+        label, schema_name, relation_name, join_local_field, where_clause;
 
     q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
         || ' select distinct ''' || label || ''','
-        || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
+        || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || pk_field || ''',' || label || '.' || pk_field || '::text), '
         || '     row_to_json(' || label || ')::jsonb, '
         || '     ' || position || ', '
         || '     ' || exclude
         || ' from ' || schema_name || '.' || relation_name || ' ' || label
         || ' ' || where_clause;
 
-        -- raise notice 'QUERY PHASE 1: %', q;
+        raise notice 'QUERY PHASE 1: %', q;
     execute q;
 
 
@@ -269,7 +272,8 @@ begin
         schema_name := quote_ident(rowset->>'schema_name');
         relation_name := quote_ident(rowset->>'relation_name');
         label := quote_ident(rowset->>'label');
-        local_id:= quote_ident(rowset->>'local_id');
+        join_local_field:= quote_ident(rowset->>'join_local_field');
+        join_pk_field:= quote_ident(rowset->>'join_local_field');
 
         related_label := quote_ident(rowset->>'related_label');
         related_field := quote_ident(rowset->>'related_field');
@@ -279,21 +283,21 @@ begin
 
         position := coalesce(rowset->>'position', '0');
 
-        -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, local_id: %, related_label: %, related_field: %, where_clause: %',
-        --    label, schema_name, relation_name, local_id, related_label, related_field, where_clause;
+        raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
+        label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
 
 
         q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
             || ' select distinct ''' || label || ''','
-            || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || local_id || ''',' || label || '.' || local_id || '::text), '
+            || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || join_pk_field || ''',' || label || '.' || join_pk_field || '::text), '
             || '     row_to_json(' || label || ')::jsonb, '
             || '     ' || position || ', '
             || '     ' || exclude
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
             || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
-            || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || local_id || '::text'
+            || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || join_local_field || '::text'
             || ' ' || where_clause;
-        -- raise notice 'QUERY PHASE 2: %', q;
+        raise notice 'QUERY PHASE 2: %', q;
         execute q;
 
     end loop;
