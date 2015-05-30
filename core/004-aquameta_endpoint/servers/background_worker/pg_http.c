@@ -426,7 +426,7 @@ static int data_callback (struct libwebsocket_context *context,
 
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
             pss->request_body = current_request_body;
-            elog(LOG, "REQUEST BODY: %s", pss->request_body);
+            // elog(LOG, "REQUEST BODY: %s", pss->request_body);
 
             do_query(context, wsi, pss);
             free(current_request_body);
