@@ -250,7 +250,7 @@ begin
     where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
 
     -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
-        label, schema_name, relation_name, join_local_field, where_clause;
+    --    label, schema_name, relation_name, join_local_field, where_clause;
 
     q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
         || ' select distinct ''' || label || ''','
@@ -284,7 +284,7 @@ begin
         position := coalesce(rowset->>'position', '0');
 
         -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
-        label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
+        -- label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
 
 
         q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
