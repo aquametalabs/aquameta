@@ -15,4 +15,4 @@ echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on 
 echo "Loading semantics ..."
 cat core/0*/semantics.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
-
+exit 0
