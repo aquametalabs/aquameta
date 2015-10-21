@@ -29,13 +29,8 @@ RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make 
 #shared_preload_libraries = 'pg_http'
 RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
 
-RUN /etc/init.d/postgresql start
-
 USER postgres
-RUN cd /s/aquameta && ./build.sh
-
-USER root
-RUN /etc/init.d/postgresql restart
+RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh
 
 
 EXPOSE 8080
