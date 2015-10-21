@@ -18,7 +18,8 @@ RUN mkdir -p /s/aquameta
 
 # web sockets
 RUN cd /s && git clone https://github.com/qpfiffer/libwebsockets.git && \
-    cd libwebsockets && mkdir build && cd build && cmake .. && make && make install
+    cd libwebsockets && mkdir build && cd build && cmake .. && make && make install && \
+    cd /usr/lib && ln -s /usr/local/lib/libwebsockets.so.5.0.0
 
 # add aquameta (assuming we're building this from cwd)
 ADD . /s/aquameta/
@@ -26,12 +27,16 @@ RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make 
 
 #Add the following line is in your postgresql.conf:
 #shared_preload_libraries = 'pg_http'
-sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
+RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
+
+RUN /etc/init.d/postgresql start
 
 USER postgres
-RUN /etc/init.d/postgresql start
 RUN cd /s/aquameta && ./build.sh
+
+USER root
 RUN /etc/init.d/postgresql restart
+
 
 EXPOSE 8080
 
