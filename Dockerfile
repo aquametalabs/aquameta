@@ -35,4 +35,4 @@ RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh
 
 EXPOSE 8080
 
-#ENTRYPOINT 
+ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
