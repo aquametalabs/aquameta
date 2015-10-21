@@ -12,7 +12,8 @@ ENV REFRESHED_AT 2015-02-23
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 plpython-postgres-9.4 postgresql-server-dev-9.4
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4
+RUN /etc/init.d/postgresql start
 
 RUN mkdir -p /s/aquameta
 
@@ -22,14 +23,16 @@ RUN cd /s && git clone https://github.com/qpfiffer/libwebsockets.git && \
 
 # add aquameta (assuming we're building this from cwd)
 ADD . /s/aquameta/
-RUN cd aquameta/http/background_worker && make && make install
+RUN cd aquameta/core/004-aquameta_endpoint/servers/background_worker && make && make install
 
 #Add the following line is in your postgresql.conf:
 #shared_preload_libraries = 'pg_http'
+sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
 
+USER postgres
 RUN cd /s/aquameta && ./build.sh
-
-# XXX set unpriv'd user
+RUN /etc/init.d/postgresql restart
 
 EXPOSE 8080
+
 #ENTRYPOINT 
