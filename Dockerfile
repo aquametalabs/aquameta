@@ -29,10 +29,17 @@ RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make 
 #shared_preload_libraries = 'pg_http'
 RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
 
-EXPOSE 8080
-EXPOSE 5432
+# Adjust PostgreSQL configuration so that remote connections to the
+# database are possible.
+RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.4/main/pg_hba.conf
+
+# And add ``listen_addresses`` to ``/etc/postgresql/9.4/main/postgresql.conf``
+RUN echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf
+
+
+EXPOSE 8080 5432
 
 USER postgres
-RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh
+RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && echo "alter role postgres password 'postgres';" | psql aquameta
 
 ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
