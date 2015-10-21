@@ -5,9 +5,9 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #   docker build -t aquameta .
 #
 # to run:
-#   docker run -it -p 8080:8080 aquameta
+#   docker run -dit -p 8080:8080 -p 5432:5432 aquameta
 
-ENV REFRESHED_AT 2015-02-23
+ENV REFRESHED_AT 2015-10-20
 
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -29,10 +29,10 @@ RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make 
 #shared_preload_libraries = 'pg_http'
 RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
 
+EXPOSE 8080
+EXPOSE 5432
+
 USER postgres
 RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh
-
-
-EXPOSE 8080
 
 ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
