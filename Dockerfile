@@ -2,10 +2,10 @@ FROM ubuntu:latest
 MAINTAINER Eric Hanson <eric@aquameta.com>
 
 # to build: 
-#   docker build -t aquameta .
+#   docker build -t aquametalabs/aquameta:0.07 .
 #
 # to run:
-#   docker run -dit -p 8080:8080 -p 5432:5432 aquameta
+#   docker run -dit -p 8080:8080 -p 5432:5432 aquametalabs/aquameta
 
 ENV REFRESHED_AT 2015-10-20
 
