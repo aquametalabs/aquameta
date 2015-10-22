@@ -6,6 +6,11 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #
 # to run:
 #   docker run -dit -p 8080:8080 -p 5432:5432 aquametalabs/aquameta
+#
+# access PostgreSQL (password 'postgres') with:
+#   psql -h localhost -p 5432 -U postgres aquameta
+#
+# access the ide by browsing to port 8080 of the host machine.
 
 ENV REFRESHED_AT 2015-10-20
 
@@ -41,5 +46,7 @@ EXPOSE 8080 5432
 
 USER postgres
 RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && echo "alter role postgres password 'postgres';" | psql aquameta
+
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
