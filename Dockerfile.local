@@ -2,7 +2,7 @@ FROM ubuntu:latest
 MAINTAINER Eric Hanson <eric@aquameta.com>
 
 # to build: 
-#   docker build -t aquametalabs/aquameta .
+#   docker build -t aquametalabs/aquameta:0.07 .
 #
 # to run:
 #   docker run -dit -p 8080:8080 -p 5432:5432 aquametalabs/aquameta
@@ -12,7 +12,7 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #
 # access the ide by browsing to port 8080 of the host machine.
 
-ENV REFRESHED_AT 2015-11-10
+ENV REFRESHED_AT 2015-10-20
 
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -44,9 +44,10 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf
 
 EXPOSE 8080 5432
 
-USER postgres
-RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && echo "alter role postgres password 'postgres';" | psql aquameta
 
-VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+USER postgres
+RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && echo "alter role postgres password 'postgres';" | psql beehive
+
+VOLUME  /var/lib/postgresql/9.4
 
 ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
