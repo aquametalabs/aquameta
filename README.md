@@ -16,12 +16,15 @@ project, and need a complete refactor.
 
 ## Project Summary
 
-http://blog.aquameta.com/2015/04/16/introducing-aquameta/
+http://blog.aquameta.com/2015/08/28/introducing-aquameta/
 
 Join #aquameta on irc.freenode.net.
 
+## Install using Docker
 
-## Build
+You can quickly get up and running with Aquameta via Docker.  See our [Dockerfile](https://github.com/aquametalabs/aquameta/blob/master/Dockerfile) for more information.
+
+## Build from Source
 
 ### 1. Install PostgreSQL 9.4
 
