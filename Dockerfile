@@ -48,6 +48,8 @@ RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.4/main/pg_hba.co
 RUN echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf
 
 
+ADD core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available/aquameta_endpoint.conf
+RUN cd /etc/nginx/sites-enabled && rm ./default && ln -s ../sites-available/aquameta_endpoint.conf
 
 
 
