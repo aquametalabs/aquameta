@@ -70,8 +70,7 @@ EXPOSE 80 8080 5432
 
 
 USER postgres
-RUN /etc/init.d/postgresql start 
-RUN cd /s/aquameta && ./build.sh && psql -c "alter role postgres password 'postgres'" aquameta
+RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && psql -c "alter role postgres password 'postgres'" aquameta
 
 
 USER root
