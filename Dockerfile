@@ -62,17 +62,19 @@ ADD core/004-aquameta_endpoint/servers/uwsgi /s/uwsgi
 RUN cd /s/uwsgi && python setup.py sdist
 
 # before last step, need to fix aquameta_db.ini via https://github.com/StefanoOrdine/uwsgi-docs/commit/1490026103fd7f4f1dd4e78911daac59c55f89b5
-RUN cd /tmp && wget http://projects.unbit.it/downloads/uwsgi-2.0.11.2.tar.gz && tar -zxvf uwsgi-2.0.11.2.tar.gz && cd uwsgi-2.0.11.2 && python uwsgiconfig.py --build /s/uwsgi/conf/uwsgi/aquameta_db_build.ini && mkdir /s/bin && mv ./uwsgi /s/bin/
-
-
-
-
+RUN cd /tmp && \
+	wget http://projects.unbit.it/downloads/uwsgi-2.0.11.2.tar.gz && \
+	tar -zxvf uwsgi-2.0.11.2.tar.gz && \
+	cd uwsgi-2.0.11.2 && \
+	python uwsgiconfig.py --build /s/uwsgi/conf/uwsgi_build/aquameta_db.ini && \
+	mkdir /s/bin && \
+	mv ./uwsgi /s/bin/
 
 EXPOSE 80 8080 5432
 
 
 USER postgres
-RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && psql -c "alter role postgres password 'postgres'" aquameta
+RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && psql -c "alter role postgres password 'postgres'" aquameta && /etc/init.d/postgresql stop
 
 
 USER root
@@ -82,7 +84,7 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 # ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
 
 ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-ENTRYPOINT ["/usr/bin/supervisord"]
+#ENTRYPOINT ["/usr/bin/supervisord"]
 
 # RUN /s/bin/uwsgi --die-on-term --emperor /s/uwsgi/conf/uwsgi
 
