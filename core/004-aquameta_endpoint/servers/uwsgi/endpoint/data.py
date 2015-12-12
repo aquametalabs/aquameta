@@ -14,7 +14,7 @@ def application(env, start_response):
         with map_errors_to_http(), cursor_for_request(request) as cursor:
             cursor.execute('''
                 select request as json
-                from www.request(%s, %s, %s::json, %s::json)
+                from endpoint.request(%s, %s, %s::json, %s::json)
             ''', (
                 request.method,
                 request.path,

@@ -11,7 +11,7 @@ def application(env, start_response):
 
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
-            cursor.execute('select content from www.page where path = %s', (request.path,))
+            cursor.execute('select content from endpoint.resource where path = %s', (request.path,))
             row = cursor.fetchone()
 
             if row is None:

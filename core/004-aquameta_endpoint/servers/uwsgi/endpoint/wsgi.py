@@ -20,6 +20,6 @@ except KeyError as err:
 
 else:
     application = AuthMiddleware(DispatcherMiddleware(page_app, {
-        '%s/data' % base_url: data_app,
+        '%s' % base_url: data_app,
         '%s/event' % base_url: events_app
     }))
