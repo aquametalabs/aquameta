@@ -839,6 +839,56 @@ $$ language plpgsql;
 
 
 /****************************************************************************************************
+ * FUNCTION request JSON VERSION FOR UWSGI woot. 
+ ****************************************************************************************************/
+
+create or replace function endpoint.request(
+    verb text,
+    path text,
+    headers json,
+    data json,
+    out status integer,
+    out message text,
+    out data2 text --FIXME INOUT breaks meta
+) returns setof record as $$
+    declare
+        args_str text;
+        path_parts text[];
+        parts integer;
+        args json;
+        args_text text;
+
+    begin
+        set local search_path = endpoint,meta,public;
+        select string_to_array(path, '/') into path_parts;
+        select array_length(path_parts, 1) into parts;
+
+        raise notice '###### endpoint.request % %', verb, path;
+        raise notice '##### data: %', data::text;
+        raise notice '##### verb: %', verb::text;
+        raise notice '##### path: %', path::text;
+        raise notice '##### headers: %', headers::text;
+        raise notice '##### path_parts: %', path_parts::text;
+        raise notice '##### parts: %', parts::text;
+
+        if verb = 'GET' then
+		return query select 200, 'OK'::text, 'Hi mom'::text;
+            
+        else
+                return query select 405, 'Method Not Allowed'::text, '{"status": 405, "message": "Method not allowed"}'::text;
+        end if;
+
+    exception
+        when undefined_table then
+             return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text;
+    end;
+$$ language plpgsql;
+
+
+
+
+
+/****************************************************************************************************
  * FUNCTION request                                                                                 *
  ****************************************************************************************************/
 

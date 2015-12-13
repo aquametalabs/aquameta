@@ -13,7 +13,7 @@ def application(env, start_response):
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
             cursor.execute('''
-                select request as json
+                select status, message, data2 as json
                 from endpoint.request(%s, %s, %s::json, %s::json)
             ''', (
                 request.method,
@@ -23,7 +23,13 @@ def application(env, start_response):
             ))
 
             row = cursor.fetchone()
-            return Response(row.json, content_type="application/json")
+            return Response('Hello World!')
+
+            return Response(
+                row.json,
+                content_type="application/json",
+                status_code=row.status,
+            )
 
     except HTTPException as e:
         e_resp = e.get_response()
