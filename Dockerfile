@@ -46,8 +46,12 @@ RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http
 
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
-ADD core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available/aquameta_endpoint.conf
-RUN cd /etc/nginx/sites-enabled && rm ./default && ln -s ../sites-available/aquameta_endpoint.conf
+RUN cd /etc/nginx/sites-available && \
+        cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf . && \
+        cd ../sites-enabled && \
+        rm ./default && \
+        ln -s ../sites-available/aquameta_endpoint.conf
+
 
 # build the aquameta db python egg
 ADD core/004-aquameta_endpoint/servers/uwsgi /s/uwsgi
