@@ -6,7 +6,7 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #
 # to run:
 #   docker run -dit -p 80:80 -p 8080:8080 -p 5432:5432 aquametalabs/aquameta
-#                      ^uwsgi  ^bg_worker    ^postgres
+#                      ^uwsgi   ^bg_worker   ^postgres
 #
 # access PostgreSQL (password 'postgres') with:
 #   psql -h localhost -p 5432 -U postgres aquameta
@@ -40,9 +40,9 @@ RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make 
 #shared_preload_libraries = 'pg_http'
 RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
 
-# Adjust PostgreSQL configuration so that remote connections to the
-# database are possible.
-RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.4/main/pg_hba.conf
+# Adjust PostgreSQL configuration so that remote connections to the database are possible.
+RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.4/main/pg_hba.conf && \
+    echo "local all all            trust" >> /etc/postgresql/9.4/main/pg_hba.conf  ## This needs a serious audit
 
 # And add ``listen_addresses`` to ``/etc/postgresql/9.4/main/postgresql.conf``
 RUN echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf
@@ -50,7 +50,6 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf
 
 ADD core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available/aquameta_endpoint.conf
 RUN cd /etc/nginx/sites-enabled && rm ./default && ln -s ../sites-available/aquameta_endpoint.conf
-
 
 
 
@@ -74,7 +73,12 @@ EXPOSE 80 8080 5432
 
 
 USER postgres
-RUN /etc/init.d/postgresql start && cd /s/aquameta && ./build.sh && psql -c "alter role postgres password 'postgres'" aquameta && /etc/init.d/postgresql stop
+RUN /etc/init.d/postgresql start && \
+	cd /s/aquameta && \
+	./build.sh && \
+	psql -c "alter role postgres password 'postgres'" aquameta && \
+	psql -c "create role guest superuser login" aquameta && \
+	/etc/init.d/postgresql stop
 
 
 USER root
@@ -84,7 +88,8 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 # ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
 
 ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-ENTRYPOINT ["/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
+# ENTRYPOINT ["/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
+ENTRYPOINT ["/usr/bin/supervisord"]
 
 # RUN /s/bin/uwsgi --die-on-term --emperor /s/uwsgi/conf/uwsgi
 
