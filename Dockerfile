@@ -84,7 +84,7 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 # ENTRYPOINT /usr/lib/postgresql/9.4/bin/postgres -D /var/lib/postgresql/9.4/main -c config_file=/etc/postgresql/9.4/main/postgresql.conf
 
 ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-#ENTRYPOINT ["/usr/bin/supervisord"]
+ENTRYPOINT ["/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
 
 # RUN /s/bin/uwsgi --die-on-term --emperor /s/uwsgi/conf/uwsgi
 
