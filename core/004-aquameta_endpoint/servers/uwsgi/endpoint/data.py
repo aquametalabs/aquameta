@@ -4,7 +4,7 @@ from werkzeug.wrappers import Request, Response
 from werkzeug.wsgi import responder
 from os import environ
 
-import json 
+import json
 
 @responder
 def application(env, start_response):
@@ -23,12 +23,11 @@ def application(env, start_response):
             ))
 
             row = cursor.fetchone()
-            return Response('Hello World!')
+            # return Response('Hello World!')
 
             return Response(
                 row.json,
-                content_type="application/json",
-                status_code=row.status,
+                content_type="application/json"
             )
 
     except HTTPException as e:

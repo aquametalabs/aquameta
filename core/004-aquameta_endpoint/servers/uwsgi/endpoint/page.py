@@ -11,14 +11,26 @@ def application(env, start_response):
 
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
-            cursor.execute('select content from endpoint.resource where path = %s', (request.path,))
+            cursor.execute('''
+                select r.content, m.mimetype
+                from endpoint.resource r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
+                where path = %s
+            ''', (request.path,))
             row = cursor.fetchone()
 
             if row is None:
-                raise NotFound
-            else:
-#                return Response(row.content, content_type='text/html')
-                return Response('<h1>Hello World!</h1><p>Resource requested: '+request.path, content_type='text/html')
+                cursor.execute('''
+                    select r.content, m.mimetype
+                    from endpoint.resource_binary r
+                        join endpoint.mimetype m on r.mimetype_id = m.id
+                    where path = %s
+                ''', (request.path,))
+                row = cursor.fetchone()
+                if row is None:
+                    raise NotFound
+            return Response(row.content, content_type=row.mimetype)
+            return Response('<h1>Hello World!</h1><p>Resource requested: '+request.path, content_type='text/html')
 
     except HTTPException as e:
         return e
