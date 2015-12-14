@@ -17,7 +17,8 @@ def application(env, start_response):
             if row is None:
                 raise NotFound
             else:
-                return Response(row.content, content_type='text/html')
+#                return Response(row.content, content_type='text/html')
+                return Response('<h1>Hello World!</h1><p>Resource requested: '+request.path, content_type='text/html')
 
     except HTTPException as e:
         return e
