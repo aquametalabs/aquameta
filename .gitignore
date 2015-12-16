@@ -2,3 +2,4 @@
 *.swo
 *pg_http.o
 *pg_http.so
+docs/build
