@@ -839,7 +839,7 @@ $$ language plpgsql;
 
 
 /****************************************************************************************************
- * FUNCTION request JSON VERSION FOR UWSGI woot. 
+ * FUNCTION request JSON VERSION FOR UWSGI root. 
  ****************************************************************************************************/
 
 create or replace function endpoint.request(
@@ -861,6 +861,7 @@ create or replace function endpoint.request(
         select string_to_array(path, '/') into path_parts;
         select array_length(path_parts, 1) into parts;
 	args := headers;
+	data2 := data;
 
         raise notice '###### endpoint.request % %', verb, path;
         raise notice '##### headers: %', headers::text;
