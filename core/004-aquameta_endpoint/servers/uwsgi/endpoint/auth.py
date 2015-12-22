@@ -11,7 +11,7 @@ class AuthMiddleware(object):
     def do_auth(self, request, start_response):
         with cursor_for_request(request) as cursor:
             cursor.execute(
-                'select auth.login(%s) as token',
+                'select endpoint.login(%s) as token',
                 (request.args['hash'],)
             )
 
@@ -31,7 +31,7 @@ class AuthMiddleware(object):
             token = request.cookies['SESSION']
 
             with cursor_for_request(request) as cursor:
-                cursor.execute("select username from auth.session where token = %s", (token,))
+                cursor.execute("select username from endpoint.session where token = %s", (token,))
 
                 row = cursor.fetchone()
                 if row:
