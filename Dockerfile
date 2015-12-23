@@ -5,8 +5,8 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #   docker build -t aquametalabs/aquameta .
 #
 # to run:
-#   docker run -dit -p 80:80 -p 8080:8080 -p 5432:5432 --privilaged aquametalabs/aquameta
-#                      ^uwsgi   ^bg_worker   ^postgres   ^ fuse
+#   docker run -dit -p 80:80 -p 8080:8080 -p 5432:5432 --privileged aquametalabs/aquameta
+#                      ^uwsgi   ^bg_worker   ^postgres   ^fuse
 #
 # access PostgreSQL (password 'postgres') with:
 #   psql -h localhost -p 5432 -U postgres aquameta
