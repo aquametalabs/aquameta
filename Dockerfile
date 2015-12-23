@@ -18,7 +18,7 @@ ENV REFRESHED_AT 2015-11-10
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev python python-pip python-dev nginx supervisor
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient fuse libfuse-deb
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient fuse libfuse-dev
 RUN pgxn install multicorn
 RUN pip install requests sphinx sphinx-autobuild fusepy
 
@@ -58,6 +58,9 @@ RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi && pip install .
 
 ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+## Docker
+RUN mkdir /mnt/aquameta
+
 #################### build aquameta ###############################
 USER postgres
 RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.4/main/pg_hba.conf && \
@@ -69,9 +72,6 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.4/main/pg_hba.con
 	psql -c "alter role postgres password 'postgres'" aquameta && \
 	psql -c "create role guest superuser login" aquameta && \
 	/etc/init.d/postgresql stop
-
-## Docker
-RUN mkdir /mnt/aquameta
 
 
 
