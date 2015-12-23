@@ -5,8 +5,8 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #   docker build -t aquametalabs/aquameta .
 #
 # to run:
-#   docker run -dit -p 80:80 -p 8080:8080 -p 5432:5432 aquametalabs/aquameta
-#                      ^uwsgi   ^bg_worker   ^postgres
+#   docker run -dit -p 80:80 -p 8080:8080 -p 5432:5432 --privilaged aquametalabs/aquameta
+#                      ^uwsgi   ^bg_worker   ^postgres   ^ fuse
 #
 # access PostgreSQL (password 'postgres') with:
 #   psql -h localhost -p 5432 -U postgres aquameta
@@ -18,9 +18,9 @@ ENV REFRESHED_AT 2015-11-10
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev python python-pip python-dev nginx supervisor
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient fuse libfuse-deb
 RUN pgxn install multicorn
-RUN pip install requests sphinx sphinx-autobuild
+RUN pip install requests sphinx sphinx-autobuild fusepy
 
 
 # cp the repo to /s
@@ -69,6 +69,10 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.4/main/pg_hba.con
 	psql -c "alter role postgres password 'postgres'" aquameta && \
 	psql -c "create role guest superuser login" aquameta && \
 	/etc/init.d/postgresql stop
+
+## Docker
+RUN mkdir /mnt/aquameta
+
 
 
 #################### docker container ###############################
