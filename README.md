@@ -4,8 +4,9 @@ aquameta
 Aquameta is a web-based development environment for building and deploying web
 applications.  It is designed on the first principle of *datafication*.
 Instead of storing files in the filesystem, with Aquameta, *everyting* lives in
-the database, PostgreSQL.  There is no command-line interfaces or text-files,
-they are replaced by a GUI, and code stored in the database.
+the database, PostgreSQL.
+
+For more info, see [aquameta.com](http://aquameta.com/).
 
 Status
 ------
@@ -15,16 +16,13 @@ Aquameta is in early prototype stages, pre-0.1 release.
 Features
 --------
 
+- Meta - Writable system catalog for PostgreSQL
 - File System - A bi-directional file system integration system
 - Events - Pub/sub data change events API
 - Web server - Hosts arbitrary resources and a REST/JSON API for database operations
 - Bundles - A version control system similar to git but for database rows intead of files
 - Widgets - Modular web components that can be reused
-- Schema editor - GUI for building database tables
-- Query editor - Write complex queries and views from the browser
-- 100% Data - Everything is stored in the database
-- Web-based IDE - Build complex applications without ever leaving the browser
-
+- P2P - Peer-to-peer communication between Aquameta nodes
 
 Installation
 ------------
