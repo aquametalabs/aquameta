@@ -21,6 +21,7 @@ RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-k
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient fuse libfuse-dev
 RUN pgxn install multicorn
 RUN pip install requests sphinx sphinx-autobuild fusepy
+RUN locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
 
 
 # cp the repo to /s
