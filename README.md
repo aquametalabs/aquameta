@@ -1,10 +1,8 @@
 aquameta
 ========
 
-Aquameta is a web-based development environment for building and deploying web
-applications.  It is designed on the first principle of *datafication*.
-Instead of storing files in the filesystem, with Aquameta, *everyting* lives in
-the database, PostgreSQL.
+Aquameta is a web-based development environment designed on the first principle
+of datafication, and build entirely in PostgreSQL.
 
 For more info, see [aquameta.com](http://aquameta.com/).
 
