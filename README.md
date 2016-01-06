@@ -35,8 +35,8 @@ You can also build from source.  See the [INSTALL](https://github.com/aquametala
 Contribute
 ----------
 
-- Issue Tracker: github.com/aquametalabs/aquameta/issues
-- Source Code: github.com/aquametalabs/aquameta
+- Issue Tracker: [github.com/aquametalabs/aquameta/issues](http://github.com/aquametalabs/aquameta/issues)
+- Source Code: [github.com/aquametalabs/aquameta](github.com/aquametalabs/aquameta)
 
 Support
 -------
