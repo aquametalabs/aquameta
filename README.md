@@ -1,65 +1,52 @@
-# Aquameta
+aquameta
+========
 
-Aquameta Labs, Portland Oregon
+Aquameta is a web-based development environment for building and deploying web
+applications.  It is designed on the first principle of *datafication*.
+Instead of storing files in the filesystem, with Aquameta, *everyting* lives in
+the database, PostgreSQL.  There is no command-line interfaces or text-files,
+they are replaced by a GUI, and code stored in the database.
 
-Copyright (c) 2015.  All rights reserved.
+Status
+------
 
-A web application development platform built entirely in PostgreSQL.
+Aquameta is in early prototype stages, pre-0.1 release.
 
-[http://aquameta.com/](http://aquameta.com/)
+Features
+--------
 
-## Prototype!
-
-Please note - this code is an early prototype stages.  Meta and bundle layers
-are approaching completion, but the remaining layers are from early on in the
-project, and need a complete refactor.
-
-## Project Summary
-
-http://blog.aquameta.com/2015/08/28/introducing-aquameta/
-
-Join #aquameta on irc.freenode.net.
-
-## Install using Docker
-
-You can quickly get up and running with Aquameta via Docker.  See our [Dockerfile](https://github.com/aquametalabs/aquameta/blob/master/Dockerfile) for more information.
-
-## Build from Source
-
-### 1. Install PostgreSQL 9.4
-
-Install PostgresSQL 9.4, and the postgresql-contrib package.  On Mac, try out
-Postgres.app.  (see http://www.postgresql.org/download/)
+- File System - A bi-directional file system integration system
+- Events - Pub/sub data change events API
+- Web server - Hosts arbitrary resources and a REST/JSON API for database operations
+- Bundles - A version control system similar to git but for database rows intead of files
+- Widgets - Modular web components that can be reused
+- Schema editor - GUI for building database tables
+- Query editor - Write complex queries and views from the browser
+- 100% Data - Everything is stored in the database
+- Web-based IDE - Build complex applications without ever leaving the browser
 
 
-### 2. Create a Superuser
+Installation
+------------
 
-Under Linux, you may need to create a PostgreSQL superuser.  Postgres.app for
-Mac does this for you, but for other PostgreSQL distributions:
+We recommend installing via Docker.  See the [Dockerfile](https://github.com/aquametalabs/aquameta/blob/master/Dockerfile) for instructions.
 
-```
-eric@34f81a644855:~$ sudo -iu postgres
-postgres@34f81a644855:~$ psql
-psql (9.4.1)
-Type "help" for help.
-
-postgres=# create role eric superuser login;
-CREATE ROLE
-postgres=# \q
-postgres@34f81a644855:~$
-```
+You can also build from source.  See the [INSTALL](https://github.com/aquametalabs/aquameta/blob/master/INSTALL.md) file.
 
 
-### 3. Install Aquameta into PostgreSQL
+Contribute
+----------
 
-Run `./build.sh` as the user who has superuser access
+- Issue Tracker: github.com/aquametalabs/aquameta/issues
+- Source Code: github.com/aquametalabs/aquameta
 
+Support
+-------
 
-### 4. Build and install the webserver
+If you are having issues, please let us know.
+We have a mailing list located at: aquameta-discuss@google-groups.com
 
-See [core/004-aquameta_endpoint/servers/background_worker/README.md](core/004-aquameta_endpoint/servers/background_worker/README.md).
+License
+-------
 
-
-### 5. Browse to `localhost`
-
-[http://localhost:8080/](http://localhost:8080/)
+The project is licensed under the GPL.
