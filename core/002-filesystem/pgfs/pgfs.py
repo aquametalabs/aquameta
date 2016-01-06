@@ -46,10 +46,10 @@ class PostgresFS(LoggingMixIn, Operations):
         return exists
 
     def _get_pk_data(self, schema, tablename, pk, col, offset=0, limit=0):
-        print "Updating data"
+        #print "Updating data"
         if self._schema_exists(schema):
             cur = self.conn.cursor()
-            print "Pulling data for {}.{}.{}.{}, O: {}, L: {}".format(schema, tablename, pk, col, offset, limit)
+            #print "Pulling data for {}.{}.{}.{}, O: {}, L: {}".format(schema, tablename, pk, col, offset, limit)
             try:
                 if limit != 0:
                     offset = offset + 1
@@ -57,11 +57,11 @@ class PostgresFS(LoggingMixIn, Operations):
                 else:
                     cur.execute("SELECT \"{col}\" FROM \"{s}\".\"{t}\" where id = '{pk}'".format(s=schema, t=tablename, pk=pk, col=col))
             except Exception as e:
-                print "LIMIT: {} OFFSET: {} ERROR: {}".format(limit, offset, e)
+                #print "LIMIT: {} OFFSET: {} ERROR: {}".format(limit, offset, e)
                 self.conn.rollback()
                 cur.close()
                 raise FuseOSError(ENOENT)
-            print "Cursor status: {}".format(cur.statusmessage)
+            #print "Cursor status: {}".format(cur.statusmessage)
             data = cur.fetchall()
             cur.close()
             formatted = str(data[0][0]).encode('utf-8', errors='replace')
@@ -70,13 +70,13 @@ class PostgresFS(LoggingMixIn, Operations):
         return None
 
     def _set_pk_data(self, schema, tablename, pk, col):
-        print "Updating data"
+        #print "Updating data"
         if self._schema_exists(schema) and self.write_buffer is not None:
             cur = self.conn.cursor()
             try:
                 to_write = QuotedString(self.write_buffer).getquoted()
                 cur.execute("UPDATE \"{s}\".\"{t}\" SET {col} = {wb} WHERE id = '{pk}'".format(s=schema, wb=to_write, t=tablename, pk=pk, col=col))
-                print "Cursor status: {}".format(cur.statusmessage)
+                #print "Cursor status: {}".format(cur.statusmessage)
                 self.conn.commit()
             except InternalError as e:
                 self.conn.rollback()
@@ -92,13 +92,13 @@ class PostgresFS(LoggingMixIn, Operations):
         return False
 
     def read(self, path, size, offset, fh):
-        print "Calling read"
+        #print "Calling read"
         if size == 0L:
             return 0
 
         split = normpath(path).split("/")
 
-        print "Reading {}".format(path)
+        #print "Reading {}".format(path)
         if len(split) == 5:
             schema = split[1]
             tablename = split[2]
@@ -110,11 +110,11 @@ class PostgresFS(LoggingMixIn, Operations):
         raise FuseOSError(ENOENT)
 
     def create(self, path, mode, fh=None):
-        print "Create called."
+        #print "Create called."
         raise FuseOSError(EROFS)
 
     def flush(self, path, fh):
-        print "Calling flush"
+        #print "Calling flush"
         split = normpath(path).split("/")
         # We only write rows
         if len(split) == 5 and self.write_buffer:
@@ -126,7 +126,7 @@ class PostgresFS(LoggingMixIn, Operations):
         return 0
 
     def unlink(self, path):
-        print "Calling unlink"
+        #print "Calling unlink"
         split = normpath(path).split("/")
         # We only write rows
         if len(split) == 5:
@@ -134,7 +134,7 @@ class PostgresFS(LoggingMixIn, Operations):
         raise FuseOSError(ENOENT)
 
     def write(self, path, data, offset, fh):
-        print "Write called"
+        #print "Write called"
         if self.write_buffer is None:
             # This is the first write to a file, so we need to get the data for it
             split = normpath(path).split("/")
@@ -155,7 +155,7 @@ class PostgresFS(LoggingMixIn, Operations):
         return len(data)
 
     def truncate(self, path, length, fh=None):
-        print "Want to truncate: {}".format(length)
+        #print "Want to truncate: {}".format(length)
         if self.write_buffer is None:
             # This is the first write to a file, so we need to get the data for it
             split = normpath(path).split("/")
@@ -171,7 +171,7 @@ class PostgresFS(LoggingMixIn, Operations):
         return 0
 
     def getattr(self, path, fh=None):
-        print "Calling getattr"
+        #print "Calling getattr"
         to_return = None
         uid, gid, pid = fuse_get_context()
         split = normpath(path).split("/")
@@ -211,7 +211,7 @@ class PostgresFS(LoggingMixIn, Operations):
 
         normalized = normpath(path)
         split = normalized.split("/")
-        print "Reading dir {}".format(path)
+        #print "Reading dir {}".format(path)
         if len(path) == 1:
             all_schemas = cur.execute("SELECT name FROM meta.schema")
             to_return = [x[0] for x in cur.fetchall()]
