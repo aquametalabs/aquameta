@@ -21,7 +21,7 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
             'last_mod': 'st_mtime' }
         super(FilesystemForeignDataWrapper, self).__init__(options, columns)
         self.columns = columns
-	self.type = options['table']
+	self.type = options['table_name']
 
     def execute(self, quals, columns):
         path = None
