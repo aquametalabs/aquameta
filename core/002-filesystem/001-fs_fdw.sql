@@ -9,7 +9,7 @@ create foreign data wrapper fs_fdw
   validator public.multicorn_validator;
 
 create server fs_srv foreign data wrapper fs_fdw options (
-	wrapper 'fs_fdw.ForeignDataWrapper'
+	wrapper 'fs_fdw.FilesystemForeignDataWrapper'
 );
 
 create foreign table filesystem.file (
