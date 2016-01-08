@@ -5,6 +5,11 @@ from time import ctime
 from grp import getgrgid
 from pwd import getpwuid
 
+# Parent_id does not work for one directory up from /
+# e.g. /usr
+
+# Content not being read
+
 class FilesystemForeignDataWrapper(ForeignDataWrapper):
     def __init__(self, options, columns):
         self.col_map={
@@ -16,6 +21,7 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
             'last_mod': 'st_mtime' }
         super(FilesystemForeignDataWrapper, self).__init__(options, columns)
         self.columns = columns
+	self.type = options['table']
 
     def execute(self, quals, columns):
         path = None
@@ -27,22 +33,28 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
             yield {}
             return
 
+	# Regular file
+        if self.type == 'file' and stat.S_ISREG( os.stat(path).st_mode ) and 'content' in columns:
+	    row={}
+	    with open(path, 'r') as infile:
+		row['content'] = infile.read().replace('\n', '')
+	    yield row
+	    return
+	    
+	# Directory
         for filename in os.listdir(path):
             f=os.stat(path + '/' + filename)
             row={}
             for column_name in columns:
                 if column_name == 'id' or column_name == 'path':
-                    row[column_name] = path #+ '/' + filename
+                    row[column_name] = path
                 elif column_name == 'name':
                     row[column_name] = filename
                 elif column_name == 'content':
-                    row[column_name] = 'content'
+		    row[column_name] = '...'
 
                 elif column_name == 'parent_id' or column_name == 'directory_id':
-                    if path == '/':
-                        row[column_name] = None
-                    else:
-                        row[column_name] = '/'.join( path.split('/')[:-1] )
+		    row[column_name] = None if path == '/' else '/'.join( path.split('/')[:-1] )
 
                 elif column_name == 'group':
                     row[column_name] = getgrgid( getattr(f, self.col_map[column_name]) ).gr_name
@@ -59,3 +71,4 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
                 else:
                     row[column_name] = None
             yield row
+
