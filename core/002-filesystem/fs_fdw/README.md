@@ -8,28 +8,32 @@ filesystem.file
 ---------------
 
 ```
-| name         | path            | permissions | links | size | owner | group | last mod   | name      | content |
-------------------------------------------------------------------------------------------------------------------
-| einstein.jpg | /var/www/public | drwxr-xr-x  | 1     | 3    | mic   | staff | Dec 1 2015 | index.php | ...     |
+-------------------------------------------------------------------------------------------------------------------------------------------
+| id                | name         | path              | directory_id | permissions | links | size | owner | group | last_mod   | content |
+-------------------------------------------------------------------------------------------------------------------------------------------
+| /etc/einstein.jpg | einstein.jpg | /etc/einstein.jpg | /etc         | drwxr-xr-x  | 1     | 3    | mic   | staff | Dec 1 2015 | ...     |
+-------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 - ls
 ```sql
-select * from filesystem.file where path = '/var/www/public';
+select permissions, links, size, owner, group, last_mod, name from filesystem.file where path = '/var/www/public';
 ```
 
 - cat
 ```sql
-select content from filesystem.file where path = '/var/www/public' and name='einstein.jpg';
+select content from filesystem.file where path = '/var/www/public' and name = 'index.php';
 ```
 
 filesystem.directory 
 --------------------
 
 ```
-| path               | permissions | links | size | owner | group | last mod   | name   |
------------------------------------------------------------------------------------------
-| /var/www/public    | drwxr-xr-x  | 1     | 3    | mic   | staff | Dec 1 2015 | public |
+-----------------------------------------------------------------------------------------------------------------------
+| id              | name   | path               | parent_id | permissions | links | size | owner | group | last mod   |
+-----------------------------------------------------------------------------------------------------------------------
+| /var/www/public | public | /var/www/public    | /var/www  | drwxr-xr-x  | 1     | 3    | mic   | staff | Dec 1 2015 |
+-----------------------------------------------------------------------------------------------------------------------
 ```
 
 - ls
@@ -37,7 +41,3 @@ filesystem.directory
 select * from filesystem.directory where path = '/var/www';
 ```
 
-- mkdir?  do we want to support writable?
-```sql
-insert into filesystem.directory (path, name) values ('/var/www’, 'public');
-```
