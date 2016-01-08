@@ -1,7 +1,18 @@
 Filesystem Foreign Data Wrapper
 ===============================
 
+Install
+-------
+```shell
+cd src/aquameta/core/002-filesystem/fs_fdw
+python setup.py install
+cd ..
+cat 001-fs_fdw.sql | psql -U postgres aquameta
+psql -U postgres aquameta
+```
+
 Spec for fs_fdw.
+
 Mickey Burks <mickey@aquameta.com>
 
 filesystem.file
