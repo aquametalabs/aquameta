@@ -18,7 +18,7 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
             if (qual.field_name == 'path' or qual.field_name == 'id') and qual.operator == '=':
                 path = qual.value
 
-	if path is null:
+	if path is None:
 	    yield {}
 
         for filename in os.listdir(path):
