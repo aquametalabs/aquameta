@@ -1205,6 +1205,10 @@ create function meta.role_delete() returns trigger as $$
 $$ language plpgsql;
 
 
+create function meta.current_role_id() returns meta.role_id as $$
+    select id from meta.role where name=current_user;
+$$ language sql;
+
 /******************************************************************************
  * meta.connection
  *****************************************************************************/
@@ -1239,6 +1243,9 @@ create function meta.connection_delete() returns trigger as $$
     end;
 $$ language plpgsql;
 
+create function meta.current_connection_id() returns meta.connection_id as $$
+    select id from meta.connection where unix_pid=pg_backend_pid();
+$$ language sql;
 
 /******************************************************************************
  * meta.constraint_unique
