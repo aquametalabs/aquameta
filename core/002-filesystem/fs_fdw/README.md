@@ -1,6 +1,19 @@
 Filesystem Foreign Data Wrapper
 ===============================
 
+Todo
+----
+
+- Filesystem.file should only show files?
+
+- Encoding is incorrect for reading files
+
+-- Currently you need to 
+
+```sql
+select convert_from(content, 'UTF8') from filesystem.file where id='/s/aquameta/test.sh';
+```
+
 Install
 -------
 ```shell

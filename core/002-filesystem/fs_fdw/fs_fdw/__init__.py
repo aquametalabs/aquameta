@@ -5,11 +5,6 @@ from time import ctime
 from grp import getgrgid
 from pwd import getpwuid
 
-# Parent_id does not work for one directory up from /
-# e.g. /usr
-
-# Content not being read
-
 class FilesystemForeignDataWrapper(ForeignDataWrapper):
     def __init__(self, options, columns):
         self.col_map={
@@ -25,71 +20,81 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
 
     def execute(self, quals, columns):
         path = None
+
         for qual in quals:
             if (qual.field_name == 'path' or qual.field_name == 'id') and qual.operator == '=':
-                path = qual.value
+                path = os.path.abspath(qual.value)
+		
+		# If path is not supplied, return empty set
+		if not os.path.exists(path):
+		    yield {}
+		    return
 
-	    elif (qual.field_name == 'directory_id' or qual.field_name == 'parent_id') and qual.operator == '=':
-		path = qual.value
+		elif path == '/':
+	            row=self.get_file_stat(columns, '/')
+		    yield row
+		    return
 
+	        filename=path.split('/')[-1]
+	        path='/' + '/'.join(path.split('/')[1:-1])
+		# If its a file -- we want one result path = path, file = filename
+		# If its a directory -- we want one result path = parent_id and file = directory
 
+	        row=self.get_file_stat(columns, filename, path)
 
-	# If path is not supplied, return empty set
-        if path is None:
-            yield {}
-            return
+                # If 'file' table, get content
+                if self.type == 'file' and stat.S_ISREG( os.stat(path + '/' + filename).st_mode ) and 'content' in columns:
+                    with open(path + '/' + filename, 'r') as infile:
+                    # import codecs
+                    # with codecs.open(path, 'r', 'ascii') as infile:
+                        row['content'] = infile.read().replace('\n', '')
+                        #row['content'] = infile.read().decode('utf-8').encode('ascii', 'ignore')
 
-
-	# Remove last /
-	path = path[:-1] if path[-1] == '/' else path
-	# If no leading /, change to absolute path
-	path = path if path[0] == '/' else os.path.abspath(path)
-
-
-        # If path is a regular file
-        if stat.S_ISREG( os.stat(path).st_mode ):
-	    filename=path.split('/')[-1]
-	    path='/'.join(path.split('/')[:-1])
-
-            row=self.get_file_stat(filename, path, columns)
-
-            # If 'file' table, get content
-            if self.type == 'file' and stat.S_ISREG( os.stat(path + '/' + filename).st_mode ) and 'content' in columns:
-                with open(path + '/' + filename, 'r') as infile:
-                # import codecs
-                # with codecs.open(path, 'r', 'ascii') as infile:
-                    row['content'] = infile.read().replace('\n', '')
-                    #row['content'] = infile.read().decode('utf-8').encode('ascii', 'ignore')
-
-	    yield row
-
-	# Path is a directory
-	else:
-            for filename in os.listdir(path):
-	        # Get stats for path
-	        row=self.get_file_stat(filename, path, columns)
 	        yield row
 
 
-    def get_file_stat(self, filename, path, columns):
-	#f=os.stat(path) if self.type == 'file' else os.stat(path + '/' + filename)
-	f=os.stat(path + '/' + filename)
+	    elif (qual.field_name == 'directory_id' or qual.field_name == 'parent_id') and qual.operator == '=':
+		path = os.path.abspath(qual.value)
+
+		# If path doesn't exist
+		if not os.path.exists(path):
+		    yield {}
+
+		# If path is a directory
+		elif os.path.isdir(path):
+		    for filename in os.listdir(path):
+			# Get stats for path
+			row=self.get_file_stat(columns, filename, path)
+			yield row
+
+
+
+
+    def get_file_stat(self, columns, filename, path=None):
+	if path is None:
+	    fullpath=filename
+	elif path == '/':
+	    fullpath=path + filename
+	else:
+	    fullpath=path + '/' + filename
+	f=os.stat(fullpath)
 	row={}	
         for column_name in columns:
             if column_name == 'id' or column_name == 'path':
-                row[column_name] = path + '/' + filename
+                row[column_name] = fullpath
             elif column_name == 'name':
                 row[column_name] = filename
             elif column_name == 'content':
-	        row[column_name] = '...'
+	        row[column_name] = u'...'
 
             elif column_name == 'parent_id' or column_name == 'directory_id':
-	        if path == '/' or path == '':
-		    # Root directory has no parent
-	    	    row[column_name] = None
-	        else:
-                    row[column_name] = path
-                    #row[column_name] = '/' + '/'.join( path.split('/')[1:-1] )
+                row[column_name] = path
+	        #if path == '/' or path == '':
+		#    # Root directory has no parent
+	    	#    row[column_name] = None
+	        #else:
+                #    row[column_name] = path
+                #    #row[column_name] = '/' + '/'.join( path.split('/')[1:-1] )
 
             elif column_name == 'group':
                 row[column_name] = getgrgid( getattr(f, self.col_map[column_name]) ).gr_name
