@@ -13,112 +13,70 @@ create extension if not exists "uuid-ossp" schema public;
 
 create schema event;
 
--- a kind of event mailbox, which can subscribe to database change events.  
--- often coupled with an instantiation of an evented endpoint client.
-create table event.queue (
-    id uuid default public.uuid_generate_v4() primary key,
-    owner_id meta.role_id
-);
+set search_path=event;
 
--- this is what is created per-user when that user subscribes.  rename to subscription.
-create table event.subscription (
+-- persistent session object.  
+create table session (
     id uuid default public.uuid_generate_v4() primary key,
-    queue_id uuid not null references event.queue(id) on delete cascade on update cascade,
-    selector text,
-    event_type text, -- FIXME: use an emum here maybe?  maybe turn both these fields into a type?
-    created_at timestamp not null default CURRENT_TIMESTAMP
-);
-
--- there is a 1:1 between this and a DML operation to which someone is subscribed.  
--- it contains the event that happened, with it's payload.
-create table event.event (
-    id uuid default public.uuid_generate_v4() primary key,
-    selector varchar not null,
-    "type" varchar not null,
-    created_at timestamp not null default CURRENT_TIMESTAMP,
-    payload json not null
-);
-
--- join table between event and queue (to be renamed to session_selector)
-create table event.queued_event (
-    id uuid default public.uuid_generate_v4() primary key,
-    event_id uuid not null references event.event(id) on delete cascade on update cascade,
-    subscription_id uuid not null references event.subscription(id) on delete cascade on update cascade,
-    created_at timestamp not null default CURRENT_TIMESTAMP
+    owner_id meta.role_id not null -- , -- the postgresql user
+--    connection_id meta.connection_id -- the postgresql database session
 );
 
 
-create or replace function event.validate_subscription(
-    selector varchar,
-    _type varchar
-) returns bool as $$
+-- create a new event.session and listen to it's channel on this postgresql connection
+create function event.session_create() returns void as $$
     declare
-        selector_parts varchar[];
-        schema_id integer;
-        table_id integer;
-
+        session_id uuid;
     begin
-        if _type not in ('insert', 'update', 'delete', '*') then
-            raise warning 'Only events on insert/update/delete or * are supported, not %, in subscription_selector to %:%', _type, selector, _type;
-            return false;
-        end if;
-
-        selector_parts := string_to_array((string_to_array(selector, '?'))[1], '/');
-
-        if array_length(selector_parts, 1) > 5 then
-            raise warning 'Selector was longer than expected in subscription_selector to %:%', selector, _type;
-            return false;
-        end if;
-
-        if array_length(selector_parts, 1) = 0 then
-            raise warning 'Selector was empty in subscription_selector to %:%', selector, _type;
-            return false;
-        end if;
-
-        if selector_parts[1] is not null then
-            select id
-            from meta.schema
-            where name = selector_parts[1]
-            into schema_id;
-
-            if schema_id is null then
-                raise warning 'There is no schema named %, in subscription_selector to %:%', selector_parts[1], selector, _type;
-                return false;
-            end if;
-
-            if selector_parts[2] is not null then
-                if selector_parts[2] != 'table' then
-                    raise warning 'Event subscription_selectors are only supported on tables, not ''%'', in subscription_selector to %:%', selector_parts[2], selector, _type;
-                    return false;
-                else
-                    if selector_parts[3] is not null then
-                        select id
-                        from meta.table
-                        where name = selector_parts[3]
-                        into table_id;
-
-                        if table_id is null then
-                            raise warning 'There is no table named %.% in subscription_selector to %:%', selector_parts[1], selector_parts[3], selector, _type;
-                            return false;
-                        end if;
-
-                        if selector_parts[4] != 'rows' then
-                            raise warning 'The fourth position in a selector is currently expected to be ''rows'' if present, not ''%'' in subscription_selector to %:%', selector_parts[4], selector, _type;
-                            return false;
-                        end if;
-                    else
-                        raise warning 'A table name is required in subscription_selector to %:%', selector, _type;
-                        return false;
-                    end if;
-                end if;
-            end if;
-        end if;
-
-        return true;
+        insert into event.session (owner_id) -- , connection_id)
+            values (meta.current_role_id()) -- , meta.current_connection_id())
+            returning id into session_id;
+        execute 'listen "' || session_id || '"';
     end;
 $$ language plpgsql;
 
 
+-- reattach to an existing session
+create function event.session_attach( session_id uuid ) returns void as $$
+    begin
+        -- todo: check to see that session exists
+        execute 'listen "' || session_id || '"';
+    end;
+$$ language plpgsql;
+
+create function event.session_detatch( session_id uuid ) returns void as $$
+    begin
+        execute 'unlisten "' || session_id || '"';
+    end;
+$$ language plpgsql;
+
+
+/************************************************************************
+ * subscription tables
+ * inserting into these tables attaches the 'evented' trigger to the 
+ * specified table, if necessary
+ ***********************************************************************/
+
+create table event.subscription_table (
+    id uuid default public.uuid_generate_v4() primary key,
+    session_id uuid not null references event.session(id),
+    relation_id meta.relation_id,
+    created_at timestamp not null default now()
+);
+
+create table event.subscription_row (
+    id uuid default public.uuid_generate_v4() primary key,
+    session_id uuid not null references event.session(id),
+    row_id meta.row_id,
+    created_at timestamp not null default now()
+);
+
+create table event.subscription_field (
+    id uuid default public.uuid_generate_v4() primary key,
+    session_id uuid not null references event.session(id),
+    field_id meta.field_id,
+    created_at timestamp not null default now()
+);
 
 /****************************************************************************************************
  * TRIGGER subscription_selector                                                                    *
