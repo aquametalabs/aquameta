@@ -2,8 +2,6 @@ begin;
 
 set search_path=filesystem;
 
-create extension if not exists multicorn;
-
 create foreign data wrapper fs_fdw
   handler public.multicorn_handler
   validator public.multicorn_validator;
