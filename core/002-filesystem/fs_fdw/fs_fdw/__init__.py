@@ -37,8 +37,6 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
 
                 filename=path.split('/')[-1]
                 path='/' + '/'.join(path.split('/')[1:-1])
-                # If its a file -- we want one result path = path, file = filename
-                # If its a directory -- we want one result path = parent_id and file = directory
 
                 row=self.get_file_stat(columns, filename, path)
 
@@ -88,12 +86,6 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
 
             elif column_name == 'parent_id' or column_name == 'directory_id':
                 row[column_name] = path
-                #if path == '/' or path == '':
-                #    # Root directory has no parent
-                #    row[column_name] = None
-                #else:
-                #    row[column_name] = path
-                #    #row[column_name] = '/' + '/'.join( path.split('/')[1:-1] )
 
             elif column_name == 'group':
                 row[column_name] = getgrgid( getattr(f, self.col_map[column_name]) ).gr_name
