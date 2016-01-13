@@ -21,7 +21,7 @@ create foreign table filesystem.file (
 	owner text,
 	"group" text,
 	last_mod text,
-	content bytea
+	content text
 ) server fs_srv options (table_name 'file');
 
 create foreign table filesystem.directory (

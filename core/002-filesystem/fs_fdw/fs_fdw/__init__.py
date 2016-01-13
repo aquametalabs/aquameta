@@ -45,10 +45,7 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
                 # If 'file' table, get content
                 if self.type == 'file' and stat.S_ISREG( os.stat(path + '/' + filename).st_mode ) and 'content' in columns:
                     with open(path + '/' + filename, 'r') as infile:
-                    # import codecs
-                    # with codecs.open(path, 'r', 'ascii') as infile:
-                        row['content'] = infile.read().replace('\n', '')
-                        #row['content'] = infile.read().decode('utf-8').encode('ascii', 'ignore')
+                        row['content'] = infile.read()
 
                 yield row
 
@@ -63,6 +60,8 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
                 # If path is a directory
                 elif os.path.isdir(path):
                     for filename in os.listdir(path):
+                        if self.type == 'file' and not stat.S_ISREG( os.stat(path + '/' + filename).st_mode ):
+                                continue
                         # Get stats for path
                         row=self.get_file_stat(columns, filename, path)
                         yield row
