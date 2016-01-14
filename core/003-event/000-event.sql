@@ -1,4 +1,4 @@
-/*******************************************************************************
+/******************************************************************************
  * Events
  * Pub/sub event system for PostgreSQL
  * 
@@ -24,7 +24,7 @@ create table session (
 
 
 -- create a new event.session and listen to it's channel on this postgresql connection
-create function event.session_create() returns void as $$
+create or replace function event.session_create() returns uuid as $$
     declare
         session_id uuid;
     begin
@@ -32,6 +32,7 @@ create function event.session_create() returns void as $$
             values (meta.current_role_id()) -- , meta.current_connection_id())
             returning id into session_id;
         execute 'listen "' || session_id || '"';
+        return session_id;
     end;
 $$ language plpgsql;
 
@@ -59,29 +60,93 @@ $$ language plpgsql;
 
 create table event.subscription_table (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id),
+    session_id uuid not null references event.session(id) on delete cascade,
     relation_id meta.relation_id,
     created_at timestamp not null default now()
 );
 
+create table event.subscription_column (
+    id uuid default public.uuid_generate_v4() primary key,
+    session_id uuid not null references event.session(id) on delete cascade,
+    column_id meta.column_id,
+    created_at timestamp not null default now()
+);
+
+
 create table event.subscription_row (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id),
+    session_id uuid not null references event.session(id) on delete cascade,
     row_id meta.row_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_field (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id),
+    session_id uuid not null references event.session(id) on delete cascade,
     field_id meta.field_id,
     created_at timestamp not null default now()
 );
+
+
+/************************************************************************
+ * evented trigger
+ * this is the trigger that gets attached to any table that someone
+ * subscribes to.  it queries the subscription_* tables looking for
+ * subscriptions that match this table and, when found, sends the
+ * subscriber an event.
+ ***********************************************************************/
+
+create function event.event_listener_relation returns trigger as $$
+    declare
+        payload varchar := '';
+        _event_type varchar;
+    begin
+        /* first, find the relation-level subscriptions (sub_table, sub_column) that match this TG_OP */
+        /* subscription_table */
+        for event in
+        select r.id, s.id
+        from subscription_table s
+            join meta.relation r on s.relation_id = r.id
+        where r.schema_name = TG_TABLE_SCHEMA
+            and r.name = TG_TABLE_NAME
+        /* build and send them a event */
+        loop
+            /* build payload object, and event_type */
+            if TG_OP = 'DELETE' then
+                _event_type := 'row_delete';
+                payload := payload || ' "old": ' || row_to_json(OLD) || ',';
+
+            elsif TG_OP = 'INSERT' then
+                _event_type := 'insert';
+                payload := payload || ' "new": ' || row_to_json(NEW) || ',';
+
+            elsif TG_OP = 'UPDATE' then
+                _event_type := 'update';
+                payload := payload || ' "old": ' || row_to_json(OLD) || ','
+                                   || ' "new": ' || row_to_json(NEW) || ',';
+            end if;
+
+            payload := payload || '"columns":' || www.columns_json(
+                TG_TABLE_SCHEMA::varchar,
+                TG_TABLE_NAME::varchar
+            );
+        end loop;
+
+
+
+    end;
+$$ language plpgsql;
+
+
+
+
 
 /****************************************************************************************************
  * TRIGGER subscription_selector                                                                    *
  ****************************************************************************************************/
 
+
+/*
 create function event.evented() returns trigger as $$
     declare
         event_selector varchar;
@@ -159,9 +224,6 @@ $$ language plpgsql;
 
 
 
-/****************************************************************************************************
- * FUNCTION queued_events_json                                                                      *
- ****************************************************************************************************/
 
 create function event.queued_events_json(
     _queue_id uuid,
@@ -196,10 +258,6 @@ create function event.queued_events_json(
 $$ language sql;
 
 
-
-/****************************************************************************************************
- * VIEW evented_table                                                                               *
- ****************************************************************************************************/
 
 create view event.evented_relation as
     select tr.schema_name,
@@ -314,11 +372,6 @@ create trigger event_evented_relation_update_trigger instead of update on event.
 create trigger event_evented_relation_delete_trigger instead of delete on event.evented_relation for each row execute procedure event.evented_relation_delete();
 
 
-
-/****************************************************************************************************
- * FUNCTION selector_does_match                                                               *
- ****************************************************************************************************/
-
 create function event.selector_does_match(
     selector1 varchar,
     selector2 varchar,
@@ -402,7 +455,6 @@ create function event.selector_does_match(
     end;
 $$ language plpgsql;
 
-/*
 create function selector_does_match(selector1 varchar, selector2 varchar, row_data public.hstore) returns bool as $$
     declare
         selector1_parts varchar[];
