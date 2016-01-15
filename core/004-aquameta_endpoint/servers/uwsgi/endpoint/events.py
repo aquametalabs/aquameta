@@ -10,30 +10,30 @@ from uuid import UUID
 
 
 
-def new_session(cursor):
-    token = UUID(bytes=urandom(16))
-
-    cursor.execute('''
-        insert into event.session (token, owner_id)
-        values (%s, (
-            select r.id
-            from meta.role r
-            where r.name = session_user    --pg magic name, not referring to event.session
-            limit 1
-        ))
-        returning id
-    ''', (str(token),))
-
-    uwsgi.websocket_send('''{
-        "method": "set_token",
-        "args": {
-            "token": "%s"
-        }
-    }''' % (token,))
-
-    session_id = cursor.fetchone().id
-
-    return session_id
+#def new_session(cursor):
+#    token = UUID(bytes=urandom(16))
+#
+#    cursor.execute('''
+#        insert into event.session (token, owner_id)
+#        values (%s, (
+#            select r.id
+#            from meta.role r
+#            where r.name = session_user    --pg magic name, not referring to event.session
+#            limit 1
+#        ))
+#        returning id
+#    ''', (str(token),))
+#
+#    uwsgi.websocket_send('''{
+#        "method": "set_token",
+#        "args": {
+#            "token": "%s"
+#        }
+#    }''' % (token,))
+#
+#    session_id = cursor.fetchone().id
+#
+#    return session_id
 
 
 def get_session_id(request, cursor):
@@ -49,8 +49,8 @@ def get_session_id(request, cursor):
         if session_row:
             session_id = session_row.id
 
-    if session_id is None:
-        session_id = new_session(cursor)
+#    if session_id is None:
+#        session_id = new_session(cursor)
 
     return session_id
 
@@ -75,14 +75,15 @@ def application(env, start_response):
             db_connection = cursor.connection
             db_connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
-            session_id = get_session_id(request, cursor)
+            #session_id = get_session_id(request, cursor)
 
-            logging.info('event/table/session/row/%s:connected (role: %s)' % (session_id, env['DB_USER']))
+            logging.info('connection established')
+            #logging.info('event/table/session/row/%s:connected (role: %s)' % (session_id, env['DB_USER']))
 
             db_conn_fd = db_connection.fileno()
             websocket_fd = uwsgi.connection_fd()
 
-            cursor.execute('listen "event/table/session/rows/%i"' % session_id)
+            #cursor.execute('listen "event/table/session/rows/%i"' % session_id)
 
             try:
                 while True:
@@ -100,13 +101,32 @@ def application(env, start_response):
 
                             if cmd:
                                 try:
-                                    if cmd['method'] == 'subscribe':
-                                        selector, type = cmd['args']['selector'].rsplit(':', 1)
-                                        cursor.execute("select event.subscribe_session(%s, %s, %s);", (session_id, selector, type))
+                                    if cmd['method'] == 'attach':
+                                        session_id = get_session_id(request, cursor)
 
-                                    elif cmd['method'] == 'unsubscribe':
-                                        selector, type = cmd['args']['selector'].rsplit(':', 1)
-                                        cursor.execute("select event.unsubscribe_session(%s, %s, %s);", (session_id, selector, type))
+                                        if session_id is not None:
+                                            logging.info('session %s:connected (role: %s)' % (session_id, env['DB_USER']))
+                                            cursor.execute('listen %i' % session_id)
+
+                                            cursor.execute('''
+                                                select event from event.event where session_id = %s;
+                                            ''', (session_id,))
+
+                                            for row in cursor:
+                                                uwsgi.websocket_send(json.dumps(row))
+                                                logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
+
+                                    elif cmd['method'] == 'detach':
+                                        logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
+                                        cursor.execute('unlisten %i' % session_id)
+
+#                                    if cmd['method'] == 'subscribe':
+#                                        selector, type = cmd['args']['selector'].rsplit(':', 1)
+#                                        cursor.execute("select event.subscribe_session(%s, %s, %s);", (session_id, selector, type))
+#
+#                                    elif cmd['method'] == 'unsubscribe':
+#                                        selector, type = cmd['args']['selector'].rsplit(':', 1)
+#                                        cursor.execute("select event.unsubscribe_session(%s, %s, %s);", (session_id, selector, type))
 
                                 except Warning as err:
                                     logging.error(str(err))
@@ -122,30 +142,35 @@ def application(env, start_response):
                         db_connection.poll()
 
                         if db_connection.notifies:
-                            del db_connection.notifies[:]
+                            #del db_connection.notifies[:]
 
-                            cursor.execute('''
-                                select *
-                                from event.session_queued_events_json(%s)
-                            ''', (session_id,))
+                            # Blast off notify's
+                            for notify in db_connection.notifies:
+                                uwsgi.websocket_send(json.dumps(notify))
+                                logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
 
-                            qe_ids = []
-                            logging.info('event/table/session/row/%s:flushing_queue (role: %s)' % (session_id, env['DB_USER']))
-
-                            for row in cursor:
-                                uwsgi.websocket_send(json.dumps(row.event_json))
-                                logging.info('event/table/session/row/%s:sent_json (role: %s)' % (session_id, env['DB_USER']))
-                                qe_ids.append(row.queued_event_id)
-
-                            cursor.execute('''
-                                delete from event.queued_event qe
-                                where qe.id = any(%s)
-                            ''', (qe_ids,))
+#                            cursor.execute('''
+#                                select *
+#                                from event.session_queued_events_json(%s)
+#                            ''', (session_id,))
+#
+#                            qe_ids = []
+#                            logging.info('event/table/session/row/%s:flushing_queue (role: %s)' % (session_id, env['DB_USER']))
+#
+#                            for row in cursor:
+#                                uwsgi.websocket_send(json.dumps(row.event_json))
+#                                logging.info('event/table/session/row/%s:sent_json (role: %s)' % (session_id, env['DB_USER']))
+#                                qe_ids.append(row.queued_event_id)
+#
+#                            cursor.execute('''
+#                                delete from event.queued_event qe
+#                                where qe.id = any(%s)
+#                            ''', (qe_ids,))
                     else:
                         # handle timeout of above wait_fd_read for ping/pong
                         uwsgi.websocket_recv_nb()
 
             except OSError as err:
-                logging.info('event/table/session/row/%s:disconnected (role: %s)' % (session_id, env['DB_USER']))
+                logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
 
         return []
