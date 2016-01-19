@@ -165,11 +165,11 @@ create or replace function event.event_listener_table() returns trigger as $$
         /* build the event, insert it into the event table, then send it to the client */
         loop
             /* build payload object, and event_type */
+
+
+            -- DELETE
             if TG_OP = 'DELETE' then
                 /* get the row_id deleted */
-                /*
-                xocolatl: execute format('select ... ($1).%L ...', somecolumn)  using old;
-                */
                 execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
                     event_receiver.schema_name,
                     event_receiver.name,
@@ -178,14 +178,42 @@ create or replace function event.event_listener_table() returns trigger as $$
                 into row_id
                 using OLD;
 
-                raise notice 'row_id: %', row_id::text;
+                -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('type', 'delete', 'row_id', row_id);
                 perform pg_notify(event.current_session_id()::text, event::text);
                 return OLD;
+
+
+            -- INSERT
             elsif TG_OP = 'INSERT' then
+                execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
+                    event_receiver.schema_name,
+                    event_receiver.name,
+                    event_receiver.pk,
+                    event_receiver.pk)
+                into row_id
+                using NEW;
+
+                -- raise notice 'row_id: %', row_id::text;
+                event := json_build_object('type', 'insert', 'row_id', row_id, 'payload', row_to_json(NEW));
+                perform pg_notify(event.current_session_id()::text, event::text);
                 return NEW;
 
+
+            -- UPDATE
             elsif TG_OP = 'UPDATE' then
+                execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
+                    event_receiver.schema_name,
+                    event_receiver.name,
+                    event_receiver.pk,
+                    event_receiver.pk)
+                into row_id
+                using NEW;
+
+                -- raise notice 'row_id: %', row_id::text;
+                event := json_build_object('type', 'update', 'row_id', row_id, 'payload', row_to_json(NEW));
+                -- todo: only send changed fields
+                perform pg_notify(event.current_session_id()::text, event::text);
                 return NEW;
             end if;
 
