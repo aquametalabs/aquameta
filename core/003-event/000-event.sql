@@ -1,7 +1,7 @@
 /******************************************************************************
  * Events
  * Pub/sub event system for PostgreSQL
- * 
+ *
  * Created by Aquameta Labs in Portland, Oregon, USA.
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
@@ -23,7 +23,7 @@ set search_path=event;
  *
  ***********************************************************************/
 
--- persistent session object.  
+-- persistent session object.
 create table event.session (
     id uuid default public.uuid_generate_v4() primary key,
     owner_id meta.role_id not null, -- the postgresql user
@@ -82,7 +82,7 @@ $$ language sql;
 
 /************************************************************************
  * subscription tables
- * inserting into these tables attaches the 'evented' trigger to the 
+ * inserting into these tables attaches the 'evented' trigger to the
  * specified table, if necessary
  ***********************************************************************/
 
@@ -142,55 +142,57 @@ create table event.event (
 
 create or replace function event.event_listener_table() returns trigger as $$
     declare
-        event jsonb;
+        event json; -- TODO: jsonb?
         payload varchar := '';
         _event_type varchar;
         row_id meta.row_id;
         relation_id meta.relation_id;
         subscription_id uuid;
-        event_recipient record;
+        event_receiver record;
         query text;
         pk text;
     begin
         /* first, find the relation-level subscriptions (sub_table, sub_column) that match this TG_OP */
         /* subscription_table */
-        for event_recipient in
-            select r.id, s.id, r.primary_key_column_names[1] as pk
+        for event_receiver in
+            select r.id, s.id, r.schema_name::text, r.name::text, (r.primary_key_column_names[1]).name::text as pk
             from subscription_table s
                 join meta.relation r on s.relation_id = r.id
             where r.schema_name = TG_TABLE_SCHEMA
                 and r.name = TG_TABLE_NAME
 
-    
+
         /* build the event, insert it into the event table, then send it to the client */
         loop
             /* build payload object, and event_type */
             if TG_OP = 'DELETE' then
-                execute 'select meta.row_id(' || 
-                    quote_literal(TG_TABLE_SCHEMA) || ',' ||
-                    quote_literal(TG_TABLE_NAME) || ',' ||
-                    quote_literal(event_recipient.pk) || ',' ||
-                    'OLD.' || quote_ident(event_recipient.pk) || '::text)'
-                    --- pk::text || ')'
-                into row_id;
-                raise notice 'row_id: %', row_id;
-                -- event := jsonb_build_object('type', 'delete', 'row_id', 'row_id here');
-            /*
+                /* get the row_id deleted */
+                /*
+                xocolatl: execute format('select ... ($1).%L ...', somecolumn)  using old;
+                */
+                execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
+                    event_receiver.schema_name,
+                    event_receiver.name,
+                    event_receiver.pk,
+                    event_receiver.pk)
+                into row_id
+                using OLD;
+
+                raise notice 'row_id: %', row_id::text;
+                event := json_build_object('type', 'delete', 'row_id', row_id);
+                perform pg_notify(event.current_session_id()::text, event::text);
+                return OLD;
             elsif TG_OP = 'INSERT' then
-                _event_type := 'row_insert';
-                payload := payload || ' "new": ' || row_to_json(NEW) || ',';
+                return NEW;
 
             elsif TG_OP = 'UPDATE' then
-                _event_type := 'field_update';
-                payload := payload || ' "old": ' || row_to_json(OLD) || ','
-                                   || ' "new": ' || row_to_json(NEW) || ',';
-            */
+                return NEW;
             end if;
 
-            -- send it
 
         end loop;
 
+        return NULL;
 
 
     end;
@@ -199,7 +201,7 @@ $$ language plpgsql;
 
 /************************************************************************
  * function subscribe_table(relation_id)
- * adds a row to the subscription_table table, attaches the trigger 
+ * adds a row to the subscription_table table, attaches the trigger
  ***********************************************************************/
 
  create or replace function event.subscribe_table(relation_id meta.relation_id) returns uuid as $$
@@ -207,14 +209,14 @@ $$ language plpgsql;
         session_id uuid;
     begin
         -- todo: check to see if trigger already exists
-        execute 'create trigger ' || quote_ident(relation_id.name || '_evented_table') || 
-            ' before INSERT or UPDATE or DELETE on ' || 
+        execute 'create trigger ' || quote_ident(relation_id.name || '_evented_table') ||
+            ' after INSERT or UPDATE or DELETE on ' ||
             quote_ident((relation_id.schema_id).name) || '.' ||
             quote_ident(relation_id.name) ||
            ' FOR EACH ROW execute procedure event.event_listener_table()';
 
-        insert into subscription_table(session_id, relation_id) 
-            values(event.current_session_id(),relation_id) 
+        insert into subscription_table(session_id, relation_id)
+            values(event.current_session_id(),relation_id)
             returning id into session_id;
         return session_id;
     end;
@@ -288,7 +290,7 @@ create function event.evented() returns trigger as $$
             if not event_inserted then -- only insert the event if a subscription_selector is going to care about it
                 insert into event.event (selector, "type", payload)
                 values (event_selector, _event_type, ('{' || payload || '}')::json) returning id into event_id;
-                
+
                 event_inserted := true;
             end if;
 
@@ -519,7 +521,7 @@ create function event.selector_does_match(
             selector1_predicate := selector1_predicate || (selector_predicate_split[1] || '=>' || selector_predicate_split[2])::public.hstore;
 
             if row_data -> selector_predicate_split[1] != selector_predicate_split[2] then
-                return false;   
+                return false;
             end if;
         end loop;
 
@@ -609,7 +611,7 @@ create function selector_does_match(selector1 varchar, selector2 varchar, row_da
             selector1_predicate := selector1_predicate || (selector_predicate_split[1] || '=>' || selector_predicate_split[2])::public.hstore;
 
             if row_data -> selector_predicate_split[1] != selector_predicate_split[2] then
-                return false;   
+                return false;
             end if;
         end loop;
 
