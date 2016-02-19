@@ -1,0 +1,46 @@
+diff --git a/Dockerfile b/Dockerfile
+index dfa7f88..808f567 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -5,17 +5,17 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
+ #   docker build -t aquametalabs/aquameta .
+ #
+ # to run:
+-#   docker run -dit -p 80:80 -p 8080:8080 -p 5432:5432 --privileged aquametalabs/aquameta
+-#                      ^uwsgi   ^bg_worker   ^postgres   ^fuse
++#   docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
++#                      ^uwsgi   ^postgres   ^fuse
+ #
+ # access PostgreSQL (password 'postgres') with:
+ #   psql -h localhost -p 5432 -U postgres aquameta
+ #
+-# access the ide by browsing to port 8080 of the host machine.
++# access the ide by browsing to port 80 of the host machine.
+ 
+ ENV REFRESHED_AT 2015-11-10
+ 
+-RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git build-essential cmake zlib1g-dev libssl-dev python python-pip python-dev nginx supervisor python-setuptools
++RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx supervisor python-setuptools
+ RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+ RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient fuse libfuse-dev
+@@ -29,19 +29,6 @@ RUN mkdir -p /s/aquameta
+ ADD . /s/aquameta/
+ 
+ 
+-############## BACKGROUND WORKER HTTP SERVER ##########################
+-# web sockets
+-RUN cd /tmp && git clone https://github.com/qpfiffer/libwebsockets.git && \
+-    cd libwebsockets && mkdir build && cd build && cmake .. && make && make install && \
+-    cd /usr/lib && ln -s /usr/local/lib/libwebsockets.so.5.0.0
+-
+-# add aquameta (assuming we're building this from cwd)
+-RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make && make install
+-
+-#shared_preload_libraries = 'pg_http'
+-RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
+-
+-
+ 
+ 
+ 
