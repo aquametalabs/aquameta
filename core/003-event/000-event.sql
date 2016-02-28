@@ -51,7 +51,7 @@ $$ language plpgsql;
 create or replace function event.session_attach( session_id uuid ) returns void as $$
     begin
         -- todo: check to see that session exists
-        -- todo: send all queued events
+        -- todo: send all events in the event table for this session (because they haven't yet been deleted aka recieved by the client)
         update event.session set connection_id=meta.current_connection_id() where id=session_id;
         execute 'listen "' || session_id || '"';
     end;
@@ -86,6 +86,7 @@ $$ language sql;
  * specified table, if necessary
  ***********************************************************************/
 
+-- todo: add trigger that checks to see 
 create table event.subscription_table (
     id uuid default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
@@ -212,6 +213,7 @@ create or replace function event.event_listener_table() returns trigger as $$
 
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'delete', 'subscription_type', event_receiver.type, 'row_id', row_id);
+                -- todo: insert this event into the event table
                 perform pg_notify(event.current_session_id()::text, event::text);
                 return OLD;
 
@@ -228,6 +230,7 @@ create or replace function event.event_listener_table() returns trigger as $$
 
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'insert', 'subscription_type', event_receiver.type, 'row_id', row_id, 'payload', row_to_json(NEW));
+                -- todo: insert this event into the event table
                 perform pg_notify(event.current_session_id()::text, event::text);
                 return NEW;
 
@@ -249,6 +252,7 @@ create or replace function event.event_listener_table() returns trigger as $$
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'update', 'subscription_type', event_receiver.type, 'row_id', row_id, 'payload', row_to_json(NEW));
                 -- todo: only send changed fields
+                -- todo: insert this event into the event table
                 perform pg_notify(event.current_session_id()::text, event::text);
                 return NEW;
             end if;
