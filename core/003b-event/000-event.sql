@@ -11,74 +11,9 @@ begin;
 
 create extension if not exists "uuid-ossp" schema public;
 
-drop schema event cascade;
 create schema event;
 
 set search_path=event;
-
-/************************************************************************
- * session
- *
- * a user-event space in time, that can be connected to and re-connected to.
- *
- ***********************************************************************/
-
--- persistent session object.
-create table event.session (
-    id uuid default public.uuid_generate_v4() primary key,
-    owner_id meta.role_id not null, -- the postgresql user
-    connection_id meta.connection_id -- the postgresql database session
-);
-
-
-
--- create a new event.session and listen to it's channel on this postgresql connection
-create or replace function event.session_create() returns uuid as $$
-    declare
-        session_id uuid;
-    begin
-        insert into event.session (owner_id, connection_id)
-            values (meta.current_role_id(), meta.current_connection_id())
-            returning id into session_id;
-        execute 'listen "' || session_id || '"';
-        return session_id;
-    end;
-$$ language plpgsql;
-
-
-
--- reattach to an existing session
-create or replace function event.session_attach( session_id uuid ) returns void as $$
-    begin
-        -- todo: check to see that session exists
-        -- todo: send all events in the event table for this session (because they haven't yet been deleted aka recieved by the client)
-        update event.session set connection_id=meta.current_connection_id() where id=session_id;
-        execute 'listen "' || session_id || '"';
-    end;
-$$ language plpgsql;
-
-
-
-create or replace function event.session_detatch( session_id uuid ) returns void as $$
-    begin
-        execute 'unlisten "' || session_id || '"';
-    end;
-$$ language plpgsql;
-
-
-
-create or replace function event.session_delete( session_id uuid ) returns void as $$
-    begin
-        execute 'delete from event.session where id=' || quote_ident(session_id);
-    end;
-$$ language plpgsql;
-
-
-
-create or replace function event.current_session_id() returns uuid as $$
-    select id from event.session where connection_id=meta.current_connection_id();
-$$ language sql;
-
 
 /************************************************************************
  * subscription tables
@@ -89,14 +24,14 @@ $$ language sql;
 -- todo: add trigger that checks to see 
 create table event.subscription_table (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id) on delete cascade,
+    session_id uuid not null references session.session(id) on delete cascade,
     relation_id meta.relation_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_column (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id) on delete cascade,
+    session_id uuid not null references session.session(id) on delete cascade,
     column_id meta.column_id,
     created_at timestamp not null default now()
 );
@@ -104,14 +39,14 @@ create table event.subscription_column (
 
 create table event.subscription_row (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id) on delete cascade,
+    session_id uuid not null references session.session(id) on delete cascade,
     row_id meta.row_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_field (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id) on delete cascade,
+    session_id uuid not null references session.session(id) on delete cascade,
     field_id meta.field_id,
     created_at timestamp not null default now()
 );
@@ -161,7 +96,7 @@ union
 
 create table event.event (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references event.session(id) on delete cascade,
+    session_id uuid not null references session.session(id) on delete cascade,
     event json,
     created_at timestamp not null default now()
 );
@@ -214,7 +149,7 @@ create or replace function event.event_listener_table() returns trigger as $$
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'delete', 'subscription_type', event_receiver.type, 'row_id', row_id);
                 -- todo: insert this event into the event table
-                perform pg_notify(event.current_session_id()::text, event::text);
+                perform pg_notify(session.current_session_id()::text, event::text);
                 return OLD;
 
 
@@ -231,7 +166,7 @@ create or replace function event.event_listener_table() returns trigger as $$
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'insert', 'subscription_type', event_receiver.type, 'row_id', row_id, 'payload', row_to_json(NEW));
                 -- todo: insert this event into the event table
-                perform pg_notify(event.current_session_id()::text, event::text);
+                perform pg_notify(session.current_session_id()::text, event::text);
                 return NEW;
 
 
@@ -253,7 +188,7 @@ create or replace function event.event_listener_table() returns trigger as $$
                 event := json_build_object('operation', 'update', 'subscription_type', event_receiver.type, 'row_id', row_id, 'payload', row_to_json(NEW));
                 -- todo: only send changed fields
                 -- todo: insert this event into the event table
-                perform pg_notify(event.current_session_id()::text, event::text);
+                perform pg_notify(session.current_session_id()::text, event::text);
                 return NEW;
             end if;
 
@@ -286,7 +221,7 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into subscription_table(session_id, relation_id)
-            values(event.current_session_id(),relation_id)
+            values(session.current_session_id(),relation_id)
             returning id into session_id;
         return session_id;
     end;
@@ -317,11 +252,10 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into subscription_column(session_id, column_id)
-            values(event.current_session_id(),column_id)
+            values(session.current_session_id(),column_id)
             returning id into session_id;
         return session_id;
     end;
 $$ language plpgsql;
-
 
 commit;
