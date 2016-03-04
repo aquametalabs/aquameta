@@ -115,6 +115,9 @@ create or replace function event.event_listener_table() returns trigger as $$
         event json; -- TODO: jsonb?
         row_id meta.row_id;
         event_receiver record;
+
+        tmp_boolean boolean; -- This is stupid
+        meta_column_row record; -- This also is a little stupid
     begin
         /* first, find the relation-level subscriptions (sub_table, sub_column) that match this TG_OP */
         /* subscription_table */
@@ -122,13 +125,16 @@ create or replace function event.event_listener_table() returns trigger as $$
             select s.*, r.schema_name::text, r.name::text, (r.primary_key_column_names[1]).name::text as pk
                     from meta.relation r 
                         join (
-                            select s.id, 'table' as type, s.relation_id, null::meta.column_id
+                            select s.id, s.session_id, 'table' as type, s.relation_id, null::meta.column_id
                             from subscription_table s
 
                             union
 
-                            select s.id, 'column', s.column_id::meta.relation_id, s.column_id
+                            select s.id, s.session_id, 'column' as type, s.column_id::meta.relation_id, s.column_id
                             from subscription_column s
+
+                            -- This prevents events being sent in multiplicate to repeat subscribers -- TODO better way
+                            where s.session_id not in (select session_id from subscription_table)
                         ) s on s.relation_id=r.id
 
             where r.schema_name = TG_TABLE_SCHEMA
@@ -137,6 +143,7 @@ create or replace function event.event_listener_table() returns trigger as $$
         loop
             -- DELETE
             if TG_OP = 'DELETE' then
+
                 /* get the row_id deleted */
                 execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
                     event_receiver.schema_name,
@@ -148,13 +155,19 @@ create or replace function event.event_listener_table() returns trigger as $$
 
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'delete', 'subscription_type', event_receiver.type, 'row_id', row_id);
-                -- todo: insert this event into the event table
-                perform pg_notify(session.current_session_id()::text, event::text);
-                return OLD;
+
+                -- insert this event into the event table
+                execute 'insert into event.event(session_id, event) values(' || quote_literal(event_receiver.session_id) || ',' || quote_literal(event) || ')';
+                perform pg_notify(event_receiver.session_id::text, event::text);
+
+                --perform pg_notify(session.current_session_id()::text, event::text);
+                --return OLD;
+                continue;
 
 
             -- INSERT
             elsif TG_OP = 'INSERT' then
+
                 execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
                     event_receiver.schema_name,
                     event_receiver.name,
@@ -165,16 +178,18 @@ create or replace function event.event_listener_table() returns trigger as $$
 
                 -- raise notice 'row_id: %', row_id::text;
                 event := json_build_object('operation', 'insert', 'subscription_type', event_receiver.type, 'row_id', row_id, 'payload', row_to_json(NEW));
-                -- todo: insert this event into the event table
-                perform pg_notify(session.current_session_id()::text, event::text);
-                return NEW;
+
+                -- insert this event into the event table
+                execute 'insert into event.event(session_id, event) values(' || quote_literal(event_receiver.session_id) || ',' || quote_literal(event) || ')';
+                perform pg_notify(event_receiver.session_id::text, event::text);
+
+                --perform pg_notify(session.current_session_id()::text, event::text);
+                --return NEW;
+                continue;
 
 
             -- UPDATE
             elsif TG_OP = 'UPDATE' then
-                if event_receiver.type = 'column' then
-                    -- todo: check to see if this column was updated, bail if not
-                end if;
 
                 execute format('select * from meta.row_id(%L,%L,%L,($1).%I::text)',
                     event_receiver.schema_name,
@@ -184,12 +199,45 @@ create or replace function event.event_listener_table() returns trigger as $$
                 into row_id
                 using NEW;
 
-                -- raise notice 'row_id: %', row_id::text;
-                event := json_build_object('operation', 'update', 'subscription_type', event_receiver.type, 'row_id', row_id, 'payload', row_to_json(NEW));
-                -- todo: only send changed fields
-                -- todo: insert this event into the event table
-                perform pg_notify(session.current_session_id()::text, event::text);
-                return NEW;
+                -- Loop through columns
+                <<meta_column_loop>>
+                for meta_column_row in
+                    select id from meta.column where relation_id = event_receiver.relation_id
+                loop
+
+                    -- Skip if wrong column
+                    if event_receiver.type = 'column' and event_receiver.column_id <> meta_column_row.id then
+                        continue meta_column_loop;
+                    else
+
+                        -- Only sending changed fields
+                        -- Check to see if this column was updated, bail if not
+                        execute 'select $1.' || (meta_column_row.id).name || ' is not distinct from $2.' || (meta_column_row.id).name using NEW, OLD into tmp_boolean;
+                        if tmp_boolean then
+                            --raise notice '---- columns are equal!!!!!! % ---- skipping ----', quote_literal((meta_column_row.id).name);
+                            continue meta_column_loop;
+                        end if;
+
+                        -- Build payload of changed field
+                        execute 
+                            'select json_build_object(''operation'', ''update'', ''subscription_type'', ''' || event_receiver.type || ''', ''row_id'', $1, ''payload'', ' || 
+                            '(select json_build_object(''' || (meta_column_row.id).name || ''', $2.' || (meta_column_row.id).name || ')));'
+                            using row_id, NEW
+                        into event;
+
+                        -- insert this event into the event table
+                        execute 'insert into event.event(session_id, event) values(' || quote_literal(event_receiver.session_id) || ',' || quote_literal(event) || ')';
+                        perform pg_notify(event_receiver.session_id::text, event::text);
+
+                        continue meta_column_loop;
+
+                    end if;
+
+                end loop meta_column_loop;
+
+                --return NEW;
+                continue;
+
             end if;
 
 
