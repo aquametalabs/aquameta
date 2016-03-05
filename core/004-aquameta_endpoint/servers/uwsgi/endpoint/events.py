@@ -53,11 +53,13 @@ def application(env, start_response):
 
             #session_id = get_session_id(request, cursor)
 
-            logging.info('connection established')
             #logging.info('event/table/session/row/%s:connected (role: %s)' % (session_id, env['DB_USER']))
 
             db_conn_fd = db_connection.fileno()
             websocket_fd = uwsgi.connection_fd()
+
+            ##
+            logging.info('connection established, db %s, ws %s' % (db_conn_fd, websocket_fd))
 
             #cursor.execute('listen "event/table/session/rows/%i"' % session_id)
 
@@ -75,23 +77,25 @@ def application(env, start_response):
 
                         if cmd_json:
                             cmd = json.loads(cmd_json.decode('utf-8'))
-                            if cmd['method'] != 'ping':
-                                logging.info('cmd_json %s' % (cmd_json))
 
                             if cmd:
                                 try:
+                                    if cmd['method'] != 'ping':
+                                        logging.info('command received, json: %s' % (cmd_json))
+
                                     if cmd['method'] == 'attach':
                                         #session_id = get_session_id(request, cursor)
                                         session_id = cmd['session_id']
 
+
                                         if session_id is not None:
                                             logging.info('session %s:connected (role: %s)' % (session_id, env['DB_USER']))
-#                                            cursor.execute('listen %i' % session_id)
 
                                             # This will execute listen, and notify of all existing events
                                             cursor.execute('''
                                                 select session.session_attach(%s);
                                             ''', (session_id,))
+
 
 #                                            cursor.execute('''
 #                                                select event from event.event where session_id = %s;
@@ -102,13 +106,17 @@ def application(env, start_response):
 #                                                logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
 
                                     elif cmd['method'] == 'detach':
-                                        logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
-#                                        cursor.execute('unlisten %i' % session_id)
 
+#                                        cursor.execute('unlisten %i' % session_id)
                                         session_id = cmd['session_id']
-                                        cursor.execute('''
-                                            select session_detach(%s);
-                                        ''', (session_id,))
+
+                                        if session_id is not None:
+                                            logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
+
+                                            cursor.execute('''
+                                                select session.session_detach(%s);
+                                            ''', (session_id,))
+
 
                                 except Warning as err:
                                     logging.error(str(err))
@@ -120,7 +128,12 @@ def application(env, start_response):
                                         }
                                     }))
 
+                    # Performance boost????
+                    # if select.select([conn],[],[],5) == ([],[],[]):
+                    # http://initd.org/psycopg/docs/advanced.html
+
                     elif fd == db_conn_fd:
+                        logging.info('---------------------------- db --------------------------------------')
                         db_connection.poll()
 
                         if db_connection.notifies:
@@ -129,15 +142,16 @@ def application(env, start_response):
 
                             # Blast off notify's
                             for notify in db_connection.notifies:
-                                logging.info('---------------------------- notifies %s' % (notify))
+                                logging.info('---------------------------- notifies \n%s' % (notify))
                                 uwsgi.websocket_send(json.dumps(notify.payload))
-                                logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
+                                #logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
 
                     else:
                         # handle timeout of above wait_fd_read for ping/pong
                         uwsgi.websocket_recv_nb()
 
             except OSError as err:
-                logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
+                #logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
+                logging.info('session s:disconnected (role: s)')
 
         return []

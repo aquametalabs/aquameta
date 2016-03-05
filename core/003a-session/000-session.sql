@@ -31,7 +31,7 @@ create table session.session (
 
 
 
--- create a new session.session and listen to it's channel on this postgresql connection
+-- create a new session.session
 create or replace function session.session_create() returns uuid as $$
     declare
         session_id uuid;
@@ -39,7 +39,6 @@ create or replace function session.session_create() returns uuid as $$
         insert into session.session (owner_id, connection_id)
             values (meta.current_role_id(), meta.current_connection_id())
             returning id into session_id;
-        execute 'listen "' || session_id || '"';
         return session_id;
     end;
 $$ language plpgsql;
@@ -50,27 +49,27 @@ $$ language plpgsql;
 create or replace function session.session_attach( session_id uuid ) returns void as $$
     DECLARE
         session_exists boolean;
-        event json;
+        event json; -- todo jsonb
     BEGIN
-        -- check to see that session exists
+
         EXECUTE 'select exists(select 1 from session.session where id=' || quote_literal(session_id) || ')' INTO session_exists;
-        RAISE NOTICE 'session exists? %', session_exists;
 
         IF session_exists THEN
-            RAISE NOTICE 'listen on %', session_id;
-            EXECUTE 'listen "' || session_id || '"';
+
+            EXECUTE 'unlisten "' || session_id || '"';
+
+            EXECUTE 'LISTEN "' || session_id || '"';
 
             -- send all events in the event table for this session (because they haven't yet been deleted aka recieved by the client)
             FOR event IN
                 EXECUTE 'select event from event.event where session_id=' || quote_literal(session_id)
             LOOP
-                RAISE NOTICE 'notifying %', session_id;
-                EXECUTE 'notify ' || session_id || ', ' || event;
+                EXECUTE 'NOTIFY "' || session_id || '",'|| quote_literal(event);
             END LOOP;
         END IF;
 
-        -- to not do?: update session.session set connection_id=meta.current_connection_id() where id=session_id;
-        --EXECUTE 'update session.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
+        -- to not do?
+        EXECUTE 'update session.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
     END;
 $$ language plpgsql;
 
@@ -78,7 +77,6 @@ $$ language plpgsql;
 
 create or replace function session.session_detach( session_id uuid ) returns void as $$
     begin
-        RAISE NOTICE 'unlisten on %', session_id;
         execute 'unlisten "' || session_id || '"';
     end;
 $$ language plpgsql;
