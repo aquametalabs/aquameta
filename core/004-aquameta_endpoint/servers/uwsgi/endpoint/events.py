@@ -1,40 +1,22 @@
 from endpoint.db import cursor_for_request
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, POLL_OK, POLL_READ, POLL_WRITE
 from psycopg2 import InternalError, Warning
 from werkzeug.contrib.wrappers import JSONRequestMixin
 from werkzeug.wrappers import Request
 from os import urandom
-
 import json, logging, uwsgi, sys
 from uuid import UUID
 
-
-
-
-#def get_session_id(request, cursor):
-#    session_id = None
-#    if 'token' in request.args:
-#        cursor.execute('''
-#            select id
-#            from session.session
-#            where id = %s
-#        ''', (request.args['token'],))
-#
-#        session_row = cursor.fetchone()
-#        if session_row:
-#            session_id = session_row.id
-#
-#    # Create new session
-#    #if session_id is None:
-#        #session_id = new_session(cursor)
-#
-#    return session_id
-
-
-    
 logger = logging.getLogger('events')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
+def handle_db_notifications(conn):
+    conn.poll()
+    while conn.notifies:
+        notify = conn.notifies.pop(0)
+        uwsgi.websocket_send(json.dumps(notify.payload))
+        logging.info('sent json notification')
 
 
 def application(env, start_response):
@@ -51,17 +33,10 @@ def application(env, start_response):
             db_connection = cursor.connection
             db_connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
-            #session_id = get_session_id(request, cursor)
-
-            #logging.info('event/table/session/row/%s:connected (role: %s)' % (session_id, env['DB_USER']))
-
             db_conn_fd = db_connection.fileno()
             websocket_fd = uwsgi.connection_fd()
 
-            ##
-            logging.info('connection established, db %s, ws %s' % (db_conn_fd, websocket_fd))
-
-            #cursor.execute('listen "event/table/session/rows/%i"' % session_id)
+            logging.info('connection established')
 
             try:
                 while True:
@@ -72,7 +47,6 @@ def application(env, start_response):
                     fd = uwsgi.ready_fd()
 
                     if fd == websocket_fd:
-
                         cmd_json = uwsgi.websocket_recv_nb()
 
                         if cmd_json:
@@ -81,77 +55,42 @@ def application(env, start_response):
                             if cmd:
                                 try:
                                     if cmd['method'] != 'ping':
-                                        logging.info('command received, json: %s' % (cmd_json))
+                                        logging.info('command received: %s' % cmd['method'])
 
                                     if cmd['method'] == 'attach':
-                                        #session_id = get_session_id(request, cursor)
                                         session_id = cmd['session_id']
-
-
                                         if session_id is not None:
-                                            logging.info('session %s:connected (role: %s)' % (session_id, env['DB_USER']))
-
-                                            # This will execute listen, and notify of all existing events
-                                            cursor.execute('''
-                                                select session.session_attach(%s);
-                                            ''', (session_id,))
-
-
-#                                            cursor.execute('''
-#                                                select event from event.event where session_id = %s;
-#                                            ''', (session_id,))
-#
-#                                            for row in cursor:
-#                                                uwsgi.websocket_send(json.dumps(row))
-#                                                logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
+                                            cursor.execute('select session.session_attach(%s);', (session_id,))
+                                            logging.info('session attached: %s (role: %s)' % (session_id, env['DB_USER']))
+                                            handle_db_notifications(db_connection)
 
                                     elif cmd['method'] == 'detach':
-
-#                                        cursor.execute('unlisten %i' % session_id)
                                         session_id = cmd['session_id']
-
                                         if session_id is not None:
-                                            logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
-
-                                            cursor.execute('''
-                                                select session.session_detach(%s);
-                                            ''', (session_id,))
+                                            cursor.execute('select session.session_detach(%s);', (session_id,))
+                                            logging.info('session detached: %s (role: %s)' % (session_id, env['DB_USER']))
 
 
                                 except Warning as err:
                                     logging.error(str(err))
-                                    uwsgi.websocket_send(json.dumps({
-                                        "method": "log",
-                                        "args": {
-                                            "level": "warning",
-                                            "message": err.diag.message_primary
-                                        }
-                                    }))
-
-                    # Performance boost????
-                    # if select.select([conn],[],[],5) == ([],[],[]):
-                    # http://initd.org/psycopg/docs/advanced.html
+#                                    uwsgi.websocket_send(json.dumps({
+#                                        "method": "log",
+#                                        "args": {
+#                                            "level": "warning",
+#                                            "message": err.diag.message_primary
+#                                        }
+#                                    }))
 
                     elif fd == db_conn_fd:
-                        logging.info('---------------------------- db --------------------------------------')
-                        db_connection.poll()
-
-                        if db_connection.notifies:
-                            #del db_connection.notifies[:]
-                            logging.info('---------------------------- db notifies')
-
-                            # Blast off notify's
-                            for notify in db_connection.notifies:
-                                logging.info('---------------------------- notifies \n%s' % (notify))
-                                uwsgi.websocket_send(json.dumps(notify.payload))
-                                #logging.info('session %s:sent_json (role: %s)' % (session_id, env['DB_USER']))
+                        handle_db_notifications(db_connection)
 
                     else:
+                        logging.info('timeout reached') # This is never reached
+
                         # handle timeout of above wait_fd_read for ping/pong
                         uwsgi.websocket_recv_nb()
 
-            except OSError as err:
-                #logging.info('session %s:disconnected (role: %s)' % (session_id, env['DB_USER']))
-                logging.info('session s:disconnected (role: s)')
+            except (OSError, IOError) as err:
+                logging.info('connection closed (role: %s)' % env['DB_USER'])
 
         return []

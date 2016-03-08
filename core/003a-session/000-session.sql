@@ -56,15 +56,13 @@ create or replace function session.session_attach( session_id uuid ) returns voi
 
         IF session_exists THEN
 
-            EXECUTE 'unlisten "' || session_id || '"';
-
             EXECUTE 'LISTEN "' || session_id || '"';
 
-            -- send all events in the event table for this session (because they haven't yet been deleted aka recieved by the client)
+            -- Send all events in the event table for this session (because they haven't yet been deleted aka recieved by the client)
             FOR event IN
                 EXECUTE 'select event from event.event where session_id=' || quote_literal(session_id)
             LOOP
-                EXECUTE 'NOTIFY "' || session_id || '",'|| quote_literal(event);
+                EXECUTE 'NOTIFY "' || session_id || '",' || quote_literal(event);
             END LOOP;
         END IF;
 
