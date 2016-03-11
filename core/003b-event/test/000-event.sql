@@ -1,4 +1,4 @@
-bxistsegin;
+begin;
 
 create extension if not exists pgtap schema public;
 set search_path=public,event;
@@ -25,7 +25,6 @@ insert into chakra (id, position, name, color, tone_hz) values
     (4, 4, 'Heart',        'green', 136.10)
 ;
 
---insert into subscription_table (session_id, relation_id) values (current_setting('session_id'), meta.relation_id('event','chakra'));
 select subscribe_table(meta.relation_id('event','chakra'));
 
 insert into chakra (id, position, name, color, tone_hz) values

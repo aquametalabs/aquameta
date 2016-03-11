@@ -1,5 +1,5 @@
 from endpoint.db import cursor_for_request
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, POLL_OK, POLL_READ, POLL_WRITE
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2 import InternalError, Warning
 from werkzeug.contrib.wrappers import JSONRequestMixin
 from werkzeug.wrappers import Request
