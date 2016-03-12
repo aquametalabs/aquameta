@@ -1077,7 +1077,6 @@ create view meta.role as
           pgr.rolinherit     as inherit,
           pgr.rolcreaterole  as create_role,
           pgr.rolcreatedb    as create_db,
-          --pgr.rolcatupdate   as catalog_update,
           pgr.rolcanlogin    as can_login,
           pgr.rolreplication as replication,
           pgr.rolconnlimit   as connection_limit,
