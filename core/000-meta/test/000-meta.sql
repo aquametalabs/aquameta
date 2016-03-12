@@ -445,7 +445,7 @@ select ok(
 );
 
 -- insert defaults
-insert into meta.role (name, superuser, inherit, create_role, create_db, catalog_update, can_login, replication, connection_limit, password, valid_until)
+insert into meta.role (name, superuser, inherit, create_role, create_db, /*catalog_update,*/ can_login, replication, connection_limit, password, valid_until)
 values ('test_user_2', false, false, false, false, false, false, false, -1, '', null);
 select ok(
     exists(
@@ -459,7 +459,7 @@ select ok(
 );
 
 -- insert with all fields set
-insert into meta.role (name, superuser, inherit, create_role, create_db, catalog_update, can_login, replication, connection_limit, password, valid_until)
+insert into meta.role (name, superuser, inherit, create_role, create_db, /*catalog_update,*/ can_login, replication, connection_limit, password, valid_until)
 values ('test_user_3', true, true, true, true, true, true, true, 5, 'foobar', '1997-08-29 02:14:00-07');
 select ok(
     exists(
@@ -477,7 +477,7 @@ update meta.role set name = 'test_user_4',
                      inherit = true,
                      create_role = true,
                      create_db = true,
-                     catalog_update = true,
+                     --catalog_update = true,
                      can_login = true,
                      replication = true,
                      connection_limit = 10,
@@ -501,7 +501,7 @@ update meta.role set name = 'test_user_4',
                      inherit = false,
                      create_role = false,
                      create_db = false,
-                     catalog_update = false,
+                     --catalog_update = false,
                      can_login = false,
                      replication = false,
                      connection_limit = null,
@@ -524,7 +524,7 @@ update meta.role set superuser = false,
                      inherit = false,
                      create_role = false,
                      create_db = false,
-                     catalog_update = false,
+                     --catalog_update = false,
                      can_login = false,
                      replication = false,
                      connection_limit = null,

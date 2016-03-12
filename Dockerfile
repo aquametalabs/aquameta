@@ -18,7 +18,7 @@ ENV REFRESHED_AT 2015-11-10
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx supervisor python-setuptools
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.4 postgresql-plpython-9.4 postgresql-server-dev-9.4 pgxnclient fuse libfuse-dev
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.5 postgresql-plpython-9.5 postgresql-server-dev-9.5 pgxnclient fuse libfuse-dev
 RUN pgxn install multicorn
 RUN pip install requests sphinx sphinx-autobuild fusepy
 RUN locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
@@ -51,9 +51,9 @@ RUN mkdir /mnt/aquameta
 
 #################### build aquameta ###############################
 USER postgres
-RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.4/main/pg_hba.conf && \
-	sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/9.4/main/pg_hba.conf && \
-	echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf && \
+RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.conf && \
+	sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/9.5/main/pg_hba.conf && \
+	echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
 	/etc/init.d/postgresql start && \
 	cd /s/aquameta && \
 	./build.sh && \

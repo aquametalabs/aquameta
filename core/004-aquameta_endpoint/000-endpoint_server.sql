@@ -1035,13 +1035,17 @@ create function endpoint.login(encrypted_password character varying) RETURNS uui
     LANGUAGE plpgsql STRICT SECURITY DEFINER
     AS $$
     DECLARE
-        token uuid;
-        role_name varchar;
+        token uuid := NULL;
+        role_name varchar := NULL;
     BEGIN
         set local search_path = endpoint;
 
         EXECUTE 'SELECT rolname FROM pg_catalog.pg_authid WHERE rolpassword = ' || quote_literal(encrypted_password) INTO role_name;
-        EXECUTE 'INSERT INTO endpoint.session (username) values (' || quote_literal(role_name) || ') RETURNING token' INTO token;
+	
+	IF role_name IS NOT NULL THEN
+		EXECUTE 'INSERT INTO endpoint.session (username) values (' || quote_literal(role_name) || ') RETURNING token' INTO token;
+	END IF;
+
         RETURN token;
     END
 $$;
