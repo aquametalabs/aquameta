@@ -3,10 +3,10 @@ INSTALL
 
 How to build Aquameta from source.
 
-1. Install PostgreSQL 9.4
+1. Install PostgreSQL 9.5
 -------------------------
 
-Install PostgresSQL 9.4, and the postgresql-contrib package.  On Mac, try out
+Install PostgresSQL 9.5, and the postgresql-contrib package.  On Mac, try out
 Postgres.app.  (see http://www.postgresql.org/download/)
 
 
@@ -19,7 +19,7 @@ Mac does this for you, but for other PostgreSQL distributions:
 ```
 eric@34f81a644855:~$ sudo -iu postgres
 postgres@34f81a644855:~$ psql
-psql (9.4.1)
+psql (9.5.1)
 Type "help" for help.
 
 postgres=# create role eric superuser login;
