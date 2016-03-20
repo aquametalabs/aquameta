@@ -11,9 +11,9 @@ begin;
 
 create extension if not exists "uuid-ossp" schema public;
 
-create schema session;
+create schema event;
 
-set search_path=session;
+set search_path=event;
 
 /************************************************************************
  * session
@@ -23,7 +23,7 @@ set search_path=session;
  ***********************************************************************/
 
 -- persistent session object.
-create table session.session (
+create table event.session (
     id uuid default public.uuid_generate_v4() primary key,
     owner_id meta.role_id not null, -- the owner's role
     connection_id meta.connection_id
@@ -31,12 +31,12 @@ create table session.session (
 
 
 
--- create a new session.session
-create or replace function session.session_create() returns uuid as $$
+-- create a new event.session
+create or replace function event.session_create() returns uuid as $$
     declare
         session_id uuid;
     begin
-        insert into session.session (owner_id, connection_id)
+        insert into event.session (owner_id, connection_id)
             values (meta.current_role_id(), meta.current_connection_id())
             returning id into session_id;
         return session_id;
@@ -46,13 +46,13 @@ $$ language plpgsql;
 
 
 -- reattach to an existing session
-create or replace function session.session_attach( session_id uuid ) returns void as $$
+create or replace function event.session_attach( session_id uuid ) returns void as $$
     DECLARE
         session_exists boolean;
         event json; -- todo jsonb
     BEGIN
 
-        EXECUTE 'select exists(select 1 from session.session where id=' || quote_literal(session_id) || ')' INTO session_exists;
+        EXECUTE 'select exists(select 1 from event.session where id=' || quote_literal(session_id) || ')' INTO session_exists;
 
         IF session_exists THEN
 
@@ -67,13 +67,13 @@ create or replace function session.session_attach( session_id uuid ) returns voi
         END IF;
 
         -- to not do?
-        EXECUTE 'update session.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
+        EXECUTE 'update event.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
     END;
 $$ language plpgsql;
 
 
 
-create or replace function session.session_detach( session_id uuid ) returns void as $$
+create or replace function event.session_detach( session_id uuid ) returns void as $$
     begin
         execute 'unlisten "' || session_id || '"';
     end;
@@ -81,16 +81,16 @@ $$ language plpgsql;
 
 
 
-create or replace function session.session_delete( session_id uuid ) returns void as $$
+create or replace function event.session_delete( session_id uuid ) returns void as $$
     begin
-        execute 'delete from session.session where id=' || quote_literal(session_id);
+        execute 'delete from event.session where id=' || quote_literal(session_id);
     end;
 $$ language plpgsql;
 
 
 
-create or replace function session.current_session_id() returns uuid as $$
-    select id from session.session where connection_id=meta.current_connection_id();
+create or replace function event.current_session_id() returns uuid as $$
+    select id from event.session where connection_id=meta.current_connection_id();
 $$ language sql;
 
 

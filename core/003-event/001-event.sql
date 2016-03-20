@@ -11,8 +11,6 @@ begin;
 
 create extension if not exists "uuid-ossp" schema public;
 
-create schema event;
-
 set search_path=event;
 
 /************************************************************************
@@ -24,14 +22,14 @@ set search_path=event;
 -- todo: add trigger that checks to see 
 create table event.subscription_table (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references session.session(id) on delete cascade,
+    session_id uuid not null references event.session(id) on delete cascade,
     relation_id meta.relation_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_column (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references session.session(id) on delete cascade,
+    session_id uuid not null references event.session(id) on delete cascade,
     column_id meta.column_id,
     created_at timestamp not null default now()
 );
@@ -39,14 +37,14 @@ create table event.subscription_column (
 
 create table event.subscription_row (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references session.session(id) on delete cascade,
+    session_id uuid not null references event.session(id) on delete cascade,
     row_id meta.row_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_field (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references session.session(id) on delete cascade,
+    session_id uuid not null references event.session(id) on delete cascade,
     field_id meta.field_id,
     created_at timestamp not null default now()
 );
@@ -100,7 +98,7 @@ union
 
 create table event.event (
     id uuid default public.uuid_generate_v4() primary key,
-    session_id uuid not null references session.session(id) on delete cascade,
+    session_id uuid not null references event.session(id) on delete cascade,
     event json,
     created_at timestamp not null default now()
 );
@@ -406,7 +404,7 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_table(session_id, relation_id)
-            values(session.current_session_id(),relation_id)
+            values(event.current_session_id(),relation_id)
             returning id into session_id;
         return session_id;
     end;
@@ -437,7 +435,7 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_column(session_id, column_id)
-            values(session.current_session_id(),column_id)
+            values(event.current_session_id(),column_id)
             returning id into session_id;
         return session_id;
     end;
@@ -468,7 +466,7 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_row(session_id, row_id)
-            values(session.current_session_id(), row_id)
+            values(event.current_session_id(), row_id)
             returning id into session_id;
         return session_id;
     end;
@@ -499,7 +497,7 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_field(session_id, field_id)
-            values(session.current_session_id(), field_id)
+            values(event.current_session_id(), field_id)
             returning id into session_id;
         return session_id;
     end;
