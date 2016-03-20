@@ -19,7 +19,7 @@ RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.5 postgresql-plpython-9.5 postgresql-server-dev-9.5 pgxnclient fuse libfuse-dev
-RUN pgxn install multicorn
+RUN pgxn install multicorn pgtap
 RUN pip install requests sphinx sphinx-autobuild fusepy
 RUN locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
 
