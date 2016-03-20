@@ -134,12 +134,12 @@ create or replace function event.event_listener_table() returns trigger as $$
                 join (
 
                     select s.id, s.session_id, 'table' as type, s.relation_id, null::meta.column_id
-                    from subscription_table s
+                    from event.subscription_table s
 
                     union
 
                     select s.id, s.session_id, 'column' as type, s.column_id::meta.relation_id, s.column_id
-                    from subscription_column s
+                    from event.subscription_column s
 
                 ) s on s.relation_id = r.id
 
@@ -283,12 +283,12 @@ create or replace function event.event_listener_row() returns trigger as $$
                 join (
 
                     select s.id, s.session_id, 'row' as type, s.row_id, null::meta.field_id
-                    from subscription_row s
+                    from event.subscription_row s
 
                     union
 
                     select s.id, s.session_id, 'field' as type, (s.field_id).row_id, s.field_id
-                    from subscription_field s
+                    from event.subscription_field s
 
                 ) s on s.row_id::meta.relation_id=r.id
 
@@ -405,7 +405,7 @@ $$ language plpgsql;
                 (relation_id.schema_id).name,
                 relation_id.name);
 
-        insert into subscription_table(session_id, relation_id)
+        insert into event.subscription_table(session_id, relation_id)
             values(session.current_session_id(),relation_id)
             returning id into session_id;
         return session_id;
@@ -436,7 +436,7 @@ $$ language plpgsql;
                 (relation_id.schema_id).name,
                 relation_id.name);
 
-        insert into subscription_column(session_id, column_id)
+        insert into event.subscription_column(session_id, column_id)
             values(session.current_session_id(),column_id)
             returning id into session_id;
         return session_id;
@@ -467,7 +467,7 @@ $$ language plpgsql;
                 (relation_id.schema_id).name,
                 relation_id.name);
 
-        insert into subscription_row(session_id, row_id)
+        insert into event.subscription_row(session_id, row_id)
             values(session.current_session_id(), row_id)
             returning id into session_id;
         return session_id;
@@ -498,7 +498,7 @@ $$ language plpgsql;
                 (relation_id.schema_id).name,
                 relation_id.name);
 
-        insert into subscription_field(session_id, field_id)
+        insert into event.subscription_field(session_id, field_id)
             values(session.current_session_id(), field_id)
             returning id into session_id;
         return session_id;
