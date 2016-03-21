@@ -272,6 +272,46 @@ with function meta.relation_id(json)
 as assignment;
 
 
+create function meta.relation_id(value text) returns meta.relation_id as $$
+select meta.relation_id((string_to_array(value, '/'))[1]::text, (string_to_array(value, '/'))[2]::text)
+$$ immutable language sql;
+
+
+create cast (text as meta.relation_id)
+with function meta.relation_id(text)
+as assignment;
+
+
+create function meta.text(value meta.relation_id) returns text as $$
+select (value.schema_id).name::text || '/' || value.name::text
+$$ immutable language sql;
+
+
+create cast (meta.relation_id as text)
+with function meta.text(meta.relation_id)
+as assignment;
+
+/*
+Use oid cast with GREAT	caution, and only for system tables
+
+http://www.postgresql.org/docs/9.4/static/datatype-oid.html
+
+The oid type is currently implemented as an unsigned four-byte integer. Therefore, it is not large enough to provide database-wide uniqueness in large databases, or even in large individual tables
+*/
+create function meta.relation_id(rel oid) returns meta.relation_id as $$
+begin
+        set local search_path='';
+	return id from meta.relation where 
+		schema_name = (select (string_to_array(rel::regclass::text, '.'))[1]) and
+		name = (select (string_to_array(rel::regclass::text, '.'))[2]);
+end;
+$$ language plpgsql;
+
+
+create cast (oid as meta.relation_id)
+with function meta.relation_id(oid)
+as assignment;
+
 
 /******************************************************************************
  * meta.column_id
@@ -514,6 +554,39 @@ create cast (meta.row_id as json)
 as assignment;
 */
 
+
+/*
+
+TODO: remove circular dependency
+
+create or replace function meta.row_id(value text) returns meta.row_id as $$
+    select meta.row_id(
+        (string_to_array(value, '/'))[1]::text,
+        (string_to_array(value, '/'))[2]::text,
+        (select primary_key_column_names[1] from meta.relation where name = (string_to_array(value, '/'))[1]::text and schema_name = (string_to_array(value, '/'))[2]::text),
+        (string_to_array(value, '/'))[3]::text)
+$$ immutable language sql;
+
+
+create cast (text as meta.row_id)
+with function meta.row_id(text)
+as assignment;
+*/
+
+
+create function meta.text(value meta.row_id) returns text as $$
+select (((value.pk_column_id).relation_id).schema_id).name::text || '/' ||
+    ((value.pk_column_id).relation_id).name::text || '/' ||
+    value.pk_value::text
+$$ immutable language sql;
+
+
+create cast (meta.row_id as text)
+with function meta.text(meta.row_id)
+as assignment;
+
+
+
 /******************************************************************************
  * meta.field_id
  *****************************************************************************/
@@ -572,6 +645,39 @@ create cast (json as meta.field_id)
 with function meta.field_id(json)
 as assignment;
 
+/*
+
+TODO: remove circular dependency
+
+create or replace function meta.field_id(value text) returns meta.field_id as $$
+    select meta.field_id(
+        (string_to_array(value, '/'))[1]::text,
+        (string_to_array(value, '/'))[2]::text,
+        (select primary_key_column_names[1] from meta.relation where name = (string_to_array(value, '/'))[1]::text and schema_name = (string_to_array(value, '/'))[2]::text),
+        (string_to_array(value, '/'))[3]::text,
+        (string_to_array(value, '/'))[4]::text)
+$$ immutable language sql;
+
+
+create cast (text as meta.field_id)
+with function meta.field_id(text)
+as assignment;
+
+*/
+
+create function meta.text(value meta.field_id) returns text as $$
+select ((((value.row_id).pk_column_id).relation_id).schema_id).name::text || '/' ||
+    (((value.row_id).pk_column_id).relation_id).name::text || '/' ||
+    (value.row_id).pk_value::text || '/' ||
+    (value.column_id).name::text
+$$ immutable language sql;
+
+
+create cast (meta.field_id as text)
+with function meta.text(meta.field_id)
+as assignment;
+
+
 /******************************************************************************
  * meta.function_id
  *****************************************************************************/
@@ -626,6 +732,37 @@ with function meta.function_id(json)
 as assignment;
 
 
+/* TODO function id cast */
+/*
+create or replace function meta.function_id(value text) returns meta.function_id as $$
+    select meta.function_id(
+        (string_to_array(value, '/'))[1]::text,
+        (string_to_array(value, '/'))[2]::text,
+        (string_to_array(value, '/'))[3]::text)
+
+        (select primary_key_column_names[1] from meta.relation where name = (string_to_array(value, '/'))[1]::text and schema_name = (string_to_array(value, '/'))[2]::text),
+        (string_to_array(value, '/'))[4]::text)
+$$ immutable language sql;
+
+
+create cast (text as meta.field_id)
+with function meta.field_id(text)
+as assignment;
+
+
+create function meta.text(value meta.field_id) returns text as $$
+select ((((value.row_id).pk_column_id).relation_id).schema_id).name::text || '/' ||
+    (((value.row_id).pk_column_id).relation_id).name::text || '/' ||
+    (value.row_id).pk_value::text || '/' ||
+    (value.column_id).name::text
+$$ immutable language sql;
+
+
+create cast (meta.field_id as text)
+with function meta.text(meta.field_id)
+as assignment;
+
+*/
 
 /******************************************************************************
  * meta.trigger_id
@@ -672,6 +809,11 @@ create operator = (
 );
 
 
+create cast (text as meta.role_id)
+with function meta.role_id(text)
+as assignment;
+
+
 create function meta.role_id(value json) returns meta.role_id as $$
     select row(value->>'name')::meta.role_id
 $$ immutable language sql;
@@ -679,6 +821,122 @@ $$ immutable language sql;
 
 create cast (json as meta.role_id)
 with function meta.role_id(json)
+as assignment;
+
+
+/******************************************************************************
+ * meta.policy_id
+ *****************************************************************************/
+create type meta.policy_id as (
+    relation_id meta.relation_id,
+    name text
+);
+
+
+create function meta.policy_id(schema_name text, relation_name text, name text) returns meta.policy_id as $$
+    select row(row(row(schema_name), relation_name), name)::meta.policy_id;
+$$ language sql;
+
+
+create function meta.eq(
+    leftarg meta.policy_id,
+    rightarg json
+) returns boolean as $$
+    select (leftarg).relation_id::meta.relation_id = (rightarg->'relation_id')::meta.relation_id and
+           (leftarg).name = rightarg->>'name';
+$$ language sql;
+
+
+create operator = (
+    leftarg = meta.policy_id,
+    rightarg = json,
+    procedure = meta.eq
+);
+
+
+create function meta.policy_id(value json) returns meta.policy_id as $$
+    select row(row(row(value->'relation_id'->'schema_id'->>'name'), value->'relation_id'->>'name'), value->>'name')::meta.policy_id
+$$ immutable language sql;
+
+
+create cast (json as meta.policy_id)
+with function meta.policy_id(json)
+as assignment;
+
+
+create function meta.policy_id(relation_id meta.relation_id, name text) returns meta.policy_id as $$
+    select row(relation_id, name)::meta.policy_id;
+$$ language sql;
+
+
+/******************************************************************************
+ * meta.siuda
+ *****************************************************************************/
+create type meta.siuda as enum ('select', 'insert', 'update', 'delete', 'all');
+
+
+create function meta.siuda(c char) returns meta.siuda as $$
+begin
+case c
+	when 'r' then
+		return 'select'::meta.siuda;
+	when 'a' then
+		return 'insert'::meta.siuda;
+	when 'w' then
+		return 'update'::meta.siuda;
+	when 'd' then
+		return 'delete'::meta.siuda;
+	when '*' then
+		return 'all'::meta.siuda;
+end case;
+end;
+$$ immutable language plpgsql;
+
+
+create cast (char as meta.siuda)
+with function meta.siuda(char)
+as assignment;
+
+
+/******************************************************************************
+ * meta.table_privilege_id
+ *****************************************************************************/
+create type meta.table_privilege_id as (
+	relation_id meta.relation_id,
+	role_id meta.role_id,
+	type text
+);
+
+
+create function meta.table_privilege_id(schema_name text, relation_name text, role_name text, type text) returns meta.table_privilege_id as $$
+    select row(row(row(schema_name), relation_name), row(role_name), type)::meta.table_privilege_id
+$$ language sql immutable;
+
+
+create function meta.eq(
+    leftarg meta.table_privilege_id,
+    rightarg json
+) returns boolean as $$
+    select (leftarg).relation_id = rightarg->'relation_id' and
+           (leftarg).role_id = rightarg->'role_id' and 
+           (leftarg).type = rightarg->>'type';
+$$ language sql;
+
+
+create operator = (
+    leftarg = meta.table_privilege_id,
+    rightarg = json,
+    procedure = meta.eq
+);
+
+
+create function meta.table_privilege_id(value json) returns meta.table_privilege_id as $$
+    select row(row(row(value->'relation_id'->'schema_id'->>'name'), value->'relation_id'->>'name'), row(value->'role_id'->>'name'), value->>'type')::meta.table_privilege_id
+$$ immutable language sql;
+
+
+create cast (json as meta.table_privilege_id)
+with function meta.table_privilege_id(json)
 as assignment;
 
 
