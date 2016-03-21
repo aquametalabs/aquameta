@@ -1084,7 +1084,11 @@ create view meta.role as
           pgr.rolvaliduntil  as valid_until
    from pg_roles pgr
    inner join pg_authid pga
-           on pgr.oid = pga.oid;
+           on pgr.oid = pga.oid
+	union
+   select '0'::oid::regrole::text::meta.role_id as id,
+	'PUBLIC' as name,
+	null, null, null, null, null, null, null, null, null;
 
 
 create function meta.stmt_role_create(role_name text, superuser boolean, inherit boolean, create_role boolean, create_db boolean, can_login boolean, replication boolean, connection_limit integer, password text, valid_until timestamp with time zone) returns text as $$
@@ -1207,6 +1211,369 @@ $$ language plpgsql;
 create function meta.current_role_id() returns meta.role_id as $$
     select id from meta.role where name=current_user;
 $$ language sql;
+
+
+/******************************************************************************
+ * meta.role_inheritance
+ *****************************************************************************/
+create view meta.role_inheritance as
+select roleid::regrole::text::meta.role_id as role_id,
+	roleid::regrole::text as role_name,
+	member::regrole::text::meta.role_id as member_role_id,
+	member::regrole::text as member_role_name
+from pg_auth_members;
+
+
+create function meta.stmt_role_inheritance_create(role_name text, member_role_name text) returns text as $$
+    select  'grant ' || quote_ident(role_name) || ' to ' || quote_ident(member_role_name);
+$$ language sql;
+
+
+create function meta.stmt_role_inheritance_drop(role_name text, member_role_name text) returns text as $$
+    select 'revoke ' || quote_ident(role_name) || ' from ' || quote_ident(member_role_name);
+$$ language sql;
+
+
+create function meta.role_inheritance_insert() returns trigger as $$
+    begin
+
+        perform meta.require_one(public.hstore(NEW), array['role_name', 'role_id']);
+        perform meta.require_one(public.hstore(NEW), array['member_role_name', 'memeber_role_id']);
+
+        execute meta.stmt_role_inheritance_create(coalesce(NEW.role_name, (NEW.role_id).name), coalesce(NEW.member_role_name, (NEW.member_role_id).name));
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.role_inheritance_update() returns trigger as $$
+    begin
+        perform meta.require_one(public.hstore(NEW), array['role_id', 'role_name']);
+        perform meta.require_one(public.hstore(NEW), array['memeber_role_id', 'member_role_name']);
+
+        execute meta.stmt_role_inheritance_drop((OLD.role_id).name, (OLD.member_role_id).name);
+        execute meta.stmt_role_inheritance_create(coalesce(NEW.role_name, (NEW.role_id).name), coalesce(NEW.member_role_name, (NEW.member_role_id).name));
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.role_inheritance_delete() returns trigger as $$
+    begin
+        execute meta.stmt_role_inheritance_drop((OLD.role_id).name, (OLD.member_role_id).name);
+        return OLD;
+    end;
+$$ language plpgsql;
+
+
+/******************************************************************************
+ * meta.table_privilege
+ *****************************************************************************/
+create view meta.table_privilege as
+select meta.table_privilege_id(schema_name, relation_name, (role_id).name, type) as id,
+	meta.relation_id(schema_name, relation_name) as relation_id,
+	schema_name,
+	relation_name,
+	role_id,
+	(role_id).name as role_name,
+	type,
+	is_grantable,
+	with_hierarchy
+from (
+	select
+		case grantee
+			when 'PUBLIC' then
+				'-'::text::meta.role_id
+			else
+				grantee::text::meta.role_id
+		end as role_id,
+		table_schema as schema_name,
+		table_name as relation_name,
+		privilege_type as type,
+		is_grantable,
+		with_hierarchy
+	from information_schema.role_table_grants
+	where table_catalog = current_database()
+) a;
+
+
+create function meta.stmt_table_privilege_create(schema_name text, relation_name text, role_name text, type text) returns text as $$
+    select 'grant ' || quote_ident(type) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || quote_ident(role_name);
+$$ language sql;
+
+
+create function meta.stmt_table_privilege_drop(schema_name text, relation_name text, role_name text, type text) returns text as $$
+    select 'revoke ' || quote_ident(type) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' from ' || quote_ident(role_name);
+$$ language sql;
+
+
+create function meta.table_privilege_insert() returns trigger as $$
+    begin
+        perform meta.require_one(public.hstore(NEW), array['role_id', 'role_name']);
+        perform meta.require_one(public.hstore(NEW), array['relation_id', 'schema_name']);
+        perform meta.require_one(public.hstore(NEW), array['relation_id', 'relation_name']);
+        perform meta.require_all(public.hstore(NEW), array['type']);
+
+        execute meta.stmt_table_privilege_create(
+		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
+		coalesce(NEW.relation_name, (NEW.relation_id).name),
+		coalesce(NEW.role_name, (NEW.role_id).name),
+		type);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.table_privilege_update() returns trigger as $$
+    begin
+        perform meta.require_one(public.hstore(NEW), array['role_id', 'role_name']);
+        perform meta.require_one(public.hstore(NEW), array['relation_id', 'schema_name']);
+        perform meta.require_one(public.hstore(NEW), array['relation_id', 'relation_name']);
+        perform meta.require_all(public.hstore(NEW), array['type']);
+
+        execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.relation_name, OLD.role_name, OLD.type);
+
+        execute meta.stmt_table_privilege_create(
+		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
+		coalesce(NEW.relation_name, (NEW.relation_id).name),
+		coalesce(NEW.role_name, (NEW.role_id).name),
+		type);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.table_privilege_delete() returns trigger as $$
+    begin
+        execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.relation_name, OLD.role_name, OLD.type);
+        return OLD;
+    end;
+$$ language plpgsql;
+
+
+/******************************************************************************
+ * meta.policy
+ *****************************************************************************/
+create view meta.policy as
+select meta.policy_id(polrelid::meta.relation_id, polname) as id,
+	polname as name,
+	polrelid::meta.relation_id as relation_id,
+	(polrelid::meta.relation_id).name as relation_name,
+	((polrelid::meta.relation_id).schema_id).name as schema_name,
+	polcmd::char::meta.siuda as command,
+	pg_get_expr(polqual, polrelid, True) as using,
+	pg_get_expr(polwithcheck, polrelid, True) as check
+from pg_policy;
+
+
+create function meta.stmt_policy_create(schema_name text, relation_name text, policy_name text, command text, "using" text, "check" text) returns text as $$
+    select  'create policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
+            case when command is not null then ' for ' || command
+					  else ''
+            end ||
+            case when "using" is not null then ' using (' || "using" || ')'
+					else ''
+            end ||
+            case when "check" is not null then ' with check (' || "check" || ')'
+					else ''
+            end;
+$$ language sql;
+
+
+create function meta.stmt_policy_rename(schema_name text, relation_name text, policy_name text, new_policy_name text) returns text as $$
+    select 'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' rename to ' || quote_ident(new_policy_name);
+$$ language sql;
+
+
+create function meta.stmt_policy_alter(schema_name text, relation_name text, policy_name text, "using" text, "check" text) returns text as $$
+    select  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
+            case when "using" is not null then ' using (' || "using" || ')'
+					else ''
+            end ||
+            case when "check" is not null then ' with check (' || "check" || ')'
+				        else ''
+            end;
+$$ language sql;
+
+
+create function meta.stmt_policy_drop(schema_name text, relation_name text, policy_name text) returns text as $$
+    select 'drop policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name);
+$$ language sql;
+
+
+create function meta.policy_insert() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['name']);
+        perform meta.require_one(public.hstore(NEW), array['relation_id', 'schema_name']);
+        perform meta.require_one(public.hstore(NEW), array['relation_id', 'relation_name']);
+
+        execute meta.stmt_policy_create(coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name), coalesce(NEW.relation_name, (NEW.relation_id).name), NEW.name, NEW.command, NEW.using, NEW.check);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.policy_update() returns trigger as $$
+    declare
+	schema_name text;
+	relation_name text;
+    begin
+        perform meta.require_all(public.hstore(NEW), array['name']);
+
+	-- could support moving policy to new relation, but is that useful?
+        if NEW.relation_id is not null and OLD.relation_id != NEW.relation_id or
+           NEW.schema_name is not null and OLD.schema_name != NEW.schema_name or
+           NEW.relation_name is not null and OLD.relation_name != NEW.relation_name then
+
+            raise exception 'Moving a policy to another table is not yet supported.';
+        end if;
+
+        if OLD.command != NEW.command then
+            raise exception 'Postgres does not allow altering the type of command';
+        end if;
+
+        schema_name := OLD.schema_name;
+        relation_name := OLD.relation_name;
+
+        if OLD.name != NEW.name then
+            execute meta.stmt_policy_rename(schema_name, relation_name, OLD.name, NEW.name);
+        end if;
+
+        execute meta.stmt_policy_alter(schema_name, relation_name, NEW.name, NEW.using, NEW.check);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.policy_delete() returns trigger as $$
+    begin
+        execute meta.stmt_policy_drop(OLD.schema_name, OLD.relation_name, OLD.name);
+        return OLD;
+    end;
+$$ language plpgsql;
+
+
+/******************************************************************************
+ * meta.policy_role
+ *****************************************************************************/
+create view meta.policy_role as 
+select
+	meta.policy_id(relation_id, policy_name) as policy_id,
+	policy_name,
+	relation_id,
+	(relation_id).name as relation_name,
+	((relation_id).schema_id).name as schema_name,
+	role_id,
+	(role_id).name as role_name
+from ( 
+	select
+		polname as policy_name,
+		polrelid::meta.relation_id as relation_id,
+		unnest(polroles::regrole[]::text[]::meta.role_id[]) as role_id
+	from pg_policy
+) a;
+
+
+create function meta.stmt_policy_role_create(schema_name text, relation_name text, policy_name text, role_name text) returns text as $$
+    select  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
+	    ' to ' ||
+	    ( select array_to_string(
+			array_append(
+				array_replace(
+					array(
+						select distinct(unnest(polroles::regrole[]::text[]))
+						from pg_policy
+						where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
+					),
+				'-', 'public'),
+			role_name),
+		 ', '));
+$$ language sql;
+
+
+create function meta.stmt_policy_role_drop(schema_name text, relation_name text, policy_name text) returns text as $$
+declare
+    roles text;
+begin
+    select array_to_string(
+		array_remove(
+			array_replace(
+				array(
+					select distinct(unnest(polroles::regrole[]::text[]))
+					from pg_policy
+					where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
+				),
+			'-', 'public'),
+		role_name),
+	 ', ') into roles;
+
+    if roles = '' then
+	    return  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to public';
+    else
+	    return  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || roles;
+    end if;
+end;
+$$ language plpgsql;
+
+
+create function meta.policy_role_insert() returns trigger as $$
+    begin
+
+        perform meta.require_one(public.hstore(NEW), array['policy_name', 'policy_id']);
+        perform meta.require_one(public.hstore(NEW), array['role_name', 'role_id']);
+        perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'relation_name']);
+        perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'schema_name']);
+
+        execute meta.stmt_policy_role_create(
+		coalesce(schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
+		coalesce(relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
+		coalesce(NEW.policy_name, (NEW.policy_id).name), 
+		coalesce(NEW.role_name, (NEW.role_id).name));
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.policy_role_update() returns trigger as $$
+    declare
+	schema_name text;
+	relation_name text;
+    begin
+        perform meta.require_one(public.hstore(NEW), array['policy_name', 'policy_id']);
+        perform meta.require_one(public.hstore(NEW), array['role_name', 'role_id']);
+        perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'relation_name']);
+        perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'schema_name']);
+
+	-- delete old policy_role
+        execute meta.stmt_policy_role_drop((((OLD.policy_id).relation_id).schema_id).name, ((OLD.policy_id).relation_id).name, (OLD.policy_id).name, (OLD.role_id).name);
+
+	-- create new policy_role
+        execute meta.stmt_policy_role_create(
+		coalesce(schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
+		coalesce(relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
+		coalesce(NEW.policy_name, (NEW.policy_id).name), 
+		coalesce(NEW.role_name, (NEW.role_id).name));
+
+        return NEW;
+
+    end;
+$$ language plpgsql;
+
+
+create function meta.policy_role_delete() returns trigger as $$
+    begin
+        execute meta.stmt_policy_role_drop((((OLD.policy_id).relation_id).schema_id).name, ((OLD.policy_id).relation_id).name, (OLD.policy_id).name, (OLD.role_id).name);
+        return OLD;
+    end;
+$$ language plpgsql;
+
 
 /******************************************************************************
  * meta.connection
@@ -2204,6 +2571,26 @@ create trigger meta_function_delete_trigger instead of delete on meta.function f
 create trigger meta_role_insert_trigger instead of insert on meta.role for each row execute procedure meta.role_insert();
 create trigger meta_role_update_trigger instead of update on meta.role for each row execute procedure meta.role_update();
 create trigger meta_role_delete_trigger instead of delete on meta.role for each row execute procedure meta.role_delete();
+
+-- ROLE INHERITANCE
+create trigger meta_role_inheritance_insert_trigger instead of insert on meta.role_inheritance for each row execute procedure meta.role_inheritance_insert();
+create trigger meta_role_inheritance_update_trigger instead of update on meta.role_inheritance for each row execute procedure meta.role_inheritance_update();
+create trigger meta_role_inheritance_delete_trigger instead of delete on meta.role_inheritance for each row execute procedure meta.role_inheritance_delete();
+
+-- TABLE PRIVILEGE
+create trigger meta_table_privilege_insert_trigger instead of insert on meta.table_privilege for each row execute procedure meta.table_privilege_insert();
+create trigger meta_table_privilege_update_trigger instead of update on meta.table_privilege for each row execute procedure meta.table_privilege_update();
+create trigger meta_table_privilege_delete_trigger instead of delete on meta.table_privilege for each row execute procedure meta.table_privilege_delete();
+
+-- POLICY
+create trigger meta_policy_insert_trigger instead of insert on meta.policy for each row execute procedure meta.policy_insert();
+create trigger meta_policy_update_trigger instead of update on meta.policy for each row execute procedure meta.policy_update();
+create trigger meta_policy_delete_trigger instead of delete on meta.policy for each row execute procedure meta.policy_delete();
+
+-- POLICY ROLE
+create trigger meta_policy_role_insert_trigger instead of insert on meta.policy_role for each row execute procedure meta.policy_role_insert();
+create trigger meta_policy_role_update_trigger instead of update on meta.policy_role for each row execute procedure meta.policy_role_update();
+create trigger meta_policy_role_delete_trigger instead of delete on meta.policy_role for each row execute procedure meta.policy_role_delete();
 
 -- CONNECTION
 create trigger meta_connection_delete_trigger instead of delete on meta.connection for each row execute procedure meta.connection_delete();
