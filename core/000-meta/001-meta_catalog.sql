@@ -1300,12 +1300,14 @@ from (
 
 
 create function meta.stmt_table_privilege_create(schema_name text, relation_name text, role_name text, type text) returns text as $$
-    select 'grant ' || quote_ident(type) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || quote_ident(role_name);
+	-- TODO: create privilege_type so that "type" can be escaped here
+    select 'grant ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || quote_ident(role_name);
 $$ language sql;
 
 
 create function meta.stmt_table_privilege_drop(schema_name text, relation_name text, role_name text, type text) returns text as $$
-    select 'revoke ' || quote_ident(type) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' from ' || quote_ident(role_name);
+	-- TODO: create privilege_type so that "type" can be escaped here
+    select 'revoke ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' from ' || quote_ident(role_name);
 $$ language sql;
 
 
@@ -1320,7 +1322,7 @@ create function meta.table_privilege_insert() returns trigger as $$
 		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
 		coalesce(NEW.relation_name, (NEW.relation_id).name),
 		coalesce(NEW.role_name, (NEW.role_id).name),
-		type);
+		NEW.type);
 
         return NEW;
     end;
@@ -1340,7 +1342,7 @@ create function meta.table_privilege_update() returns trigger as $$
 		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
 		coalesce(NEW.relation_name, (NEW.relation_id).name),
 		coalesce(NEW.role_name, (NEW.role_id).name),
-		type);
+		NEW.type);
 
         return NEW;
     end;
@@ -1370,9 +1372,9 @@ select meta.policy_id(polrelid::meta.relation_id, polname) as id,
 from pg_policy;
 
 
-create function meta.stmt_policy_create(schema_name text, relation_name text, policy_name text, command text, "using" text, "check" text) returns text as $$
+create function meta.stmt_policy_create(schema_name text, relation_name text, policy_name text, command meta.siuda, "using" text, "check" text) returns text as $$
     select  'create policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
-            case when command is not null then ' for ' || command
+            case when command is not null then ' for ' || command::text
 					  else ''
             end ||
             case when "using" is not null then ' using (' || "using" || ')'
@@ -1411,7 +1413,7 @@ create function meta.policy_insert() returns trigger as $$
         perform meta.require_one(public.hstore(NEW), array['relation_id', 'schema_name']);
         perform meta.require_one(public.hstore(NEW), array['relation_id', 'relation_name']);
 
-        execute meta.stmt_policy_create(coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name), coalesce(NEW.relation_name, (NEW.relation_id).name), NEW.name, NEW.command, NEW.using, NEW.check);
+        execute meta.stmt_policy_create(coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name), coalesce(NEW.relation_name, (NEW.relation_id).name), NEW.name, NEW.command, NEW."using", NEW."check");
 
         return NEW;
     end;
@@ -1444,7 +1446,7 @@ create function meta.policy_update() returns trigger as $$
             execute meta.stmt_policy_rename(schema_name, relation_name, OLD.name, NEW.name);
         end if;
 
-        execute meta.stmt_policy_alter(schema_name, relation_name, NEW.name, NEW.using, NEW.check);
+        execute meta.stmt_policy_alter(schema_name, relation_name, NEW.name, NEW."using", NEW."check");
 
         return NEW;
     end;
@@ -1485,31 +1487,31 @@ create function meta.stmt_policy_role_create(schema_name text, relation_name tex
 	    ' to ' ||
 	    ( select array_to_string(
 			array_append(
-				array_replace(
+				array_remove(
 					array(
 						select distinct(unnest(polroles::regrole[]::text[]))
 						from pg_policy
 						where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
 					),
-				'-', 'public'),
+				'-'), -- Remove public from list of roles
 			role_name),
 		 ', '));
 $$ language sql;
 
 
-create function meta.stmt_policy_role_drop(schema_name text, relation_name text, policy_name text) returns text as $$
+create function meta.stmt_policy_role_drop(schema_name text, relation_name text, policy_name text, role_name text) returns text as $$
 declare
     roles text;
 begin
     select array_to_string(
 		array_remove(
-			array_replace(
+			array_remove(
 				array(
 					select distinct(unnest(polroles::regrole[]::text[]))
 					from pg_policy
 					where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
 				),
-			'-', 'public'),
+			'-'), -- Remove public from list of roles
 		role_name),
 	 ', ') into roles;
 
@@ -1531,8 +1533,8 @@ create function meta.policy_role_insert() returns trigger as $$
         perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'schema_name']);
 
         execute meta.stmt_policy_role_create(
-		coalesce(schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
-		coalesce(relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
+		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
+		coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
 		coalesce(NEW.policy_name, (NEW.policy_id).name), 
 		coalesce(NEW.role_name, (NEW.role_id).name));
 
@@ -1556,8 +1558,8 @@ create function meta.policy_role_update() returns trigger as $$
 
 	-- create new policy_role
         execute meta.stmt_policy_role_create(
-		coalesce(schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
-		coalesce(relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
+		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
+		coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
 		coalesce(NEW.policy_name, (NEW.policy_id).name), 
 		coalesce(NEW.role_name, (NEW.role_id).name));
 
