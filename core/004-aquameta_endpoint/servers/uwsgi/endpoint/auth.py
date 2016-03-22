@@ -25,7 +25,7 @@ class AuthMiddleware(object):
             return []
 
     def verify_session(self, request, environ, start_response):
-        environ['DB_USER'] = 'guest'
+        environ['DB_USER'] = 'anonymous'
 
         if self.session_cookie in request.cookies: 
             token = request.cookies['SESSION']

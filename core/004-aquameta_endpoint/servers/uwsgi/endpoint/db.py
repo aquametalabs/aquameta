@@ -8,7 +8,7 @@ from werkzeug.exceptions import BadRequest, Forbidden, NotFound, Unauthorized
 def connect(request):
     conn_info = {
         'host':     environ['DB_HOST'],
-        'user':     request.environ.get('DB_USER', 'guest'),
+        'user':     request.environ.get('DB_USER', 'anonymous'),
         'database': environ['DB_NAME'],
         'port':     environ['DB_PORT']
     }
