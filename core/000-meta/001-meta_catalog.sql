@@ -1217,11 +1217,13 @@ $$ language sql;
  * meta.role_inheritance
  *****************************************************************************/
 create view meta.role_inheritance as
-select roleid::regrole::text::meta.role_id as role_id,
-	roleid::regrole::text as role_name,
-	member::regrole::text::meta.role_id as member_role_id,
-	member::regrole::text as member_role_name
-from pg_auth_members;
+select r.rolname::text::meta.role_id as role_id,
+	r.rolname as role_name,
+	r2.rolname::text::meta.role_id as member_role_id,
+	r2.rolname as member_role_name
+from pg_auth_members m
+	join pg_roles r on r.oid = m.roleid
+	join pg_roles r2 on r2.oid = m.member;
 
 
 create function meta.stmt_role_inheritance_create(role_name text, member_role_name text) returns text as $$
@@ -1238,7 +1240,7 @@ create function meta.role_inheritance_insert() returns trigger as $$
     begin
 
         perform meta.require_one(public.hstore(NEW), array['role_name', 'role_id']);
-        perform meta.require_one(public.hstore(NEW), array['member_role_name', 'memeber_role_id']);
+        perform meta.require_one(public.hstore(NEW), array['member_role_name', 'member_role_id']);
 
         execute meta.stmt_role_inheritance_create(coalesce(NEW.role_name, (NEW.role_id).name), coalesce(NEW.member_role_name, (NEW.member_role_id).name));
 
@@ -1250,7 +1252,7 @@ $$ language plpgsql;
 create function meta.role_inheritance_update() returns trigger as $$
     begin
         perform meta.require_one(public.hstore(NEW), array['role_id', 'role_name']);
-        perform meta.require_one(public.hstore(NEW), array['memeber_role_id', 'member_role_name']);
+        perform meta.require_one(public.hstore(NEW), array['member_role_id', 'member_role_name']);
 
         execute meta.stmt_role_inheritance_drop((OLD.role_id).name, (OLD.member_role_id).name);
         execute meta.stmt_role_inheritance_create(coalesce(NEW.role_name, (NEW.role_id).name), coalesce(NEW.member_role_name, (NEW.member_role_id).name));
