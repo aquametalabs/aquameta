@@ -1022,41 +1022,173 @@ $$ language plpgsql;
 
 
 /******************************************************************************
- *
- *
- * AUTH?
- *
- * these are very old and not thought out.
+ * endpoint.user
  ******************************************************************************/
+create table endpoint.user (
+	id uuid default public.uuid_generate_v4() primary key,
+	role_id meta.role_id not null,
+	email text not null unique,
+	name text not null default '',
+	active boolean not null default false,
+	activation_code uuid not null default public.uuid_generate_v4()
+);
 
 
--- create schema auth;
-create function endpoint.login(encrypted_password character varying) RETURNS uuid
-    LANGUAGE plpgsql STRICT SECURITY DEFINER
-    AS $$
-    DECLARE
-        token uuid := NULL;
-        role_name varchar := NULL;
-    BEGIN
-        set local search_path = endpoint;
+/******************************************************************************
+ * auth roles
+ ******************************************************************************/
+-- User-defined roles inherit from "user" role
+create role "user" nologin;
 
-        EXECUTE 'SELECT rolname FROM pg_catalog.pg_authid WHERE rolpassword = ' || quote_literal(encrypted_password) INTO role_name;
-	
-	IF role_name IS NOT NULL THEN
-		EXECUTE 'INSERT INTO endpoint.session (username) values (' || quote_literal(role_name) || ') RETURNING token' INTO token;
-	END IF;
 
-        RETURN token;
-    END
-$$;
+-- Guest role
+create role anonymous with login;
+-- TODO: Needs default permissions further up the stack
 
+
+-- Superuser is aquameta
+-- Goof to rename postgres to aquameta
+create role tmp with superuser;
+set session authorization tmp;
+alter role postgres rename to aquameta;
+alter role aquameta password 'postgres';
+set session authorization aquameta;
+drop role tmp;
+
+
+/******************************************************************************
+ * endpoint.current_user
+ ******************************************************************************/
 create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
 
+
+/******************************************************************************
+ * endpoint.session
+ ******************************************************************************/
+
+-- Could this be renamed to endpoint.cookie?
+
 create table endpoint.session (
-    id serial primary key,
-    username character varying,
-    token uuid DEFAULT public.uuid_generate_v4() NOT NULL
+	id uuid default public.uuid_generate_v4() not null,
+	role_id meta.role_id not null,
+	user_id uuid references endpoint.user(id)
 );
+
+
+/******************************************************************************
+ * endpoint.register
+ ******************************************************************************/
+create function endpoint.register (_email text, _password text) returns void
+	language plpgsql strict security definer
+as $$
+	declare
+		_user_exists boolean;
+		_role_id meta.role_id;
+	begin
+
+		-- 1. check for existing role, throw exception if found
+		execute 'select exists(select 1 from endpoint.user where email=' || quote_literal(_email) || ')' into _user_exists;
+		if _user_exists then
+			raise exception 'A user already exists with this email';
+		end if;
+
+
+		-- 2. datafy
+		-- create role
+		insert into meta.role (name, password) values (public.uuid_generate_v4(), _password) returning name into _role_id;
+
+		-- create user
+		insert into endpoint.user (role_id, email, active) values (_role_id, _email, false);
+
+		-- inherit from generic user
+		insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
+
+
+		-- 3. send email to {email}
+		-- TODO: call email function or insert into queued emails
+
+		return;
+
+	end
+$$;
+
+
+/******************************************************************************
+ * endpoint.register_confirm
+ ******************************************************************************/
+create function endpoint.register_confirm (_email text, _confirmation_code text) returns void
+	language plpgsql strict security definer
+as $$
+	declare
+		_user_row record;
+		_role_id meta.role_id;
+	begin
+		
+		-- 1. check for existing user.  throw exceptions for
+		  -- a. non-matching code
+		execute 'select * from endpoint.user where email=' || quote_literal(_email) || ' and activation_code=' || quote_literal(_confirmation_code) into _user_row;
+		if _user_row is null then
+			raise exception 'Invalid confirmation code';
+		end if;
+
+		  -- b. already active user
+		if _user_row.active then
+			raise exception 'User already activated';
+		end if;
+
+		-- 2. update user set active=true;
+										--     Why?
+		update endpoint.user set active=true where email=_email returning (role_id).name into _role_id;
+		raise notice 'role id %', _role_id;
+
+		-- 3. update role set login=true
+		update meta.role set can_login=true where id=_role_id; 
+
+		-- 4. send email?
+		-- TODO: call email function or insert into queued emails
+
+		return;
+
+	end
+$$;
+
+
+/******************************************************************************
+ * endpoint.login
+ ******************************************************************************/
+create function endpoint.login (_email text, _password text) returns uuid
+	language plpgsql strict security definer
+as $$
+	declare
+		_role_name text;
+		_encrypted_password text;
+		_session_id uuid := null;
+	begin
+		-- Build encrypted password by getting role name associated with this email
+		select 'md5' || md5(_password || (role_id).name) from endpoint.user where email=_email into _encrypted_password;
+
+		-- Look for role with this password
+		execute 'select rolname from pg_catalog.pg_authid where rolpassword = ' || quote_literal(_encrypted_password) into _role_name;
+
+		-- Create cookie session for this role/user
+		if _role_name is not null then
+			insert into endpoint.session (role_id, user_id) values (meta.role_id(_role_name), (select id from endpoint.user where email=_email)) returning id into _session_id;
+		end if;
+
+		-- Return cookie
+		return _session_id;
+	end
+$$;
+
+
+/******************************************************************************
+ * endpoint.logout
+ ******************************************************************************/
+create function endpoint.logout (_email text) returns void
+	language sql strict security definer
+as $$
+	delete from endpoint.session where user_id = (select id from endpoint."user" where email = _email);
+$$;
 
 
 commit;
