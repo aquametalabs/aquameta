@@ -1042,11 +1042,15 @@ create role "user" nologin;
 
 
 -- Guest role
-create role anonymous with login;
--- TODO: Needs default permissions further up the stack
+-- To find default permissions further up the stack
+-- `cd aquameta/core && grep -R default_permissions`
+create role anonymous login;
 
 
 -- Superuser is aquameta
+create role aquameta superuser createdb createrole login replication bypassrls;
+
+/*
 -- Goof to rename postgres to aquameta
 create role tmp with superuser;
 set session authorization tmp;
@@ -1054,6 +1058,7 @@ alter role postgres rename to aquameta;
 alter role aquameta password 'postgres';
 set session authorization aquameta;
 drop role tmp;
+*/
 
 
 /******************************************************************************
@@ -1137,7 +1142,7 @@ as $$
 		end if;
 
 		-- 2. update user set active=true;
-										--     Why?
+					                                                    --     Why?
 		update endpoint.user set active=true where email=_email returning (role_id).name into _role_id;
 		raise notice 'role id %', _role_id;
 
