@@ -1,5 +1,6 @@
 from endpoint.db import cursor_for_request
 from werkzeug.wrappers import Request
+from werkzeug.utils import redirect
 
 
 class AuthMiddleware(object):
@@ -8,45 +9,73 @@ class AuthMiddleware(object):
         self.login_path = '/login' # TODO remove this hardcoded login path when row-level permissions lands; should just react to db causing 401
         self.session_cookie = 'SESSION'
 
-    def do_auth(self, request, start_response):
+    def do_auth(self, request, environ, start_response):
         with cursor_for_request(request) as cursor:
-            cursor.execute(
-                'select endpoint.login(%s) as token',
-                (request.args['hash'],)
-            )
 
-            row = cursor.fetchone()
+            # Incomplete login attempt if email/password not POSTed
+            if request.form.get('email') is None or request.form.get('password') is None:
+                return []
 
-            if row and row.token:
-                start_response('200 Found', [('Set-Cookie', '%s=%s' % (self.session_cookie, row.token))])
-            else:
+            # Attempt login
+            try :
+                cursor.execute(
+                    'select endpoint.login(%s, %s) as session_id',
+                    (request.form.get('email'), request.form.get('password'))
+                )
+                row = cursor.fetchone()
+
+            except:
+                # Exception raised from invalid email
                 start_response('401 Unauthorized', [])
+                redirect_response = redirect(request.full_path)
+                return redirect_response(environ, start_response)
 
-            return []
+
+            if row and row.session_id:
+                # Logged in
+                start_response('200 Found', [('Set-Cookie', '%s=%s' % (self.session_cookie, row.session_id))])
+            else:
+                # Login failed from invalid password attempt
+                start_response('401 Unauthorized', [])
+                redirect_response = redirect(request.full_path)
+                return redirect_response(environ, start_response)
+
+            # Redirect to redirectURL or /
+            redirect_response = redirect(request.args.get('redirectURL', '/'))
+            return redirect_response(environ, start_response)
 
     def verify_session(self, request, environ, start_response):
         environ['DB_USER'] = 'anonymous'
 
         if self.session_cookie in request.cookies: 
-            token = request.cookies['SESSION']
+            session_id = request.cookies[self.session_cookie]
 
             with cursor_for_request(request) as cursor:
-                cursor.execute("select username from endpoint.session where token = %s", (token,))
+                cursor.execute("select (role_id).name as role_name from endpoint.session where id = %s", (session_id,))
 
                 row = cursor.fetchone()
                 if row:
-                    environ['DB_USER'] = row.username
+                    environ['DB_USER'] = row.role_name
 
         return self.app(environ, start_response)
 
     def handle_req(self, request, environ, start_response):
+
+        # If login page requested
         if request.path == self.login_path:
-            if 'hash' in request.args:
-                return self.do_auth(request, start_response)
+
+            # POST handler for login attempt
+            if request.method == 'POST':
+                return self.do_auth(request, environ, start_response)
+
+            # GET login page
             else:
                 return self.app(environ, start_response)
+
+        # Verify current database role and continue
         else:
             return self.verify_session(request, environ, start_response)
+
 
     def __call__(self, environ, start_response):
         return self.handle_req(Request(environ), environ, start_response)
