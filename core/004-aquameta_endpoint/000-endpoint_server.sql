@@ -1220,8 +1220,15 @@ as $$
 		-- Build encrypted password by getting role name associated with this email
 		select 'md5' || md5(_password || (role_id).name) from endpoint.user where email=_email into _encrypted_password;
 
+		-- Email does not exists in endpoint.user table
+		if _encrypted_password is null then
+			raise exception 'No user with this email';
+		end if;
+
 		-- Look for role with this password
 		execute 'select rolname from pg_catalog.pg_authid where rolpassword = ' || quote_literal(_encrypted_password) into _role_name;
+
+		-- _role_name is null if rolpassword does not exist in pg_catalog.pg_auth_id table -- invalid password
 
 		-- Create cookie session for this role/user
 		if _role_name is not null then
@@ -1240,6 +1247,7 @@ $$;
 create function endpoint.logout (_email text) returns void
 	language sql strict security definer
 as $$
+	-- Should this delete all sessions associated with this user? I think so
 	delete from endpoint.session where user_id = (select id from endpoint."user" where email = _email);
 $$;
 
