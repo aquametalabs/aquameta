@@ -58,7 +58,6 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.con
 	cd /s/aquameta && \
 	./build.sh && \
 	psql -c "alter role postgres password 'postgres'" aquameta && \
-	psql -c "create role guest superuser login" aquameta && \
 	/etc/init.d/postgresql stop
 
 

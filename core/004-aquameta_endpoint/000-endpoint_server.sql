@@ -1026,12 +1026,72 @@ $$ language plpgsql;
  ******************************************************************************/
 create table endpoint.user (
 	id uuid default public.uuid_generate_v4() primary key,
-	role_id meta.role_id not null,
+	role_id meta.role_id not null default public.uuid_generate_v4()::text::meta.role_id,
 	email text not null unique,
 	name text not null default '',
 	active boolean not null default false,
 	activation_code uuid not null default public.uuid_generate_v4()
 );
+
+
+-- Trigger on endpoint.user for insert
+create or replace function endpoint.user_insert() returns trigger as $$
+declare
+	role_exists boolean;
+begin
+	-- If a role_id is supplied (thus not generated), make sure this role does not exist
+	select exists(select 1 from meta.role where id = NEW.role_id) into role_exists;
+	if role_exists then
+		raise exception 'Role already exists';
+	end if;
+
+	-- Create a new role
+	insert into meta.role(name) values((NEW.role_id).name);
+
+	return NEW;
+end;
+$$ language plpgsql;
+
+
+-- Trigger on endpoint.user for update
+create or replace function endpoint.user_update() returns trigger as $$
+declare
+	role_exists boolean;
+begin
+	if OLD.role_id != NEW.role_id then
+
+		-- If a role_id is supplied (thus not generated), make sure this role does not exist
+		select exists(select 1 from meta.role where id = NEW.role_id) into role_exists;
+		if role_exists then
+			raise exception 'Role already exists';
+		end if;
+
+		-- Delete old role
+		delete from meta.role where id = OLD.role_id;
+
+		-- Create a new role
+		insert into meta.role(name) values((NEW.role_id).name);
+
+	end if;
+
+	return NEW;
+end;
+$$ language plpgsql;
+
+
+-- Trigger on endpoint.user for delete
+create or replace function endpoint.user_delete() returns trigger as $$
+begin
+	-- Delete old role
+	delete from meta.role where id = OLD.role_id;
+	return OLD;
+end;
+$$ language plpgsql;
+
+
+create trigger endpoint_user_insert_trigger before insert on endpoint.user for each row execute procedure endpoint.user_insert();
+create trigger endpoint_user_update_trigger before update on endpoint.user for each row execute procedure endpoint.user_update();
+create trigger endpoint_user_delete_trigger before delete on endpoint.user for each row execute procedure endpoint.user_delete();
 
 
 /******************************************************************************
@@ -1087,29 +1147,18 @@ create function endpoint.register (_email text, _password text) returns void
 	language plpgsql strict security definer
 as $$
 	declare
-		_user_exists boolean;
 		_role_id meta.role_id;
 	begin
+		-- Create user
+		insert into endpoint.user (email, active) values (_email, false) returning (role_id).name into _role_id;
 
-		-- 1. check for existing role, throw exception if found
-		execute 'select exists(select 1 from endpoint.user where email=' || quote_literal(_email) || ')' into _user_exists;
-		if _user_exists then
-			raise exception 'A user already exists with this email';
-		end if;
+		-- Set role password
+		update meta.role set password = _password where id = _role_id;
 
-
-		-- 2. datafy
-		-- create role
-		insert into meta.role (name, password) values (public.uuid_generate_v4(), _password) returning name into _role_id;
-
-		-- create user
-		insert into endpoint.user (role_id, email, active) values (_role_id, _email, false);
-
-		-- inherit from generic user
+		-- Inherit from generic user
 		insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
-
-		-- 3. send email to {email}
+		-- Send email to {email}
 		-- TODO: call email function or insert into queued emails
 
 		return;
@@ -1128,7 +1177,6 @@ as $$
 		_user_row record;
 		_role_id meta.role_id;
 	begin
-		
 		-- 1. check for existing user.  throw exceptions for
 		  -- a. non-matching code
 		execute 'select * from endpoint.user where email=' || quote_literal(_email) || ' and activation_code=' || quote_literal(_confirmation_code) into _user_row;
@@ -1141,19 +1189,19 @@ as $$
 			raise exception 'User already activated';
 		end if;
 
+
 		-- 2. update user set active=true;
-					                                                    --     Why?
-		update endpoint.user set active=true where email=_email returning (role_id).name into _role_id;
-		raise notice 'role id %', _role_id;
+		update endpoint.user set active = true where email = _email and activation_code = _confirmation_code::uuid returning (role_id).name into _role_id;
+
 
 		-- 3. update role set login=true
-		update meta.role set can_login=true where id=_role_id; 
+		update meta.role set can_login = true where id = _role_id; 
+
 
 		-- 4. send email?
 		-- TODO: call email function or insert into queued emails
 
 		return;
-
 	end
 $$;
 
