@@ -16,8 +16,8 @@ class AuthMiddleware(object):
             if request.form.get('email') is None or request.form.get('password') is None:
                 return []
 
-            # Attempt login
-            try :
+            try:
+                # Attempt login
                 cursor.execute(
                     'select endpoint.login(%s, %s) as session_id',
                     (request.form.get('email'), request.form.get('password'))
@@ -33,16 +33,19 @@ class AuthMiddleware(object):
 
             if row and row.session_id:
                 # Logged in
-                start_response('200 Found', [('Set-Cookie', '%s=%s' % (self.session_cookie, row.session_id))])
+
+                # Redirect to redirectURL or /
+                redirect_response = redirect(request.args.get('redirectURL', '/'))
+                redirect_response.set_cookie(self.session_cookie, row.session_id)
+                #start_response('200 Found', [('Set-Cookie', '%s=%s' % (self.session_cookie, row.session_id))])
+                return redirect_response(environ, start_response)
+
             else:
                 # Login failed from invalid password attempt
                 start_response('401 Unauthorized', [])
                 redirect_response = redirect(request.full_path)
                 return redirect_response(environ, start_response)
 
-            # Redirect to redirectURL or /
-            redirect_response = redirect(request.args.get('redirectURL', '/'))
-            return redirect_response(environ, start_response)
 
     def verify_session(self, request, environ, start_response):
         environ['DB_USER'] = 'anonymous'
@@ -51,11 +54,14 @@ class AuthMiddleware(object):
             session_id = request.cookies[self.session_cookie]
 
             with cursor_for_request(request) as cursor:
-                cursor.execute("select (role_id).name as role_name from endpoint.session where id = %s", (session_id,))
-
-                row = cursor.fetchone()
-                if row:
-                    environ['DB_USER'] = row.role_name
+                try:
+                    cursor.execute("select (role_id).name as role_name from endpoint.session where id = %s::uuid", (session_id,))
+                    row = cursor.fetchone()
+                except:
+                    pass
+                else:
+                    if row:
+                        environ['DB_USER'] = row.role_name
 
         return self.app(environ, start_response)
 

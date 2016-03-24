@@ -1110,16 +1110,6 @@ create role anonymous login;
 -- Superuser is aquameta
 create role aquameta superuser createdb createrole login replication bypassrls;
 
-/*
--- Goof to rename postgres to aquameta
-create role tmp with superuser;
-set session authorization tmp;
-alter role postgres rename to aquameta;
-alter role aquameta password 'postgres';
-set session authorization aquameta;
-drop role tmp;
-*/
-
 
 /******************************************************************************
  * endpoint.current_user

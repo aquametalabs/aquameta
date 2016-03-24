@@ -1145,7 +1145,7 @@ create function meta.stmt_role_alter(role_name text, superuser boolean, inherit 
             case when connection_limit is not null then ' connection limit ' || connection_limit -- can't take quoted literal
                                                    else ''
             end ||
-            case when password is not null then ' password ' || quote_literal(password)
+            case when password is not null and password <> '********' then ' password ' || quote_literal(password)
                                            else ''
             end ||
             case when valid_until is not null then ' valid until ' || quote_literal(valid_until)
