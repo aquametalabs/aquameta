@@ -283,7 +283,7 @@ as assignment;
 
 
 create function meta.text(value meta.relation_id) returns text as $$
-select (value.schema_id).name::text || '/' || value.name::text
+select (value::meta.schema_id).name || '/' || value.name
 $$ immutable language sql;
 
 
@@ -555,29 +555,55 @@ as assignment;
 */
 
 
-/*
-
-TODO: remove circular dependency
-
 create or replace function meta.row_id(value text) returns meta.row_id as $$
-    select meta.row_id(
-        (string_to_array(value, '/'))[1]::text,
-        (string_to_array(value, '/'))[2]::text,
-        (select primary_key_column_names[1] from meta.relation where name = (string_to_array(value, '/'))[1]::text and schema_name = (string_to_array(value, '/'))[2]::text),
-        (string_to_array(value, '/'))[3]::text)
-$$ immutable language sql;
+declare
+    parts text[];
+    schema_name text;
+    relation_name text;
+    pk_value text;
+    pk_column_name text;
+begin
+    select string_to_array(value, '/') into parts;
+    select parts[1]::text into schema_name;
+    select parts[2]::text into relation_name;
+    select parts[3]::text into pk_value;
+
+    select c.column_name as name
+    from information_schema.columns c
+    left join information_schema.table_constraints t
+          on t.table_catalog = c.table_catalog and
+             t.table_schema = c.table_schema and
+             t.table_name = c.table_name and
+             t.constraint_type = 'PRIMARY KEY'
+    left join information_schema.key_column_usage k
+          on k.constraint_catalog = t.constraint_catalog and
+             k.constraint_schema = t.constraint_schema and
+             k.constraint_name = t.constraint_name and
+             k.column_name = c.column_name
+    where c.table_schema = schema_name and c.table_name = relation_name
+            and k.column_name is not null or (c.table_schema = 'meta' and c.column_name = 'id') -- is this the primary_key
+    into pk_column_name;
+
+    return meta.row_id(
+        schema_name,
+        relation_name,
+        pk_column_name,
+        pk_value
+    );
+
+end;
+$$ immutable language plpgsql;
 
 
 create cast (text as meta.row_id)
 with function meta.row_id(text)
 as assignment;
-*/
 
 
 create function meta.text(value meta.row_id) returns text as $$
-select (((value.pk_column_id).relation_id).schema_id).name::text || '/' ||
-    ((value.pk_column_id).relation_id).name::text || '/' ||
-    value.pk_value::text
+select (value::meta.schema_id).name || '/' ||
+    (value::meta.relation_id).name || '/' ||
+    value.pk_value
 $$ immutable language sql;
 
 
@@ -636,7 +662,6 @@ create operator = (
 );
 
 create function meta.field_id(value json) returns meta.field_id as $$
-    -- select row(row(value->'schema_id'->>'name'), value->>'name')::meta.relation_id
     select row(meta.row_id(value->'row_id'), meta.column_id(value->'column_id'))::meta.field_id
 $$ immutable language sql;
 
@@ -645,31 +670,60 @@ create cast (json as meta.field_id)
 with function meta.field_id(json)
 as assignment;
 
-/*
-
-TODO: remove circular dependency
 
 create or replace function meta.field_id(value text) returns meta.field_id as $$
-    select meta.field_id(
-        (string_to_array(value, '/'))[1]::text,
-        (string_to_array(value, '/'))[2]::text,
-        (select primary_key_column_names[1] from meta.relation where name = (string_to_array(value, '/'))[1]::text and schema_name = (string_to_array(value, '/'))[2]::text),
-        (string_to_array(value, '/'))[3]::text,
-        (string_to_array(value, '/'))[4]::text)
-$$ immutable language sql;
+declare
+    parts text[];
+    schema_name text;
+    relation_name text;
+    pk_value text;
+    column_name text;
+    pk_column_name text;
+begin
+    select string_to_array(value, '/') into parts;
+    select parts[1]::text into schema_name;
+    select parts[2]::text into relation_name;
+    select parts[3]::text into pk_value;
+    select parts[4]::text into column_name;
+
+    select c.column_name as name
+    from information_schema.columns c
+    left join information_schema.table_constraints t
+          on t.table_catalog = c.table_catalog and
+             t.table_schema = c.table_schema and
+             t.table_name = c.table_name and
+             t.constraint_type = 'PRIMARY KEY'
+    left join information_schema.key_column_usage k
+          on k.constraint_catalog = t.constraint_catalog and
+             k.constraint_schema = t.constraint_schema and
+             k.constraint_name = t.constraint_name and
+             k.column_name = c.column_name
+    where c.table_schema = schema_name and c.table_name = relation_name
+            and k.column_name is not null or (c.table_schema = 'meta' and c.column_name = 'id') -- is this the primary_key
+    into pk_column_name;
+
+    return meta.field_id(
+        schema_name,
+        relation_name,
+        pk_column_name,
+        pk_value,
+        column_name
+    );
+
+end;
+$$ immutable language plpgsql;
 
 
 create cast (text as meta.field_id)
 with function meta.field_id(text)
 as assignment;
 
-*/
 
 create function meta.text(value meta.field_id) returns text as $$
-select ((((value.row_id).pk_column_id).relation_id).schema_id).name::text || '/' ||
-    (((value.row_id).pk_column_id).relation_id).name::text || '/' ||
-    (value.row_id).pk_value::text || '/' ||
-    (value.column_id).name::text
+select (value::meta.schema_id).name || '/' ||
+    (value::meta.relation_id).name || '/' ||
+    (value::meta.row_id).pk_value || '/' ||
+    (value::meta.column_id).name
 $$ immutable language sql;
 
 
@@ -732,37 +786,31 @@ with function meta.function_id(json)
 as assignment;
 
 
-/* TODO function id cast */
-/*
 create or replace function meta.function_id(value text) returns meta.function_id as $$
-    select meta.function_id(
-        (string_to_array(value, '/'))[1]::text,
-        (string_to_array(value, '/'))[2]::text,
-        (string_to_array(value, '/'))[3]::text)
-
-        (select primary_key_column_names[1] from meta.relation where name = (string_to_array(value, '/'))[1]::text and schema_name = (string_to_array(value, '/'))[2]::text),
-        (string_to_array(value, '/'))[4]::text)
+select meta.function_id(
+    (string_to_array(value, '/'))[1]::text, -- schema name
+    (string_to_array(value, '/'))[2]::text, -- function name
+    (string_to_array(value, '/'))[3]::text[] -- array of ordered parameter types, e.g. {uuid,text,text}
+);
 $$ immutable language sql;
 
 
-create cast (text as meta.field_id)
-with function meta.field_id(text)
+create cast (text as meta.function_id)
+with function meta.function_id(text)
 as assignment;
 
 
-create function meta.text(value meta.field_id) returns text as $$
-select ((((value.row_id).pk_column_id).relation_id).schema_id).name::text || '/' ||
-    (((value.row_id).pk_column_id).relation_id).name::text || '/' ||
-    (value.row_id).pk_value::text || '/' ||
-    (value.column_id).name::text
+create function meta.text(value meta.function_id) returns text as $$
+select (value).schema_id.name || '/' ||
+    (value).name || '/' ||
+    (value).parameters::text
 $$ immutable language sql;
 
 
-create cast (meta.field_id as text)
-with function meta.text(meta.field_id)
+create cast (meta.function_id as text)
+with function meta.text(meta.function_id)
 as assignment;
 
-*/
 
 /******************************************************************************
  * meta.trigger_id
