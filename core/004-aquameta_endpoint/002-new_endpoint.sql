@@ -706,63 +706,67 @@ create function rows_select_function(
 ) returns json as $$
 
     declare
-        _schema_name text;
-        _function_name text;
-        function_args text;
-        columns_json text;
-        func_returns text;
-        rows_json text[];
-        row_is_composite boolean;
-        _row record;
         function_row record;
+        row_is_composite boolean;
+        columns_json text;
+        function_args text;
+        _row record;
+        rows_json text[];
 
     begin
-        -- raise notice '###### ROW SELECT FUNCTION ARGS: %, %, %', schema_name, function_name, args;
-        select (function_id::meta.schema_id).name into _schema_name;
-        select (function_id).name into _function_name;
-
+        -- Get function row
         select *
         from meta.function f
-        where f.schema_name = _schema_name and
-              f.name = _function_name
+        where f.id = function_id
         into function_row;
 
-        -- replace with querying meta.type
-        select typtype = 'c'
-        from pg_catalog.pg_type
-        into row_is_composite
-        where pg_type.oid = function_row.return_type::regtype;
+        -- Find is return type is composite
+        select t.composite
+        from meta.function f
+		join meta.type t on t.id = f.return_type_id
+        where f.id = function_id
+	into row_is_composite;
 
+        -- Build columns_json
         if row_is_composite then
           select string_agg(row_to_json(q.*)::text, ',')
             from (
-                  select pga.attname as name,
-                         pgt2.typname as "type"
-                    from pg_catalog.pg_type pgt
-              inner join pg_class pgc
-                      on pgc.oid = pgt.typrelid
-              inner join pg_attribute pga
-                      on pga.attrelid = pgc.oid
-              inner join pg_type pgt2
-                      on pgt2.oid = pga.atttypid
-                   where pgt.oid = function_row.return_type::regtype
-                     and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
+		select pga.attname as name,
+			pgt2.typname as "type"
+		from pg_catalog.pg_type pgt
+			inner join pg_class pgc
+				on pgc.oid = pgt.typrelid
+			inner join pg_attribute pga
+				on pga.attrelid = pgc.oid
+			inner join pg_type pgt2
+				on pgt2.oid = pga.atttypid
+		where pgt.oid = function_row.return_type::regtype
+			and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
             ) q
             into columns_json;
         else
             select row_to_json(q.*)
-            from (select function_name as name, function_row.return_type as "type") q
+            from (select (function_id).name as name, function_row.return_type as "type") q
             into columns_json;
         end if;
 
-        select string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value), ',')
+        -- Build function arguments string
+        -- Cast to type_name found in meta.function_parameter
+        -- Using coalesce(function_args, '') so we can call function without arguments
+        select coalesce(
+            string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
+        '')
         from json_each_text(args) r
+	join meta.function_parameters fp on
+		fp.function_id = function_id and
+		fp.name = r.key
         into function_args;
 
-        for _row in execute 'select * from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
+        -- Loop through function call results
+        for _row in execute 'select * from ' || quote_ident((function_id::meta.schema_id).name) || '.' || quote_ident((function_id).name)
                             || '(' || function_args || ')'
         loop
-            rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');  -- TODO if we pulled a single table from pg_class, give that selector
+            rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
         end loop;
 
         return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}';
@@ -770,63 +774,72 @@ create function rows_select_function(
 $$
 language plpgsql;
 
+
 create function endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
     column_name text
 ) returns text as $$
     declare
-        schema_name text;
-        function_name text;
-
-        function_args text;
-        columns_json text;
-        func_returns text;
-        rows_json text[];
         row_type regtype;
         row_is_composite boolean;
-        _row record;
+        columns_json text;
+        function_args text;
         result text;
 
     begin
-        select (function_id::meta.schema_id).name into schema_name;
-        select (function_id).name into function_name;
-
         select case when substring(q.ret from 1 for 6) = 'SETOF ' then substring(q.ret from 6)
                     else q.ret
                end::regtype
-        from (select pg_get_function_result((schema_name || '.' || function_name)::regproc) as ret) q
+        from (select pg_get_function_result(((function_id::meta.schema_id).name || '.' || (function_id).name)::regproc) as ret) q
         into row_type;
 
-        select typtype = 'c' from pg_type into row_is_composite where pg_type.oid = row_type;
+        -- Find is return type is composite
+        select t.composite
+        from meta.function f
+		join meta.type t on t.id = f.return_type_id
+        where f.id = function_id
+	into row_is_composite;
 
+        -- select typtype = 'c' from pg_type into row_is_composite where pg_type.oid = row_type;
+
+	-- Build columns_json
         if row_is_composite then
                 select string_agg(row_to_json(q.*)::text, ',')
                   from (
-                        select pga.attname as name,
-                               pgt2.typname as "type"
-                          from pg_type pgt
-                    inner join pg_class pgc
-                            on pgc.oid = pgt.typrelid
-                    inner join pg_attribute pga
-                            on pga.attrelid = pgc.oid
-                    inner join pg_type pgt2
-                            on pgt2.oid = pga.atttypid
-                         where pgt.oid = row_type
-                           and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
+			select pga.attname as name,
+				pgt2.typname as "type"
+			from pg_type pgt
+				inner join pg_class pgc
+					on pgc.oid = pgt.typrelid
+				inner join pg_attribute pga
+					on pga.attrelid = pgc.oid
+				inner join pg_type pgt2
+					on pgt2.oid = pga.atttypid
+			where pgt.oid = row_type
+				and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
                   ) q
                   into columns_json;
         else
             select row_to_json(q.*)
-              from (select function_name as name, row_type as "type") q
+              from (select (function_id).name as name, row_type as "type") q
               into columns_json;
         end if;
 
-        select string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value), ',')
+
+        -- Build function arguments string
+        select coalesce(
+		string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
+        '')
         from json_each_text(args) r
+	join meta.function_parameters fp on
+		fp.function_id = function_id and
+		fp.name = r.key
         into function_args;
 
-        execute 'select ' || quote_ident(column_name) || ' from ' || quote_ident(schema_name) || '.' || quote_ident(function_name)
+
+        -- Loop through function call results
+        execute 'select ' || quote_ident(column_name) || ' from ' || quote_ident((function_id::meta.schema_id).name) || '.' || quote_ident((function_id).name)
                 || '(' || function_args || ')' into result;
 
         return result;
@@ -941,8 +954,6 @@ create or replace function endpoint.request(
    */
 /*
  All 9 subroutines
--- need all casts to work
--- needs rows_select_function functions to use meta.function_arguments
 -- needs new where clause to be used in rows_select function
 
 -done- rows_select_function(function_id, query_args)
@@ -1305,6 +1316,34 @@ as $$
 	-- Should this delete all sessions associated with this user? I think so
 	delete from endpoint.session where user_id = (select id from endpoint."user" where email = _email);
 $$;
+
+
+/******************************************************************************
+ * endpoint.email
+ ******************************************************************************/
+create table endpoint.email (
+	id serial primary key,
+	recipient_email text,
+	sender_email text,
+	body text
+);
+
+
+create function endpoint.email_insert () returns trigger
+as $$
+
+	perform endpoint.email_send(NEW.to, NEW.from, NEW.subject, NEW.body);
+	return NEW;
+
+$$ language plpgsql;
+
+
+create trigger endpoint_email_insert_trigger after insert on endpoint.email for each row execute procedure endpoint.email_insert();
+
+
+create function endpoint.email_send (to text, from text, subject text, body text) returns void
+as $$
+$$ language plpython;
 
 
 commit;
