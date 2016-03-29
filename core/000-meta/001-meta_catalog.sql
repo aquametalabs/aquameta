@@ -890,6 +890,7 @@ create view meta.function as
              parameters,
              definition,
              return_type,
+             return_type_id,
              language;
 
 

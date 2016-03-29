@@ -283,7 +283,7 @@ as assignment;
 
 
 create function meta.text(value meta.relation_id) returns text as $$
-select (value::meta.schema_id).name || '/' || value.name
+select (value).schema_id.name || '/' || value.name
 $$ immutable language sql;
 
 
@@ -460,7 +460,7 @@ create or replace function row_exists(in row_id meta.row_id, out answer boolean)
     declare
         stmt text;
     begin
-        execute 'select (count(*) = 1) from ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id::meta.relation_id).name) ||
+        execute 'select (count(*) = 1) from ' || quote_ident((row_id).relation_id.schema_id.name) || '.' || quote_ident((row_id).relation_id.name) ||
                 ' where ' || quote_ident((row_id.pk_column_id).name) || '::text = ' || quote_literal(row_id.pk_value)
             into answer;
     exception
@@ -537,8 +537,8 @@ declare
     row_as_json json;
 begin
 
-    execute 'with r as (select * from ' || quote_ident ((row_id::meta.schema_id).name) || '.'
-                             || quote_ident ((row_id::meta.relation_id).name) 
+    execute 'with r as (select * from ' || quote_ident ((row_id).pk_column_id.relation_id.schema_id.name) || '.'
+                             || quote_ident ((row_id).pk_column_id.relation_id.name) 
                              || ' where ' || quote_ident ((row_id.pk_column_id).name) 
                              || ' = ' || quote_literal (row_id.pk_value) || ') SELECT row_to_json(r.*) FROM r'
         into row_json;
@@ -601,8 +601,8 @@ as assignment;
 
 
 create function meta.text(value meta.row_id) returns text as $$
-select (value::meta.schema_id).name || '/' ||
-    (value::meta.relation_id).name || '/' ||
+select (value).pk_column_id.relation_id.schema_id.name || '/' ||
+    (value).pk_column_id.relation_id.name || '/' ||
     value.pk_value
 $$ immutable language sql;
 
@@ -720,10 +720,10 @@ as assignment;
 
 
 create function meta.text(value meta.field_id) returns text as $$
-select (value::meta.schema_id).name || '/' ||
-    (value::meta.relation_id).name || '/' ||
-    (value::meta.row_id).pk_value || '/' ||
-    (value::meta.column_id).name
+select (value).column_id.relation_id.schema_id.name || '/' ||
+    (value).column_id.relation_id.name || '/' ||
+    (value).row_id.pk_value || '/' ||
+    (value).column_id.name
 $$ immutable language sql;
 
 

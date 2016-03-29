@@ -18,15 +18,14 @@ def application(env, start_response):
 
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
-                # will be
-                # select status, message, response as json
+            logging.info('attempting endpoint2 %s, %s, query %s, post %s' % (request.method, request.path, request.args, request.data))
             cursor.execute('''
-                select status, message, data2 as json
-                from endpoint.request(%s, %s, %s::json, %s::json)
+                select status, message, response as json
+                from endpoint.request2(%s, %s, %s::json, %s::json)
             ''', (
                 request.method, # verb - GET | POST | PATCH | PUT | DELETE ...
                 request.path, # path - the full path including leading slash but without query string
-                json.dumps(request.args.to_dict(flat=True)), # args - "url parameters", aka parsed out query string, converted to a json string
+                json.dumps(request.args.to_dict(flat=False)), # args - "url parameters", aka parsed out query string, converted to a json string
                 request.data.decode('utf8') if request.data else 'null'
             ))
 
