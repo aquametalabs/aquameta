@@ -595,10 +595,10 @@ create or replace function endpoint.field_select2(
 
     begin
 
-        select (field_id::meta.schema_id).name into schema_name;
-        select (field_id::meta.relation_id).name into table_name;
-        select (field_id::meta.row_id).pk_value into pk;
-        select (field_id::meta.column_id).name into field_name;
+        select (field_id).schema_id.name into schema_name;
+        select (field_id).relation_id.name into table_name;
+        select (field_id).row_id.pk_value into pk;
+        select (field_id).column_id.name into field_name;
 
         -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
 
@@ -722,6 +722,7 @@ create function rows_select_function2(
 ) returns json as $$
 
     declare
+        _function_id alias for function_id;
         function_row record;
         row_is_composite boolean;
         columns_json text;
@@ -733,14 +734,14 @@ create function rows_select_function2(
         -- Get function row
         select *
         from meta.function f
-        where f.id = function_id
+        where f.id = _function_id
         into function_row;
 
         -- Find is return type is composite
         select t.composite
         from meta.function f
 		join meta.type t on t.id = f.return_type_id
-        where f.id = function_id
+        where f.id = _function_id
 	into row_is_composite;
 
         -- Build columns_json
@@ -762,7 +763,7 @@ create function rows_select_function2(
             into columns_json;
         else
             select row_to_json(q.*)
-            from (select (function_id).name as name, function_row.return_type as "type") q
+            from (select (_function_id).name as name, function_row.return_type as "type") q
             into columns_json;
         end if;
 
@@ -773,13 +774,13 @@ create function rows_select_function2(
             string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
         '')
         from json_each_text(args) r
-	join meta.function_parameters fp on
-		fp.function_id = function_id and
+	join meta.function_parameter fp on
+		fp.function_id = _function_id and
 		fp.name = r.key
         into function_args;
 
         -- Loop through function call results
-        for _row in execute 'select * from ' || quote_ident((function_id::meta.schema_id).name) || '.' || quote_ident((function_id).name)
+        for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
                             || '(' || function_args || ')'
         loop
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
