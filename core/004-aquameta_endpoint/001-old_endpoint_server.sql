@@ -29,7 +29,7 @@ set search_path = endpoint;
 /****************************************************************************************************
  * FUNCTION rows_insert                                                                              *
  ****************************************************************************************************/
-
+/*
 create or replace function endpoint.rows_insert(
     args json
 ) returns void as $$
@@ -67,7 +67,7 @@ create or replace function endpoint.rows_insert(
     end
 $$
 language plpgsql;
-
+*/
 
 
 

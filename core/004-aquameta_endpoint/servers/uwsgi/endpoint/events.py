@@ -57,7 +57,18 @@ def application(env, start_response):
                                     if cmd['method'] != 'ping':
                                         logging.info('command received: %s' % cmd['method'])
 
-                                    if cmd['method'] == 'attach':
+                                    if cmd['method'] == 'new_session':
+                                        cursor.execute('select session_create();', (,))
+                                        session_id = cursor.fetchone()
+                                        logging.info('session created: %s (role: %s)' % (session_id, env['DB_USER']))
+                                        uwsgi.websocket_send('''{
+                                            "method": "set_session_id",
+                                            "args": {
+                                                "session_id": "%s"
+                                            }
+                                        }''' % (session_id,))
+
+                                    elif cmd['method'] == 'attach':
                                         session_id = cmd['session_id']
                                         if session_id is not None:
                                             cursor.execute('select session.session_attach(%s);', (session_id,))

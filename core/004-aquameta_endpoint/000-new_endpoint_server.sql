@@ -323,7 +323,7 @@ $$ language plpgsql;
  * FUNCTION rows_insert                                                                              *
  ****************************************************************************************************/
 
-create or replace function endpoint.rows_insert2(
+create or replace function endpoint.rows_insert(
     args json
 ) returns void as $$
     declare
@@ -368,7 +368,7 @@ language plpgsql;
  * FUNCTION row_insert                                                                              *
  ****************************************************************************************************/
 
-create or replace function endpoint.row_insert2(
+create or replace function endpoint.row_insert(
     relation_id meta.relation_id,
     args json
 ) returns setof json as $$
@@ -487,7 +487,7 @@ $$ immutable language plpgsql;
  * FUNCTION row_update                                                                              *
  ****************************************************************************************************/
 
-create or replace function endpoint.row_update2(
+create or replace function endpoint.row_update(
     row_id meta.row_id,
     args json
 ) returns json as $$ -- FIXME: use json_to_row upon 9.4 release, alleviates all the destructuring below
@@ -538,7 +538,7 @@ language plpgsql;
  * FUNCTION row_select                                                                              *
  ****************************************************************************************************/
 
-create function row_select2(
+create function row_select(
     row_id meta.row_id
 ) returns json as $$
 
@@ -578,7 +578,7 @@ language plpgsql;
  * FUNCTION field_select                                                                            *
  ****************************************************************************************************/
 
-create or replace function endpoint.field_select2(
+create or replace function endpoint.field_select(
     field_id meta.field_id
 ) returns text as $$
 
@@ -617,7 +617,7 @@ language plpgsql;
  * FUNCTION rows_select                                                                             *
  ****************************************************************************************************/
 
-create function endpoint.rows_select2(
+create function endpoint.rows_select(
     relation_id meta.relation_id,
     args json
 ) returns json as $$
@@ -713,10 +713,16 @@ maybe?
 some_function?args={ ... }
 some_function?args={ vals: [] }
 some_function?args={ kwargs: {} }
+some_function?args={ kwargs: {} }&column=name
+
+This function should do some much smarter stuff with return type
+Should be able to select a single column when not returning SETOF
+Some of the logic from the column-specific rows_select_function()
+We also want to use column_mimetype if we are only sending one column back
 
  *****************************************************************************/
 
-create function rows_select_function2(
+create function rows_select_function(
     function_id meta.function_id,
     args json
 ) returns json as $$
@@ -792,7 +798,8 @@ $$
 language plpgsql;
 
 
-create function endpoint.rows_select_function2(
+-- This function should disappear. Factor column selection into previous rows_select_function()
+create function endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
     column_name text
@@ -869,7 +876,7 @@ language plpgsql;
  * FUNCTION row_delete
  *****************************************************************************/
 
-create function endpoint.row_delete2(
+create function endpoint.row_delete(
     row_id meta.row_id
 ) returns json as $$
     declare
@@ -906,13 +913,28 @@ create or replace function endpoint.request2(
     out response text
 ) returns setof record as $$
         declare
+                session_id uuid; -- null if not evented
                 row_id meta.row_id;
                 relation_id meta.relation_id;
                 function_id meta.function_id;
                 field_id meta.field_id;
+                relation_subscribable boolean;
 
         begin
                 set local search_path = endpoint,meta,public;
+
+                -- We will only be subscribing to something on a GET request, wouldn't make sense otherwise
+                if verb = 'GET' then
+
+                        -- Look for session_id in query string
+                        select (query_args->>'session_id')::uuid into session_id;
+
+                        -- Allow us to properly subscribe to events, if evented
+                        if session_id is not null then
+                            execute 'update event.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
+                        end if;
+
+                end if;
 
     /*
      URL					VERB(s)			RESPONSE TYPE
@@ -1000,18 +1022,23 @@ create or replace function endpoint.request2(
 
                         if verb = 'GET' then
 
+                                -- Subscribe to row
+                                if session_id is not null then
+                                    perform event.subscribe_row(row_id);
+                                end if;
+
                                 -- Get single row
-                                return query select 200, 'OK'::text, (select endpoint.row_select2(row_id))::text;
+                                return query select 200, 'OK'::text, (select endpoint.row_select(row_id))::text;
 
                         elsif verb = 'PATCH' then
 
                                 -- Update row
-                                return query select 200, 'OK'::text, (select endpoint.row_update2(row_id, post_data))::text;
+                                return query select 200, 'OK'::text, (select endpoint.row_update(row_id, post_data))::text;
 
                         elsif verb = 'DELETE' then
 
                                 -- Delete row
-                                return query select 200, 'OK'::text, (select endpoint.row_delete2(row_id))::text;
+                                return query select 200, 'OK'::text, (select endpoint.row_delete(row_id))::text;
 
                         else
                                 -- HTTP method not allowed for this resource: 405
@@ -1025,17 +1052,29 @@ create or replace function endpoint.request2(
 
                         if verb = 'GET' then
 
+                                -- Subscribe to relation
+                                if session_id is not null then
+
+                                    -- TODO: Fix when views become subscribable
+                                    -- If relation is subscribable
+                                    select type='BASE TABLE' from meta.relation where id = relation_id into relation_subscribable;
+                                    if relation_subscribable then
+                                            perform event.subscribe_table(relation_id);
+                                    end if;
+
+                                end if;
+
                                 -- Get rows 
-                                return query select 200, 'OK'::text, (select endpoint.rows_select2(relation_id, query_args))::text;
+                                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text;
 
                         elsif verb = 'POST' then
 
                                 if json_array_length(post_data) = 1 then
                                         -- Insert single row
-                                        return query select 200, 'OK'::text, (select endpoint.row_insert2(relation_id, post_data))::text;
+                                        return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text;
                                 else
                                         -- Insert multiple rows
-                                        return query select 200, 'OK'::text, (select endpoint.rows_insert2(post_data))::text;
+                                        return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text;
                                 end if;
 
                         else
@@ -1050,12 +1089,12 @@ create or replace function endpoint.request2(
 
                         if verb = 'GET' then
                                 -- Get record from function call
-                                return query select 200, 'OK'::text, (select endpoint.rows_select_function2(function_id, query_args))::text;
+                                return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args))::text;
 
                                 -- I'm not sure this is possible in a clean way
                                 -- Get single column from function call
                                 -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
-                                --return query select 200, 'OK'::text, (select endpoint.rows_select_function2(function_id, query_args, /*??*/path_parts[6]))::text;
+                                --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
 
                         else
                                 -- HTTP method not allowed for this resource: 405
@@ -1069,8 +1108,13 @@ create or replace function endpoint.request2(
 
                         if verb = 'GET' then
 
+                                -- Subscribe to field
+                                if session_id is not null then
+                                    perform event.subscribe_field(field_id);
+                                end if;
+
                                 -- Get field
-                                return query select 200, 'OK'::text, (select endpoint.field_select2(field_id))::text;
+                                return query select 200, 'OK'::text, (select endpoint.field_select(field_id))::text;
 
                         else
                                 -- HTTP method not allowed for this resource: 405
