@@ -816,146 +816,147 @@ create view meta.function as
 
     from (
         select meta.function_id(
-                   r.routine_schema,
-                   r.routine_name,
-                   coalesce(
-                       nullif(
-			       array_agg( -- Array of types of the 'IN' parameters to this function
-					 coalesce( nullif( nullif(p.data_type, 'ARRAY'), 'USER-DEFINED'), p.udt_schema || '.' || p.udt_name)
-					 order by p.ordinal_position),
-			       array[null]
-                       ),
-                       array[]::text[]
-                   )
-               ) as id,
-               meta.schema_id(r.routine_schema) as schema_id,
-               r.routine_schema as schema_name,
-               r.routine_name as name,
-               r.specific_catalog,
-               r.specific_schema,
-               r.specific_name,
-               coalesce(
-                   nullif(
-		       array_agg( -- Array of types of the 'IN' parameters to this function
-                                 coalesce( nullif( nullif(p.data_type, 'ARRAY'), 'USER-DEFINED'), p.udt_schema || '.' || p.udt_name)
-                                 order by p.ordinal_position),
-                       array[null]
-                   ),
-                   array[]::text[]
-               ) as parameters,
-               r.routine_definition as definition,
-               coalesce(nullif(r.data_type, 'USER-DEFINED'), r.type_udt_schema || '.' || r.type_udt_name) as return_type,
-               meta.type_id(r.type_udt_schema, r.type_udt_name) as return_type_id,
-               lower(r.external_language)::information_schema.character_data as language
+                r.routine_schema,
+                r.routine_name,
+                coalesce(
+                    nullif(
+                        array_agg( -- Array of types of the 'IN' parameters to this function
+                            coalesce( nullif( nullif(p.data_type, 'ARRAY'), 'USER-DEFINED'), p.udt_schema || '.' || p.udt_name)
+                            order by p.ordinal_position),
+                        array[null]
+                    ),
+                    array[]::text[]
+                )
+            ) as id,
+            meta.schema_id(r.routine_schema) as schema_id,
+            r.routine_schema as schema_name,
+            r.routine_name as name,
+            r.specific_catalog,
+            r.specific_schema,
+            r.specific_name,
+            coalesce(
+                nullif(
+                    array_agg( -- Array of types of the 'IN' parameters to this function
+                        coalesce( nullif( nullif(p.data_type, 'ARRAY'), 'USER-DEFINED'), p.udt_schema || '.' || p.udt_name)
+                        order by p.ordinal_position),
+                    array[null]
+                ),
+                array[]::text[]
+            ) as parameters,
+            r.routine_definition as definition,
+            coalesce(nullif(r.data_type, 'USER-DEFINED'), r.type_udt_schema || '.' || r.type_udt_name) as return_type,
+            meta.type_id(r.type_udt_schema, r.type_udt_name) as return_type_id,
+            lower(r.external_language)::information_schema.character_data as language
 
         from information_schema.routines r
 
-        left join information_schema.parameters p
+            left join information_schema.parameters p
                 on p.specific_catalog = r.specific_catalog and
-                   p.specific_schema = r.specific_schema and
-                   p.specific_name = r.specific_name and
-                   p.ordinal_position > 0 and
-                   p.parameter_mode like 'IN%' -- Includes IN and INOUT
+                    p.specific_schema = r.specific_schema and
+                    p.specific_name = r.specific_name and
+                    p.ordinal_position > 0 and
+                    p.parameter_mode like 'IN%' -- Includes IN and INOUT
 
         where r.routine_type = 'FUNCTION' and
-              r.routine_name not in ('pg_identify_object', 'pg_sequence_parameters')
+            r.routine_name not in ('pg_identify_object', 'pg_sequence_parameters')
 
         group by r.routine_catalog,
-                 r.routine_schema,
-                 r.routine_name,
-                 r.routine_definition,
-                 r.data_type,
-                 r.type_udt_schema,
-                 r.type_udt_name,
-                 r.external_language,
-                 r.specific_catalog,
-                 r.specific_schema,
-                 r.specific_name,
-                 p.specific_catalog,
-                 p.specific_schema,
-                 p.specific_name
+            r.routine_schema,
+            r.routine_name,
+            r.routine_definition,
+            r.data_type,
+            r.type_udt_schema,
+            r.type_udt_name,
+            r.external_language,
+            r.specific_catalog,
+            r.specific_schema,
+            r.specific_name,
+            p.specific_catalog,
+            p.specific_schema,
+            p.specific_name
     ) q
 
-    left join information_schema.parameters p_in
+        left join information_schema.parameters p_in
             on p_in.specific_catalog = q.specific_catalog and
-               p_in.specific_schema = q.specific_schema and
-               p_in.specific_name = q.specific_name and
-               p_in.ordinal_position > 0 and
-               p_in.parameter_mode = 'IN'
+                p_in.specific_schema = q.specific_schema and
+                p_in.specific_name = q.specific_name and
+                p_in.ordinal_position > 0 and
+                p_in.parameter_mode = 'IN'
 
     group by id,
-             schema_id,
-             schema_name,
-             name,
-             parameters,
-             definition,
-             return_type,
-             return_type_id,
-             language;
+        schema_id,
+        schema_name,
+        name,
+        parameters,
+        definition,
+        return_type,
+        return_type_id,
+        language;
 
 
 create view meta.function_parameter as
     select q.schema_id,
-           q.schema_name,
-           q.function_id,
-           q.function_name,
-           par.parameter_name as name,
-	   meta.type_id(par.udt_schema, par.udt_name) as type_id,
-	   quote_ident(par.udt_schema) || '.' || quote_ident(par.udt_name) as type_name,
-           par.parameter_mode as "mode",
-           par.ordinal_position as position,
-           par.parameter_default as "default"
+        q.schema_name,
+        q.function_id,
+        q.function_name,
+        par.parameter_name as name,
+        meta.type_id(par.udt_schema, par.udt_name) as type_id,
+        quote_ident(par.udt_schema) || '.' || quote_ident(par.udt_name) as type_name,
+        par.parameter_mode as "mode",
+        par.ordinal_position as position,
+        par.parameter_default as "default"
 
     from (
         select meta.function_id(
-                   r.routine_schema,
-                   r.routine_name,
-                   coalesce(
-                       nullif(
-			       array_agg( -- Array of types of the 'IN' parameters to this function
-					 coalesce( nullif( nullif(p.data_type, 'ARRAY'), 'USER-DEFINED'), p.udt_schema || '.' || p.udt_name)
-					 order by p.ordinal_position),
-			       array[null]
-                       ),
-                       array[]::text[]
-                   )
-               ) as function_id,
-               meta.schema_id(r.routine_schema) as schema_id,
-               r.routine_schema as schema_name,
-               r.routine_name as function_name,
-               r.specific_catalog,
-               r.specific_schema,
-               r.specific_name
+                r.routine_schema,
+                r.routine_name,
+                coalesce(
+                    nullif(
+                array_agg( -- Array of types of the 'IN' parameters to this function
+                    coalesce( nullif( nullif(p.data_type, 'ARRAY'), 'USER-DEFINED'), p.udt_schema || '.' || p.udt_name)
+                    order by p.ordinal_position),
+                array[null]
+                    ),
+                    array[]::text[]
+                )
+            ) as function_id,
+            meta.schema_id(r.routine_schema) as schema_id,
+            r.routine_schema as schema_name,
+            r.routine_name as function_name,
+            r.specific_catalog,
+            r.specific_schema,
+            r.specific_name
 
         from information_schema.routines r
 
-        left join information_schema.parameters p
+            left join information_schema.parameters p
                 on p.specific_catalog = r.specific_catalog and
-                   p.specific_schema = r.specific_schema and
-                   p.specific_name = r.specific_name
+                    p.specific_schema = r.specific_schema and
+                    p.specific_name = r.specific_name
 
         where r.routine_type = 'FUNCTION' and
-              r.routine_name not in ('pg_identify_object', 'pg_sequence_parameters')
+            r.routine_name not in ('pg_identify_object', 'pg_sequence_parameters') and
+            p.parameter_mode like 'IN%' -- Includes IN and INOUT
 
         group by r.routine_catalog,
-                 r.routine_schema,
-                 r.routine_name,
-                 r.routine_definition,
-                 r.data_type,
-                 r.type_udt_schema,
-                 r.type_udt_name,
-                 r.external_language,
-                 r.specific_catalog,
-                 r.specific_schema,
-                 r.specific_name,
-                 p.specific_catalog,
-                 p.specific_schema,
-                 p.specific_name
+            r.routine_schema,
+            r.routine_name,
+            r.routine_definition,
+            r.data_type,
+            r.type_udt_schema,
+            r.type_udt_name,
+            r.external_language,
+            r.specific_catalog,
+            r.specific_schema,
+            r.specific_name,
+            p.specific_catalog,
+            p.specific_schema,
+            p.specific_name
     ) q
-    join information_schema.parameters par
-	on par.specific_catalog = q.specific_catalog and
-		par.specific_schema = q.specific_schema and
-		par.specific_name = q.specific_name;
+        join information_schema.parameters par
+            on par.specific_catalog = q.specific_catalog and
+                par.specific_schema = q.specific_schema and
+                par.specific_name = q.specific_name;
 
 
 create function meta.stmt_function_create(schema_name text, function_name text, parameters text[], return_type text, definition text, language text) returns text as $$
