@@ -20,7 +20,7 @@ def application(env, start_response):
         with map_errors_to_http(), cursor_for_request(request) as cursor:
             logging.info('attempting endpoint2 %s, %s, query %s, post %s' % (request.method, request.path, request.args, request.data))
             cursor.execute('''
-                select status, message, response as json
+                select status, message, response, mimetype
                 from endpoint.request2(%s, %s, %s::json, %s::json)
             ''', (
                 request.method, # verb - GET | POST | PATCH | PUT | DELETE ...
@@ -35,8 +35,8 @@ def application(env, start_response):
             # TODO?
             # How come status and message are not used here?
             return Response(
-                row.json,
-                content_type="application/json"
+                row.response,
+                content_type=row.mimetype # "application/json"
             )
 
     except HTTPException as e:

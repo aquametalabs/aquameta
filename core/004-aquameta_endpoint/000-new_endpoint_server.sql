@@ -612,35 +612,40 @@ language plpgsql;
  ****************************************************************************************************/
 
 create or replace function endpoint.field_select(
-    field_id meta.field_id
-) returns text as $$
+    field_id meta.field_id,
+    out field text,
+    out mimetype text
+) returns record as $$
 
     declare
         schema_name text;
         relation_name text;
         pk text;
+        pk_column_name text;
         field_name text;
 
-        row_query text;
-        row_json text;
-        columns_json text;
-        result text;
-
     begin
+        -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
+        set local search_path = endpoint;
 
         select (field_id).schema_id.name into schema_name;
         select (field_id).relation_id.name into relation_name;
         select (field_id).row_id.pk_value into pk;
+        select (field_id).row_id.pk_column_id.name into pk_column_name;
         select (field_id).column_id.name into field_name;
 
-        -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
+        -- Find mimetype for this field
+        select coalesce(m.mimetype, 'application/json');
+        from endpoint.column_mimetype cm
+            join endpoint.mimetype m on m.id = cm.mimetype_id
+        where cm.column_id = (field_id).column_id
+        into mimetype;
 
-        set local search_path = endpoint;
 
         execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name)
-                || ' as t where ' || quote_ident(endpoint.pk_name(schema_name, relation_name)) || ' = ' || quote_literal(pk) into result;
+                || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) into field;
 
-        return result;
+        -- implicitly returning field and mimetype
     end;
 $$
 language plpgsql;
@@ -777,10 +782,12 @@ We also want to use column_mimetype if we are only sending one column back
 
  *****************************************************************************/
 
-create function rows_select_function(
+create function endpoint.rows_select_function(
     function_id meta.function_id,
-    args json
-) returns json as $$
+    args json,
+    out result json,
+    out mimetype text
+) returns record as $$
 
     declare
         _function_id alias for function_id;
@@ -793,6 +800,10 @@ create function rows_select_function(
         suffix text;
 
     begin
+        -- TODO: mimetype
+        mimetype := 'application/json';
+
+
         -- Get function row
         select *
         from meta.function f
@@ -854,7 +865,7 @@ create function rows_select_function(
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
         end loop;
 
-        return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}';
+        return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}', mimetype;
 
     end;
 $$
@@ -981,7 +992,8 @@ create or replace function endpoint.request2(
     post_data json,
     out status integer,
     out message text,
-    out response text
+    out response text,
+    out mimetype text
 ) returns setof record as $$
 
     declare
@@ -1100,21 +1112,21 @@ create or replace function endpoint.request2(
                 end if;
 
                 -- Get single row
-                return query select 200, 'OK'::text, (select endpoint.row_select(row_id))::text;
+                return query select 200, 'OK'::text, (select endpoint.row_select(row_id))::text, 'application/json'::text;
 
             elsif verb = 'PATCH' then
 
                 -- Update row
-                return query select 200, 'OK'::text, (select endpoint.row_update(row_id, post_data))::text;
+                return query select 200, 'OK'::text, (select endpoint.row_update(row_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'DELETE' then
 
                 -- Delete row
-                return query select 200, 'OK'::text, (select endpoint.row_delete(row_id))::text;
+                return query select 200, 'OK'::text, (select endpoint.row_delete(row_id))::text, 'application/json'::text;
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         when path like '/relation%' then
@@ -1137,21 +1149,21 @@ create or replace function endpoint.request2(
                 end if;
 
                 -- Get rows 
-                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text;
+                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text, 'application/json'::text;
 
             elsif verb = 'POST' then
 
                 if json_array_length(post_data) = 1 then
                     -- Insert single row
-                    return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text;
+                    return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text, 'application/json'::text;
                 else
                     -- Insert multiple rows
-                    return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text;
+                    return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text, 'application/json'::text;
                 end if;
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         when path like '/function%' then
@@ -1161,7 +1173,7 @@ create or replace function endpoint.request2(
 
             if verb = 'GET' then
                 -- Get record from function call
-                return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args))::text;
+                return query select 200, 'OK'::text, result::text, mimetype::text from endpoint.rows_select_function(function_id, query_args);
 
                 -- I'm not sure this is possible in a clean way
                 -- Get single column from function call
@@ -1170,7 +1182,7 @@ create or replace function endpoint.request2(
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         when path like '/field%' then
@@ -1186,11 +1198,11 @@ create or replace function endpoint.request2(
                 end if;
 
                 -- Get field
-                return query select 200, 'OK'::text, (select endpoint.field_select(field_id))::text;
+                return query select 200, 'OK'::text, field::text, mimetype::text from endpoint.field_select(field_id);
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 /*
             when path like '/endpoint/table%' then
@@ -1219,12 +1231,12 @@ create or replace function endpoint.request2(
 */
         else
             -- Resource not found: 404
-            return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::text;
+            return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::text, 'application/json'::text;
 
         end case;
 
         exception when undefined_table then
-        return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text;
+        return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
 
     end;
 $$
