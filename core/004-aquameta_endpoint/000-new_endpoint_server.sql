@@ -623,27 +623,36 @@ create or replace function endpoint.field_select(
         pk text;
         pk_column_name text;
         field_name text;
+        pk_type text;
 
     begin
         -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
         set local search_path = endpoint;
 
-        select (field_id).schema_id.name into schema_name;
-        select (field_id).relation_id.name into relation_name;
+        select (field_id).column_id.relation_id.schema_id.name into schema_name;
+        select (field_id).column_id.relation_id.name into relation_name;
         select (field_id).row_id.pk_value into pk;
         select (field_id).row_id.pk_column_id.name into pk_column_name;
         select (field_id).column_id.name into field_name;
 
+        -- Find pk_type
+        select type_name
+        from meta.column
+        where id = (field_id).row_id.pk_column_id
+        into pk_type;
+
         -- Find mimetype for this field
-        select coalesce(m.mimetype, 'application/json');
+        select m.mimetype
         from endpoint.column_mimetype cm
             join endpoint.mimetype m on m.id = cm.mimetype_id
         where cm.column_id = (field_id).column_id
         into mimetype;
 
+        -- Default mimetype
+        mimetype := coalesce(mimetype, 'application/json');
 
         execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name)
-                || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) into field;
+                || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
 
         -- implicitly returning field and mimetype
     end;
@@ -865,7 +874,10 @@ create function endpoint.rows_select_function(
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
         end loop;
 
-        return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}', mimetype;
+        select '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
+        --return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}', mimetype;
+
+        -- implicitly returning function result and mimetype
 
     end;
 $$
@@ -1173,7 +1185,7 @@ create or replace function endpoint.request2(
 
             if verb = 'GET' then
                 -- Get record from function call
-                return query select 200, 'OK'::text, result::text, mimetype::text from endpoint.rows_select_function(function_id, query_args);
+                return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, query_args) as rsf;
 
                 -- I'm not sure this is possible in a clean way
                 -- Get single column from function call
@@ -1198,7 +1210,7 @@ create or replace function endpoint.request2(
                 end if;
 
                 -- Get field
-                return query select 200, 'OK'::text, field::text, mimetype::text from endpoint.field_select(field_id);
+                return query select 200, 'OK'::text, fs.field::text, fs.mimetype::text from endpoint.field_select(field_id) as fs;
 
             else
                 -- HTTP method not allowed for this resource: 405
