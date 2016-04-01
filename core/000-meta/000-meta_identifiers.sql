@@ -300,10 +300,10 @@ The oid type is currently implemented as an unsigned four-byte integer. Therefor
 */
 create function meta.relation_id(rel oid) returns meta.relation_id as $$
 begin
-        set local search_path='';
-	return id from meta.relation where 
-		schema_name = (select (string_to_array(rel::regclass::text, '.'))[1]) and
-		name = (select (string_to_array(rel::regclass::text, '.'))[2]);
+    set local search_path='';
+    return id from meta.relation where 
+        schema_name = (select (string_to_array(rel::regclass::text, '.'))[1]) and
+        name = (select (string_to_array(rel::regclass::text, '.'))[2]);
 end;
 $$ language plpgsql;
 
@@ -925,18 +925,18 @@ create type meta.siuda as enum ('select', 'insert', 'update', 'delete', 'all');
 
 create function meta.siuda(c char) returns meta.siuda as $$
 begin
-case c
-	when 'r' then
-		return 'select'::meta.siuda;
-	when 'a' then
-		return 'insert'::meta.siuda;
-	when 'w' then
-		return 'update'::meta.siuda;
-	when 'd' then
-		return 'delete'::meta.siuda;
-	when '*' then
-		return 'all'::meta.siuda;
-end case;
+    case c
+        when 'r' then
+            return 'select'::meta.siuda;
+        when 'a' then
+            return 'insert'::meta.siuda;
+        when 'w' then
+            return 'update'::meta.siuda;
+        when 'd' then
+            return 'delete'::meta.siuda;
+        when '*' then
+            return 'all'::meta.siuda;
+    end case;
 end;
 $$ immutable language plpgsql;
 
@@ -950,9 +950,9 @@ as assignment;
  * meta.table_privilege_id
  *****************************************************************************/
 create type meta.table_privilege_id as (
-	relation_id meta.relation_id,
-	role_id meta.role_id,
-	type text
+    relation_id meta.relation_id,
+    role_id meta.role_id,
+    type text
 );
 
 

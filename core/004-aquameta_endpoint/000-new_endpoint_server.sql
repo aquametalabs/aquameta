@@ -87,7 +87,8 @@ create function set_mimetype(
           c.relation_name = _table and
           c.name          = _column and
           m.mimetype = _mimetype
-$$ language sql;
+$$
+language sql;
 
 
 /******************************************************************************
@@ -206,105 +207,106 @@ select endpoint.construct_join_graph('foo',
 
 create or replace function endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof endpoint.join_graph_row
 as $$
-declare
-    tmp text;
+    declare
+        tmp text;
 
-    schema_name text;
-    relation_name text;
-    label text;
-    pk_field text;
-    join_pk_field text;
-    join_local_field text;
+        schema_name text;
+        relation_name text;
+        label text;
+        pk_field text;
+        join_pk_field text;
+        join_local_field text;
 
-    related_label text;
-    related_field text;
+        related_label text;
+        related_field text;
 
-    where_clause text;
+        where_clause text;
 
-    position integer;
-    exclude boolean;
+        position integer;
+        exclude boolean;
 
-    rowset json;
-    q text;
-    ct integer;
-begin
-    raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
-    -- create temp table
-    tmp := quote_ident(temp_table_name);
-    execute 'create temp table '
-        || tmp
-|| ' of endpoint.join_graph_row';
+        rowset json;
+        q text;
+        ct integer;
+    begin
+        raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
+        -- create temp table
+        tmp := quote_ident(temp_table_name);
+        execute 'create temp table '
+            || tmp
+    || ' of endpoint.join_graph_row';
 
-    -- load up the starting relation
-    schema_name := quote_ident(start_rowset->>'schema_name');
-    relation_name := quote_ident(start_rowset->>'relation_name');
-    label := quote_ident(start_rowset->>'label');
-    join_local_field := quote_ident(start_rowset->>'join_local_field');
-    pk_field:= quote_ident(start_rowset->>'pk_field');
-    exclude:= coalesce(start_rowset->>'exclude', 'false');
+        -- load up the starting relation
+        schema_name := quote_ident(start_rowset->>'schema_name');
+        relation_name := quote_ident(start_rowset->>'relation_name');
+        label := quote_ident(start_rowset->>'label');
+        join_local_field := quote_ident(start_rowset->>'join_local_field');
+        pk_field:= quote_ident(start_rowset->>'pk_field');
+        exclude:= coalesce(start_rowset->>'exclude', 'false');
 
-    position := coalesce(start_rowset->>'position', '0');
+        position := coalesce(start_rowset->>'position', '0');
 
-    where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
+        where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
 
-    -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
-    --    label, schema_name, relation_name, join_local_field, where_clause;
+        -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
+        --    label, schema_name, relation_name, join_local_field, where_clause;
 
-    q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
-        || ' select distinct ''' || label || ''','
-        || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || pk_field || ''',' || label || '.' || pk_field || '::text), '
-        || '     row_to_json(' || label || ')::jsonb, '
-        || '     ' || position || ', '
-        || '     ' || exclude
-        || ' from ' || schema_name || '.' || relation_name || ' ' || label
-        || ' ' || where_clause;
-
-        -- raise notice 'QUERY PHASE 1: %', q;
-    execute q;
-
-
-    -- load up sub-relations
-    for i in 0..(json_array_length(subrowsets) - 1) loop
-        rowset := subrowsets->i;
-
-        schema_name := quote_ident(rowset->>'schema_name');
-        relation_name := quote_ident(rowset->>'relation_name');
-        label := quote_ident(rowset->>'label');
-        join_local_field:= quote_ident(rowset->>'join_local_field');
-        join_pk_field:= quote_ident(rowset->>'join_local_field');
-
-        related_label := quote_ident(rowset->>'related_label');
-        related_field := quote_ident(rowset->>'related_field');
-
-        where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
-        exclude:= coalesce(rowset->>'exclude', 'false');
-
-        position := coalesce(rowset->>'position', '0');
-
-        -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
-        -- label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
-
-
-        q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
+        q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
             || ' select distinct ''' || label || ''','
-            || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || join_pk_field || ''',' || label || '.' || join_pk_field || '::text), '
+            || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || pk_field || ''',' || label || '.' || pk_field || '::text), '
             || '     row_to_json(' || label || ')::jsonb, '
             || '     ' || position || ', '
             || '     ' || exclude
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
-            || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
-            || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || join_local_field || '::text'
             || ' ' || where_clause;
-        -- raise notice 'QUERY PHASE 2: %', q;
+
+            -- raise notice 'QUERY PHASE 1: %', q;
         execute q;
 
-    end loop;
 
-    execute 'delete from ' || tmp || ' where exclude = true';
+        -- load up sub-relations
+        for i in 0..(json_array_length(subrowsets) - 1) loop
+            rowset := subrowsets->i;
 
-    execute 'select * from ' || tmp || ' order by position';
-end;
-$$ language plpgsql;
+            schema_name := quote_ident(rowset->>'schema_name');
+            relation_name := quote_ident(rowset->>'relation_name');
+            label := quote_ident(rowset->>'label');
+            join_local_field:= quote_ident(rowset->>'join_local_field');
+            join_pk_field:= quote_ident(rowset->>'join_local_field');
+
+            related_label := quote_ident(rowset->>'related_label');
+            related_field := quote_ident(rowset->>'related_field');
+
+            where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
+            exclude:= coalesce(rowset->>'exclude', 'false');
+
+            position := coalesce(rowset->>'position', '0');
+
+            -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
+            -- label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
+
+
+            q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
+                || ' select distinct ''' || label || ''','
+                || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || join_pk_field || ''',' || label || '.' || join_pk_field || '::text), '
+                || '     row_to_json(' || label || ')::jsonb, '
+                || '     ' || position || ', '
+                || '     ' || exclude
+                || ' from ' || schema_name || '.' || relation_name || ' ' || label
+                || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
+                || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || join_local_field || '::text'
+                || ' ' || where_clause;
+            -- raise notice 'QUERY PHASE 2: %', q;
+            execute q;
+
+        end loop;
+
+        execute 'delete from ' || tmp || ' where exclude = true';
+
+        execute 'select * from ' || tmp || ' order by position';
+    end;
+$$
+language plpgsql;
 
 
 /******************************************************************************
@@ -326,9 +328,11 @@ $$ language plpgsql;
 create or replace function endpoint.rows_insert(
     args json
 ) returns void as $$
+
     declare
         row_id meta.row_id;
         --q text;
+
     begin
         raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
         raise notice 'TOTAL ROWS: %', json_array_length(args);
@@ -372,10 +376,12 @@ create or replace function endpoint.row_insert(
     relation_id meta.relation_id,
     args json
 ) returns setof json as $$
+
     declare
        _schema_name text;
        _relation_name text;
        q text;
+
     begin
         select (relation_id).schema_id.name into _schema_name;
         select (relation_id).name into _relation_name;
@@ -418,9 +424,9 @@ create or replace function endpoint.row_insert(
 
         -- raise notice 'ROW_INSERT ############: %', q;
         return query execute q
-	using _schema_name,
-                _relation_name,
-                args;
+        using _schema_name,
+            _relation_name,
+            args;
     end
 $$
 language plpgsql;
@@ -444,7 +450,8 @@ exception when invalid_parameter_value then
           when invalid_text_representation then
     return false;
 end;
-$$ immutable language plpgsql;
+$$
+immutable language plpgsql;
 */
 
 
@@ -452,35 +459,43 @@ $$ immutable language plpgsql;
  * FUNCTION is_json_object                                                                          *
  ****************************************************************************************************/
 
-create or replace function endpoint.is_json_object(value text) returns boolean as $$
-begin
-    if value is null then return false; end if;
-    perform json_object_keys(value::json);
-    return true;
+create or replace function endpoint.is_json_object(
+    value text
+) returns boolean as $$
 
-exception when invalid_parameter_value then
-    return false;
-          when invalid_text_representation then
-    return false;
-end;
-$$ immutable language plpgsql;
+    begin
+        if value is null then return false; end if;
+        perform json_object_keys(value::json);
+        return true;
+    
+        exception when invalid_parameter_value then
+            return false;
+        when invalid_text_representation then
+            return false;
+    end;
+$$
+immutable language plpgsql;
 
 
 /****************************************************************************************************
  * FUNCTION is_json_array                                                                           *
  ****************************************************************************************************/
 
-create function endpoint.is_json_array(value text) returns boolean as $$
-begin
-    perform json_array_length(value::json);
-    return true;
+create function endpoint.is_json_array(
+    value text
+) returns boolean as $$
 
-exception when invalid_parameter_value then
-    return false;
-          when invalid_text_representation then
-    return false;
-end;
-$$ immutable language plpgsql;
+    begin
+        perform json_array_length(value::json);
+        return true;
+    
+        exception when invalid_parameter_value then
+            return false;
+        when invalid_text_representation then
+            return false;
+    end;
+$$
+immutable language plpgsql;
 
 
 /****************************************************************************************************
@@ -544,7 +559,7 @@ create function row_select(
 
     declare
         schema_name text;
-        table_name text;
+        relation_name text;
         pk text;
 
         row_query text;
@@ -556,19 +571,19 @@ create function row_select(
         set local search_path = endpoint;
 
         select (row_id::meta.schema_id).name into schema_name;
-        select (row_id::meta.relation_id).name into table_name;
+        select (row_id::meta.relation_id).name into relation_name;
         select row_id.pk_value::text into pk;
 
         row_query := 'select ''[{"row": '' || row_to_json(t.*) || ''}]'' from '
-                     || quote_ident(schema_name) || '.' || quote_ident(table_name)
+                     || quote_ident(schema_name) || '.' || quote_ident(relation_name)
                      || ' as t where ' || (
                          select quote_ident(pk_name) || ' = ' || quote_literal(pk) || '::' || pk_type
-                         from endpoint.pk(schema_name, table_name) p
+                         from endpoint.pk(schema_name, relation_name) p
                      );
 
         execute row_query into row_json;
 
-        return '{"columns":' || columns_json(schema_name, table_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
+        return '{"columns":' || columns_json(schema_name, relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
     end;
 $$
 language plpgsql;
@@ -584,7 +599,7 @@ create or replace function endpoint.field_select(
 
     declare
         schema_name text;
-        table_name text;
+        relation_name text;
         pk text;
         field_name text;
 
@@ -596,7 +611,7 @@ create or replace function endpoint.field_select(
     begin
 
         select (field_id).schema_id.name into schema_name;
-        select (field_id).relation_id.name into table_name;
+        select (field_id).relation_id.name into relation_name;
         select (field_id).row_id.pk_value into pk;
         select (field_id).column_id.name into field_name;
 
@@ -604,8 +619,8 @@ create or replace function endpoint.field_select(
 
         set local search_path = endpoint;
 
-        execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(schema_name) || '.' || quote_ident(table_name)
-                || ' as t where ' || quote_ident(endpoint.pk_name(schema_name, table_name)) || ' = ' || quote_literal(pk) into result;
+        execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name)
+                || ' as t where ' || quote_ident(endpoint.pk_name(schema_name, relation_name)) || ' = ' || quote_literal(pk) into result;
 
         return result;
     end;
@@ -614,19 +629,18 @@ language plpgsql;
 
 
 /****************************************************************************************************
- * FUNCTION rows_select                                                                             *
+ *
+ * FUNCTION suffix_clause
+ * 
+ * Builds limit, offset, order by, and where clauses from json
+ *
  ****************************************************************************************************/
 
-create function endpoint.rows_select(
-    relation_id meta.relation_id,
+create function endpoint.suffix_clause(
     args json
-) returns json as $$
+) returns text as $$
+
     declare
-        schema_name text;
-        table_name text;
-        row_query text;
-        rows_json text;
-        columns_json json;
         _limit text := '';
         _offset text := '';
         _order_by text := '';
@@ -634,9 +648,6 @@ create function endpoint.rows_select(
         r record;
 
     begin
-        select (relation_id).schema_id.name into schema_name;
-        select (relation_id).name into table_name;
-
         for r in select * from json_each_text(args) loop
 
             -- Limit clause
@@ -656,10 +667,10 @@ create function endpoint.rows_select(
             -- /endpoint?$order_by=city,-state,-full_name
             elsif r.key = '$order_by' then
                 select ' order by ' ||
-                       string_agg(case substring(q.val from 1 for 1)
-                                  when '-' then substring(q.val from 2) || ' desc'
-                                  else q.val end,
-                       ', ')
+                    string_agg(case substring(q.val from 1 for 1)
+                               when '-' then substring(q.val from 2) || ' desc'
+                               else q.val end,
+                    ', ')
                 from (select unnest(string_to_array(r.value, ',')) as val) q
                 into _order_by;
 
@@ -670,36 +681,62 @@ create function endpoint.rows_select(
 
                 select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
 
-                        -- Value is array
-                        case when endpoint.is_json_array(value) then
-                                (select quote_literal('{' || string_agg(array_val::text, ', '::text) || '}')
-                                from json_array_elements(value::json) as array_val)
+                    -- Value is array
+                    case when endpoint.is_json_array(value) then
+                       (select quote_literal('{' || string_agg(array_val::text, ', '::text) || '}')
+                       from json_array_elements(value::json) as array_val)
 
-                        -- Value is object
-                             when endpoint.is_json_object(value) then
-                                quote_literal(value) || '::json'
+                    -- Value is object
+                    when endpoint.is_json_object(value) then
+                       quote_literal(value) || '::json'
 
-                        -- Value is literal
-                             else
-                                quote_literal(value)
+                    -- Value is literal
+                    else
+                       quote_literal(value)
 
-                        end
+                    end
 
                 from json_to_record(r.value::json) as x(name text, op text, value text)
                 into _where;
 
             end if;
         end loop;
+        return  _where || _order_by || _limit || _offset;
+    end;
+$$
+language plpgsql;
+
+
+/****************************************************************************************************
+ * FUNCTION rows_select                                                                             *
+ ****************************************************************************************************/
+
+create function endpoint.rows_select(
+    relation_id meta.relation_id,
+    args json
+) returns json as $$
+    declare
+        schema_name text;
+        relation_name text;
+        row_query text;
+        rows_json text;
+        suffix text;
+
+    begin
+        select (relation_id).schema_id.name into schema_name;
+        select (relation_id).name into relation_name;
+
+        select endpoint.suffix_clause(args) into suffix;
 
         row_query := 'select ''['' || string_agg(q.js, '','') || '']'' from (
                           select ''{ "row":'' || row_to_json(t.*) || '' }'' js
-                          from ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' as t '
-                          || _where || _order_by || _limit || _offset || '
-                     ) q';
+                          from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' as t '
+                          || suffix ||
+                     ') q';
 
         execute row_query into rows_json;
 
-        return '{"columns":' || endpoint.columns_json(schema_name, table_name) || ','
+        return '{"columns":' || endpoint.columns_json(schema_name, relation_name) || ','
                || '"result":' || coalesce(rows_json, '[]') || '}';
     end;
 $$
@@ -735,6 +772,7 @@ create function rows_select_function(
         function_args text;
         _row record;
         rows_json text[];
+        suffix text;
 
     begin
         -- Get function row
@@ -746,31 +784,35 @@ create function rows_select_function(
         -- Find is return type is composite
         select t.composite
         from meta.function f
-		join meta.type t on t.id = f.return_type_id
+            join meta.type t on t.id = f.return_type_id
         where f.id = _function_id
-	into row_is_composite;
+        into row_is_composite;
 
         -- Build columns_json
         if row_is_composite then
+
           select string_agg(row_to_json(q.*)::text, ',')
-            from (
-		select pga.attname as name,
-			pgt2.typname as "type"
-		from pg_catalog.pg_type pgt
-			inner join pg_class pgc
-				on pgc.oid = pgt.typrelid
-			inner join pg_attribute pga
-				on pga.attrelid = pgc.oid
-			inner join pg_type pgt2
-				on pgt2.oid = pga.atttypid
-		where pgt.oid = function_row.return_type::regtype
-			and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
-            ) q
-            into columns_json;
+          from (
+                select pga.attname as name,
+                    pgt2.typname as "type"
+                from pg_catalog.pg_type pgt
+                    inner join pg_class pgc
+                        on pgc.oid = pgt.typrelid
+                    inner join pg_attribute pga
+                        on pga.attrelid = pgc.oid
+                    inner join pg_type pgt2
+                        on pgt2.oid = pga.atttypid
+                where pgt.oid = function_row.return_type::regtype
+                    and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
+          ) q
+          into columns_json;
+
         else
+
             select row_to_json(q.*)
             from (select (_function_id).name as name, function_row.return_type as "type") q
             into columns_json;
+
         end if;
 
         -- Build function arguments string
@@ -780,19 +822,22 @@ create function rows_select_function(
             string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
         '')
         from json_each_text(args) r
-	join meta.function_parameter fp on
-		fp.function_id = _function_id and
-		fp.name = r.key
+            join meta.function_parameter fp on
+                fp.function_id = _function_id and
+                fp.name = r.key
         into function_args;
+
+        select endpoint.suffix_clause(args) into suffix;
 
         -- Loop through function call results
         for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
-                            || '(' || function_args || ')'
+                            || '(' || function_args || ')' || suffix
         loop
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
         end loop;
 
         return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}';
+
     end;
 $$
 language plpgsql;
@@ -804,6 +849,7 @@ create function endpoint.rows_select_function(
     args json,
     column_name text
 ) returns text as $$
+
     declare
         row_type regtype;
         row_is_composite boolean;
@@ -813,52 +859,56 @@ create function endpoint.rows_select_function(
 
     begin
         select case when substring(q.ret from 1 for 6) = 'SETOF ' then substring(q.ret from 6)
-                    else q.ret
-               end::regtype
+                else q.ret
+            end::regtype
         from (select pg_get_function_result(((function_id::meta.schema_id).name || '.' || (function_id).name)::regproc) as ret) q
         into row_type;
 
         -- Find is return type is composite
         select t.composite
         from meta.function f
-		join meta.type t on t.id = f.return_type_id
+            join meta.type t on t.id = f.return_type_id
         where f.id = function_id
-	into row_is_composite;
+        into row_is_composite;
 
         -- select typtype = 'c' from pg_type into row_is_composite where pg_type.oid = row_type;
 
-	-- Build columns_json
+        -- Build columns_json
         if row_is_composite then
-                select string_agg(row_to_json(q.*)::text, ',')
-                  from (
-			select pga.attname as name,
-				pgt2.typname as "type"
-			from pg_type pgt
-				inner join pg_class pgc
-					on pgc.oid = pgt.typrelid
-				inner join pg_attribute pga
-					on pga.attrelid = pgc.oid
-				inner join pg_type pgt2
-					on pgt2.oid = pga.atttypid
-			where pgt.oid = row_type
-				and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
-                  ) q
-                  into columns_json;
+
+            select string_agg(row_to_json(q.*)::text, ',')
+            from (
+                select pga.attname as name,
+                    pgt2.typname as "type"
+                from pg_type pgt
+                    inner join pg_class pgc
+                        on pgc.oid = pgt.typrelid
+                    inner join pg_attribute pga
+                        on pga.attrelid = pgc.oid
+                    inner join pg_type pgt2
+                        on pgt2.oid = pga.atttypid
+                where pgt.oid = row_type
+                    and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
+            ) q
+            into columns_json;
+
         else
+
             select row_to_json(q.*)
-              from (select (function_id).name as name, row_type as "type") q
-              into columns_json;
+            from (select (function_id).name as name, row_type as "type") q
+            into columns_json;
+
         end if;
 
 
         -- Build function arguments string
         select coalesce(
-		string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
+            string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
         '')
         from json_each_text(args) r
-	join meta.function_parameters fp on
-		fp.function_id = function_id and
-		fp.name = r.key
+            join meta.function_parameters fp on
+                fp.function_id = function_id and
+                fp.name = r.key
         into function_args;
 
 
@@ -879,10 +929,12 @@ language plpgsql;
 create function endpoint.row_delete(
     row_id meta.row_id
 ) returns json as $$
+
     declare
         schema_name text;
         table_name text;
         pk text;
+
     begin
         select (row_id::meta.schema_id).name into schema_name;
         select (row_id::meta.relation_id).name into table_name;
@@ -896,7 +948,8 @@ create function endpoint.row_delete(
 
         return '{}';
     end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 
 /****************************************************************************************************
@@ -912,29 +965,30 @@ create or replace function endpoint.request2(
     out message text,
     out response text
 ) returns setof record as $$
-        declare
-                session_id uuid; -- null if not evented
-                row_id meta.row_id;
-                relation_id meta.relation_id;
-                function_id meta.function_id;
-                field_id meta.field_id;
-                relation_subscribable boolean;
 
-        begin
-                set local search_path = endpoint,meta,public;
+    declare
+        session_id uuid; -- null if not evented
+        row_id meta.row_id;
+        relation_id meta.relation_id;
+        function_id meta.function_id;
+        field_id meta.field_id;
+        relation_subscribable boolean;
 
-                -- We will only be subscribing to something on a GET request, wouldn't make sense otherwise
-                if verb = 'GET' then
+    begin
+        set local search_path = endpoint,meta,public;
 
-                        -- Look for session_id in query string
-                        select (query_args->>'session_id')::uuid into session_id;
+        -- We will only be subscribing to something on a GET request, wouldn't make sense otherwise
+        if verb = 'GET' then
 
-                        -- Allow us to properly subscribe to events, if evented
-                        if session_id is not null then
-                            execute 'update event.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
-                        end if;
+            -- Look for session_id in query string
+            select (query_args->>'session_id')::uuid into session_id;
 
-                end if;
+            -- Allow us to properly subscribe to events, if evented
+            if session_id is not null then
+                execute 'update event.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
+            end if;
+
+        end if;
 
     /*
      URL					VERB(s)			RESPONSE TYPE
@@ -1010,152 +1064,153 @@ create or replace function endpoint.request2(
 
 */
 
-                raise notice '###### endpoint.request % %', verb, path;
-                raise notice '##### query string args: %', query_args::text;
-                raise notice '##### POST data: %', post_data::text;
+        raise notice '###### endpoint.request % %', verb, path;
+        raise notice '##### query string args: %', query_args::text;
+        raise notice '##### POST data: %', post_data::text;
 
-                case
-                when path like '/row/%' then
+        case
+        when path like '/row/%' then
 
-                        -- URL /endpoint/row/{row_id}
-                        row_id := substring(path from 6)::meta.row_id;
+            -- URL /endpoint/row/{row_id}
+            row_id := substring(path from 6)::meta.row_id;
 
-                        if verb = 'GET' then
+            if verb = 'GET' then
 
-                                -- Subscribe to row
-                                if session_id is not null then
-                                    perform event.subscribe_row(row_id);
-                                end if;
+                -- Subscribe to row
+                if session_id is not null then
+                    perform event.subscribe_row(row_id);
+                end if;
 
-                                -- Get single row
-                                return query select 200, 'OK'::text, (select endpoint.row_select(row_id))::text;
+                -- Get single row
+                return query select 200, 'OK'::text, (select endpoint.row_select(row_id))::text;
 
-                        elsif verb = 'PATCH' then
+            elsif verb = 'PATCH' then
 
-                                -- Update row
-                                return query select 200, 'OK'::text, (select endpoint.row_update(row_id, post_data))::text;
+                -- Update row
+                return query select 200, 'OK'::text, (select endpoint.row_update(row_id, post_data))::text;
 
-                        elsif verb = 'DELETE' then
+            elsif verb = 'DELETE' then
 
-                                -- Delete row
-                                return query select 200, 'OK'::text, (select endpoint.row_delete(row_id))::text;
+                -- Delete row
+                return query select 200, 'OK'::text, (select endpoint.row_delete(row_id))::text;
 
-                        else
-                                -- HTTP method not allowed for this resource: 405
-                                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                        end if;
+            else
+                -- HTTP method not allowed for this resource: 405
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+            end if;
 
-               when path like '/relation%' then
+        when path like '/relation%' then
 
-                        -- URL /endpoint/relation/{relation_id}
-                        relation_id := substring(path from 11)::meta.relation_id;
+            -- URL /endpoint/relation/{relation_id}
+            relation_id := substring(path from 11)::meta.relation_id;
 
-                        if verb = 'GET' then
+            if verb = 'GET' then
 
-                                -- Subscribe to relation
-                                if session_id is not null then
+                -- Subscribe to relation
+                if session_id is not null then
 
-                                    -- TODO: Fix when views become subscribable
-                                    -- If relation is subscribable
-                                    select type='BASE TABLE' from meta.relation where id = relation_id into relation_subscribable;
-                                    if relation_subscribable then
-                                            perform event.subscribe_table(relation_id);
-                                    end if;
+                    -- TODO: Fix when views become subscribable
+                    -- If relation is subscribable
+                    select type='BASE TABLE' from meta.relation where id = relation_id into relation_subscribable;
+                    if relation_subscribable then
+                        perform event.subscribe_table(relation_id);
+                    end if;
 
-                                end if;
+                end if;
 
-                                -- Get rows 
-                                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text;
+                -- Get rows 
+                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text;
 
-                        elsif verb = 'POST' then
+            elsif verb = 'POST' then
 
-                                if json_array_length(post_data) = 1 then
-                                        -- Insert single row
-                                        return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text;
-                                else
-                                        -- Insert multiple rows
-                                        return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text;
-                                end if;
-
-                        else
-                                -- HTTP method not allowed for this resource: 405
-                                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                        end if;
-
-                when path like '/function%' then
-
-                        -- URL /endpoint/function/{function_id}
-                        function_id := substring(path from 11)::meta.function_id;
-
-                        if verb = 'GET' then
-                                -- Get record from function call
-                                return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args))::text;
-
-                                -- I'm not sure this is possible in a clean way
-                                -- Get single column from function call
-                                -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
-                                --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
-
-                        else
-                                -- HTTP method not allowed for this resource: 405
-                                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                        end if;
-
-                when path like '/field%' then
-
-                        -- URL /endpoint/field/{field_id}
-                        field_id := substring(path from 8)::meta.field_id;
-
-                        if verb = 'GET' then
-
-                                -- Subscribe to field
-                                if session_id is not null then
-                                    perform event.subscribe_field(field_id);
-                                end if;
-
-                                -- Get field
-                                return query select 200, 'OK'::text, (select endpoint.field_select(field_id))::text;
-
-                        else
-                                -- HTTP method not allowed for this resource: 405
-                                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                        end if;
-/*
-                when path like '/endpoint/table%' then
-
-                        relation_id := substring(path from 17)::meta.relation_id;
-
-                        if verb = 'GET' then
-                        elsif verb = 'POST' then
-                        else
-                                -- HTTP method not allowed for this resource: 405
-                                --raise exception 'HTTP method not allowed for this resource';
-                                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                        end if;
-
-                when path like '/endpoint/view%' then
-
-                        relation_id := substring(path from 16)::meta.relation_id;
-
-                        if verb = 'GET' then
-                        elsif verb = 'POST' then
-                        else
-                                -- HTTP method not allowed for this resource: 405
-                                --raise exception 'HTTP method not allowed for this resource';
-                                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                        end if;
-*/
+                if json_array_length(post_data) = 1 then
+                    -- Insert single row
+                    return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text;
                 else
-                        -- Resource not found: 404
-                        return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::text;
+                    -- Insert multiple rows
+                    return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text;
+                end if;
 
-                end case;
+            else
+                -- HTTP method not allowed for this resource: 405
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+            end if;
 
-                exception when undefined_table then
-                return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text;
+        when path like '/function%' then
 
-        end;
-$$ language plpgsql;
+            -- URL /endpoint/function/{function_id}
+            function_id := substring(path from 11)::meta.function_id;
+
+            if verb = 'GET' then
+                -- Get record from function call
+                return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args))::text;
+
+                -- I'm not sure this is possible in a clean way
+                -- Get single column from function call
+                -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
+                --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
+
+            else
+                -- HTTP method not allowed for this resource: 405
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+            end if;
+
+        when path like '/field%' then
+
+            -- URL /endpoint/field/{field_id}
+            field_id := substring(path from 8)::meta.field_id;
+
+            if verb = 'GET' then
+
+                -- Subscribe to field
+                if session_id is not null then
+                    perform event.subscribe_field(field_id);
+                end if;
+
+                -- Get field
+                return query select 200, 'OK'::text, (select endpoint.field_select(field_id))::text;
+
+            else
+                -- HTTP method not allowed for this resource: 405
+                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+            end if;
+/*
+            when path like '/endpoint/table%' then
+
+                    relation_id := substring(path from 17)::meta.relation_id;
+
+                    if verb = 'GET' then
+                    elsif verb = 'POST' then
+                    else
+                            -- HTTP method not allowed for this resource: 405
+                            --raise exception 'HTTP method not allowed for this resource';
+                            return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+                    end if;
+
+            when path like '/endpoint/view%' then
+
+                    relation_id := substring(path from 16)::meta.relation_id;
+
+                    if verb = 'GET' then
+                    elsif verb = 'POST' then
+                    else
+                            -- HTTP method not allowed for this resource: 405
+                            --raise exception 'HTTP method not allowed for this resource';
+                            return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
+                    end if;
+*/
+        else
+            -- Resource not found: 404
+            return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::text;
+
+        end case;
+
+        exception when undefined_table then
+        return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text;
+
+    end;
+$$
+language plpgsql;
 
 
 /******************************************************************************
@@ -1163,71 +1218,78 @@ $$ language plpgsql;
  ******************************************************************************/
 
 create table endpoint.user (
-	id uuid default public.uuid_generate_v4() primary key,
-	role_id meta.role_id not null default public.uuid_generate_v4()::text::meta.role_id,
-	email text not null unique,
-	name text not null default '',
-	active boolean not null default false,
-	activation_code uuid not null default public.uuid_generate_v4()
+    id uuid default public.uuid_generate_v4() primary key,
+    role_id meta.role_id not null default public.uuid_generate_v4()::text::meta.role_id,
+    email text not null unique,
+    name text not null default '',
+    active boolean not null default false,
+    activation_code uuid not null default public.uuid_generate_v4()
 );
 
 
 -- Trigger on endpoint.user for insert
 create or replace function endpoint.user_insert() returns trigger as $$
-declare
-	role_exists boolean;
-begin
-	-- If a role_id is supplied (thus not generated), make sure this role does not exist
-	select exists(select 1 from meta.role where id = NEW.role_id) into role_exists;
-	if role_exists then
-		raise exception 'Role already exists';
-	end if;
 
-	-- Create a new role
-	insert into meta.role(name) values((NEW.role_id).name);
+    declare
+        role_exists boolean;
 
-	return NEW;
-end;
-$$ language plpgsql;
+    begin
+        -- If a role_id is supplied (thus not generated), make sure this role does not exist
+        select exists(select 1 from meta.role where id = NEW.role_id) into role_exists;
+        if role_exists then
+            raise exception 'Role already exists';
+        end if;
+    
+        -- Create a new role
+        insert into meta.role(name) values((NEW.role_id).name);
+    
+        return NEW;
+    end;
+$$
+language plpgsql;
 
 
 -- Trigger on endpoint.user for update
 create or replace function endpoint.user_update() returns trigger as $$
-declare
-	role_exists boolean;
-begin
-	if OLD.role_id != NEW.role_id then
 
-		-- If a role_id is supplied (thus not generated), make sure this role does not exist
-		select exists(select 1 from meta.role where id = NEW.role_id) into role_exists;
-		if role_exists then
-			raise exception 'Role already exists';
-		end if;
+    declare
+        role_exists boolean;
 
-		-- Delete old role
-		delete from meta.role where id = OLD.role_id;
+    begin
+        if OLD.role_id != NEW.role_id then
 
-		-- Create a new role
-		insert into meta.role(name) values((NEW.role_id).name);
+            -- If a role_id is supplied (thus not generated), make sure this role does not exist
+            select exists(select 1 from meta.role where id = NEW.role_id) into role_exists;
+            if role_exists then
+                raise exception 'Role already exists';
+            end if;
 
-                -- This could be accomplished with one query?:
-                -- update meta.role set id = NEW.role_id where id = OLD.role_id;
+            -- Delete old role
+            delete from meta.role where id = OLD.role_id;
 
-	end if;
+            -- Create a new role
+            insert into meta.role(name) values((NEW.role_id).name);
 
-	return NEW;
-end;
-$$ language plpgsql;
+                    -- This could be accomplished with one query?:
+                    -- update meta.role set id = NEW.role_id where id = OLD.role_id;
+
+        end if;
+
+        return NEW;
+    end;
+$$
+language plpgsql;
 
 
 -- Trigger on endpoint.user for delete
 create or replace function endpoint.user_delete() returns trigger as $$
-begin
-	-- Delete old role
-	delete from meta.role where id = OLD.role_id;
-	return OLD;
-end;
-$$ language plpgsql;
+    begin
+        -- Delete old role
+        delete from meta.role where id = OLD.role_id;
+        return OLD;
+    end;
+$$
+language plpgsql;
 
 
 create trigger endpoint_user_insert_trigger before insert on endpoint.user for each row execute procedure endpoint.user_insert();
@@ -1265,9 +1327,9 @@ create view endpoint."current_user" AS SELECT "current_user"() AS "current_user"
  ******************************************************************************/
 
 create table endpoint.session (
-	id uuid default public.uuid_generate_v4() not null,
-	role_id meta.role_id not null,
-	user_id uuid references endpoint.user(id)
+    id uuid default public.uuid_generate_v4() not null,
+    role_id meta.role_id not null,
+    user_id uuid references endpoint.user(id)
 );
 
 
@@ -1276,26 +1338,28 @@ create table endpoint.session (
  ******************************************************************************/
 
 create function endpoint.register (_email text, _password text) returns void
-	language plpgsql strict security definer
+    language plpgsql strict security definer
 as $$
-	declare
-		_role_id meta.role_id;
-	begin
-		-- Create user
-		insert into endpoint.user (email, active) values (_email, false) returning (role_id).name into _role_id;
 
-		-- Set role password
-		update meta.role set password = _password where id = _role_id;
+    declare
+        _role_id meta.role_id;
 
-		-- Inherit from generic user
-		insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
+    begin
+        -- Create user
+        insert into endpoint.user (email, active) values (_email, false) returning (role_id).name into _role_id;
 
-		-- Send email to {email}
-		-- TODO: call email function or insert into queued emails
+        -- Set role password
+        update meta.role set password = _password where id = _role_id;
 
-		return;
+        -- Inherit from generic user
+        insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
-	end
+        -- Send email to {email}
+        -- TODO: call email function or insert into queued emails
+
+        return;
+
+    end
 $$;
 
 
@@ -1304,38 +1368,40 @@ $$;
  ******************************************************************************/
 
 create function endpoint.register_confirm (_email text, _confirmation_code text) returns void
-	language plpgsql strict security definer
+    language plpgsql strict security definer
 as $$
-	declare
-		_user_row record;
-		_role_id meta.role_id;
-	begin
-		-- 1. check for existing user.  throw exceptions for
-		  -- a. non-matching code
-		execute 'select * from endpoint.user where email=' || quote_literal(_email) || ' and activation_code=' || quote_literal(_confirmation_code) into _user_row;
-		if _user_row is null then
-			raise exception 'Invalid confirmation code';
-		end if;
 
-		  -- b. already active user
-		if _user_row.active then
-			raise exception 'User already activated';
-		end if;
+    declare
+        _user_row record;
+        _role_id meta.role_id;
 
+    begin
+        -- 1. check for existing user.  throw exceptions for
+          -- a. non-matching code
+        execute 'select * from endpoint.user where email=' || quote_literal(_email) || ' and activation_code=' || quote_literal(_confirmation_code) into _user_row;
+        if _user_row is null then
+            raise exception 'Invalid confirmation code';
+        end if;
 
-		-- 2. update user set active=true;
-		update endpoint.user set active = true where email = _email and activation_code = _confirmation_code::uuid returning (role_id).name into _role_id;
+          -- b. already active user
+        if _user_row.active then
+            raise exception 'User already activated';
+        end if;
 
 
-		-- 3. update role set login=true
-		update meta.role set can_login = true where id = _role_id; 
+        -- 2. update user set active=true;
+        update endpoint.user set active = true where email = _email and activation_code = _confirmation_code::uuid returning (role_id).name into _role_id;
 
 
-		-- 4. send email?
-		-- TODO: call email function or insert into queued emails
+        -- 3. update role set login=true
+        update meta.role set can_login = true where id = _role_id; 
 
-		return;
-	end
+
+        -- 4. send email?
+        -- TODO: call email function or insert into queued emails
+
+        return;
+    end
 $$;
 
 
@@ -1344,34 +1410,36 @@ $$;
  ******************************************************************************/
 
 create function endpoint.login (_email text, _password text) returns uuid
-	language plpgsql strict security definer
+    language plpgsql strict security definer
 as $$
-	declare
-		_role_name text;
-		_encrypted_password text;
-		_session_id uuid := null;
-	begin
-		-- Build encrypted password by getting role name associated with this email
-		select 'md5' || md5(_password || (role_id).name) from endpoint.user where email=_email into _encrypted_password;
 
-		-- Email does not exists in endpoint.user table
-		if _encrypted_password is null then
-			raise exception 'No user with this email';
-		end if;
+    declare
+        _role_name text;
+        _encrypted_password text;
+        _session_id uuid := null;
 
-		-- Look for role with this password
-		execute 'select rolname from pg_catalog.pg_authid where rolpassword = ' || quote_literal(_encrypted_password) into _role_name;
+    begin
+        -- Build encrypted password by getting role name associated with this email
+        select 'md5' || md5(_password || (role_id).name) from endpoint.user where email=_email into _encrypted_password;
 
-		-- _role_name is null if rolpassword does not exist in pg_catalog.pg_auth_id table -- invalid password
+        -- Email does not exists in endpoint.user table
+        if _encrypted_password is null then
+            raise exception 'No user with this email';
+        end if;
 
-		-- Create cookie session for this role/user
-		if _role_name is not null then
-			insert into endpoint.session (role_id, user_id) values (meta.role_id(_role_name), (select id from endpoint.user where email=_email)) returning id into _session_id;
-		end if;
+        -- Look for role with this password
+        execute 'select rolname from pg_catalog.pg_authid where rolpassword = ' || quote_literal(_encrypted_password) into _role_name;
 
-		-- Return cookie
-		return _session_id;
-	end
+        -- _role_name is null if rolpassword does not exist in pg_catalog.pg_auth_id table -- invalid password
+
+        -- Create cookie session for this role/user
+        if _role_name is not null then
+            insert into endpoint.session (role_id, user_id) values (meta.role_id(_role_name), (select id from endpoint.user where email=_email)) returning id into _session_id;
+        end if;
+
+        -- Return cookie
+        return _session_id;
+    end
 $$;
 
 
@@ -1380,10 +1448,10 @@ $$;
  ******************************************************************************/
 
 create function endpoint.logout (_email text) returns void
-	language sql strict security definer
+    language sql strict security definer
 as $$
-	-- Should this delete all sessions associated with this user? I think so
-	delete from endpoint.session where user_id = (select id from endpoint."user" where email = _email);
+    -- Should this delete all sessions associated with this user? I think so
+    delete from endpoint.session where user_id = (select id from endpoint."user" where email = _email);
 $$;
 
 
@@ -1392,10 +1460,10 @@ $$;
  ******************************************************************************/
 
 create table endpoint.email (
-	id serial primary key,
-	recipient_email text,
-	sender_email text,
-	body text
+    id serial primary key,
+    recipient_email text,
+    sender_email text,
+    body text
 );
 
 /*
@@ -1405,7 +1473,8 @@ as $$
 	--perform endpoint.email_send(NEW.to, NEW.from, NEW.subject, NEW.body);
 	--return NEW;
 
-$$ language plpgsql;
+$$
+language plpgsql;
 
 
 create trigger endpoint_email_insert_trigger after insert on endpoint.email for each row execute procedure endpoint.email_insert();
@@ -1413,7 +1482,8 @@ create trigger endpoint_email_insert_trigger after insert on endpoint.email for 
 
 create function endpoint.email_send (to text, from text, subject text, body text) returns void
 as $$
-$$ language plpython;
+$$
+language plpython;
 */
 
 
