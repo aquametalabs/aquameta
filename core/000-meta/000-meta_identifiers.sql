@@ -566,20 +566,20 @@ begin
     select string_to_array(value, '/') into parts;
     select parts[1]::text into schema_name;
     select parts[2]::text into relation_name;
-    select parts[3]::text into pk_value;
+    select substring(value from schema_name || '/' || relation_name || '/(.*)') into pk_value;
 
     select c.column_name as name
     from information_schema.columns c
-    left join information_schema.table_constraints t
-          on t.table_catalog = c.table_catalog and
-             t.table_schema = c.table_schema and
-             t.table_name = c.table_name and
-             t.constraint_type = 'PRIMARY KEY'
-    left join information_schema.key_column_usage k
-          on k.constraint_catalog = t.constraint_catalog and
-             k.constraint_schema = t.constraint_schema and
-             k.constraint_name = t.constraint_name and
-             k.column_name = c.column_name
+        left join information_schema.table_constraints t
+              on t.table_catalog = c.table_catalog and
+                 t.table_schema = c.table_schema and
+                 t.table_name = c.table_name and
+                 t.constraint_type = 'PRIMARY KEY'
+        left join information_schema.key_column_usage k
+              on k.constraint_catalog = t.constraint_catalog and
+                 k.constraint_schema = t.constraint_schema and
+                 k.constraint_name = t.constraint_name and
+                 k.column_name = c.column_name
     where c.table_schema = schema_name and c.table_name = relation_name
             and k.column_name is not null or (c.table_schema = 'meta' and c.column_name = 'id') -- is this the primary_key
     into pk_column_name;
@@ -683,8 +683,8 @@ begin
     select string_to_array(value, '/') into parts;
     select parts[1]::text into schema_name;
     select parts[2]::text into relation_name;
-    select parts[3]::text into pk_value;
-    select parts[4]::text into column_name;
+    select parts[(select array_length(parts, 1))]::text into column_name;
+    select substring(value from schema_name || '/' || relation_name || '/(.*)/' || column_name) into pk_value;
 
     select c.column_name as name
     from information_schema.columns c

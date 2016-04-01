@@ -58,7 +58,7 @@ def application(env, start_response):
                                         logging.info('command received: %s' % cmd['method'])
 
                                     if cmd['method'] == 'new_session':
-                                        cursor.execute('select session_create();', (,))
+                                        cursor.execute('select session_create();')
                                         session_id = cursor.fetchone()
                                         logging.info('session created: %s (role: %s)' % (session_id, env['DB_USER']))
                                         uwsgi.websocket_send('''{

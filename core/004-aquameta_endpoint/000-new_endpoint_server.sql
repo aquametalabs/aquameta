@@ -73,7 +73,7 @@ create table "resource" (
  *
  ******************************************************************************/
 
-create function set_mimetype(
+create function endpoint.set_mimetype(
     _schema name,
     _table name,
     _column name,
@@ -101,7 +101,7 @@ create type column_type as (
 );
 
 -- returns the columns for a provided schema.relation as a json object
-create function columns_json(
+create function endpoint.columns_json(
     _schema_name text,
     _relation_name text,
     out json json
@@ -553,13 +553,14 @@ language plpgsql;
  * FUNCTION row_select                                                                              *
  ****************************************************************************************************/
 
-create function row_select(
+create function endpoint.row_select(
     row_id meta.row_id
 ) returns json as $$
 
     declare
-        schema_name text;
-        relation_name text;
+        _schema_name text;
+        _relation_name text;
+        pk_column_name text;
         pk text;
 
         row_query text;
@@ -570,9 +571,25 @@ create function row_select(
         -- raise notice 'ROW SELECT ARGS: %, %, %, %', schema_name, table_name, queryable_type, pk;
         set local search_path = endpoint;
 
-        select (row_id::meta.schema_id).name into schema_name;
-        select (row_id::meta.relation_id).name into relation_name;
-        select row_id.pk_value::text into pk;
+        select (row_id::meta.schema_id).name into _schema_name;
+        select (row_id::meta.relation_id).name into _relation_name;
+        select (row_id).pk_column_id.name into pk_column_name;
+        select row_id.pk_value into pk;
+
+        row_query := 'select ''[{"row": '' || row_to_json(t.*) || ''}]'' from ' ||
+                        '(select * from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || 
+                        ' where ' || quote_ident(pk_column_name) || '=' || quote_literal(pk) ||
+                            (
+                                select '::' || c.type_name
+                                from meta.column c
+                                where c.schema_name = _schema_name and
+                                   c.relation_name = _relation_name and
+                                   c.name = pk_column_name
+                            ) ||
+                    ') t';
+/*
+-- This pk lookup only works if relation has a primary key in meta.column... what about foreign tables and views?
+-- Also foreign data does not show up unless you use a subquery to get it to run first... Not sure why
 
         row_query := 'select ''[{"row": '' || row_to_json(t.*) || ''}]'' from '
                      || quote_ident(schema_name) || '.' || quote_ident(relation_name)
@@ -580,10 +597,11 @@ create function row_select(
                          select quote_ident(pk_name) || ' = ' || quote_literal(pk) || '::' || pk_type
                          from endpoint.pk(schema_name, relation_name) p
                      );
+*/
 
         execute row_query into row_json;
 
-        return '{"columns":' || columns_json(schema_name, relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
+        return '{"columns":' || columns_json(_schema_name, _relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
     end;
 $$
 language plpgsql;
