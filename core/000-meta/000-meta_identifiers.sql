@@ -272,8 +272,31 @@ with function meta.relation_id(json)
 as assignment;
 
 
+/*
+ * Function: urldecode_arr
+ * Author: Marc Mamin
+ * Source: PostgreSQL Tricks (http://postgres.cz/wiki/postgresql_sql_tricks#function_for_decoding_of_url_code)
+ * Decode URLs
+ */
+create or replace function urldecode_arr(url text)
+returns text as $$
+begin
+  return 
+   (with str as (select case when $1 ~ '^%[0-9a-fa-f][0-9a-fa-f]' then array[''] end
+                                      || regexp_split_to_array ($1, '(%[0-9a-fa-f][0-9a-fa-f])+', 'i') plain,
+                       array(select (regexp_matches ($1, '((?:%[0-9a-fa-f][0-9a-fa-f])+)', 'gi'))[1]) encoded)
+     select  coalesce(string_agg(plain[i] || coalesce( convert_from(decode(replace(encoded[i], '%',''), 'hex'), 'utf8'), ''), ''), $1)
+        from str,
+             (select  generate_series(1, array_upper(encoded,1) + 2) i from str) blah);
+end
+$$ language plpgsql immutable strict;
+
+
 create function meta.relation_id(value text) returns meta.relation_id as $$
-select meta.relation_id((string_to_array(value, '/'))[1]::text, (string_to_array(value, '/'))[2]::text)
+select meta.relation_id(
+    urldecode_arr((string_to_array(value, '/'))[1]::text), -- Schema name
+    urldecode_arr((string_to_array(value, '/'))[2]::text) -- Relation name
+)
 $$ immutable language sql;
 
 
@@ -564,9 +587,9 @@ declare
     pk_column_name text;
 begin
     select string_to_array(value, '/') into parts;
-    select parts[1]::text into schema_name;
-    select parts[2]::text into relation_name;
-    select substring(value from schema_name || '/' || relation_name || '/(.*)') into pk_value;
+    select urldecode_arr(parts[1]::text) into schema_name;
+    select urldecode_arr(parts[2]::text) into relation_name;
+    select urldecode_arr(parts[3]::text) into pk_value;
 
     select c.column_name as name
     from information_schema.columns c
@@ -681,10 +704,10 @@ declare
     pk_column_name text;
 begin
     select string_to_array(value, '/') into parts;
-    select parts[1]::text into schema_name;
-    select parts[2]::text into relation_name;
-    select parts[(select array_length(parts, 1))]::text into column_name;
-    select substring(value from schema_name || '/' || relation_name || '/(.*)/' || column_name) into pk_value;
+    select urldecode_arr(parts[1]::text) into schema_name;
+    select urldecode_arr(parts[2]::text) into relation_name;
+    select urldecode_arr(parts[3]::text) into pk_value;
+    select urldecode_arr(parts[4]::text) into column_name;
 
     select c.column_name as name
     from information_schema.columns c
