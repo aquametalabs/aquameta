@@ -1,0 +1,46 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <h1>Socket</h1>
+        <p>Open debugger to see the magic</p>
+        <button id='open'>Open WebSocket</button>
+        <label for='selector'>Write selector here</label>
+        <input id='selector' type='text' value='/function/public/uuid_generate_v4/{}'>
+        <button id='request'>Request</button>
+        <script>
+            var socket;
+            document.getElementById('open').onclick = function() {
+                socket = new WebSocket('ws://master.com/endpoint/event');
+
+                socket.onopen = function(event) {
+                    console.log('opened', event);
+                }
+
+                socket.onmessage = function(message) {
+                    console.log('message parse', JSON.parse(message.data));
+                };
+
+                socket.onerror = function(error) {
+                    console.log('error', error.code, error.eventPhase);
+                };
+
+                socket.onclose = function(event) {
+                    console.log('closed, ', event.code, event.reason);
+                };
+
+                document.getElementById('request').onclick = function() {
+                    socket.send(JSON.stringify({
+                        method: 'request',
+                        verb: 'GET',
+                        uri: document.getElementById('selector').value,
+                        query: {},
+                        data: {}
+                    }));
+                };
+
+            };
+
+        </script>
+    </body>
+</html>

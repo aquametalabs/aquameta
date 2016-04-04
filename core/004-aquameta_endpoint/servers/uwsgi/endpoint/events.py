@@ -57,16 +57,29 @@ def application(env, start_response):
                                     if cmd['method'] != 'ping':
                                         logging.info('command received: %s' % cmd['method'])
 
-                                    if cmd['method'] == 'new_session':
-                                        cursor.execute('select session_create();')
-                                        session_id = cursor.fetchone()
-                                        logging.info('session created: %s (role: %s)' % (session_id, env['DB_USER']))
+                                    if cmd['method'] == 'request':
+
+                                        cursor.execute('select status, message, response, mimetype from endpoint.request2(%s, %s, %s::json, %s::json);', (
+                                            cmd['verb'],                # HTTP method               - GET, POST, PATCH, DELETE
+                                            cmd['uri'],                 # selector                  - '/relation/widget/dependency_js'
+                                            json.dumps(cmd['query']),   # query string arguments    - including event.session id
+                                            json.dumps(cmd['data'])     # post data
+                                        ))
+
+                                        logging.info('websocket endpoint request: %s, %s, %s, %s' % (
+                                            cmd['verb'],                # HTTP method               - GET, POST, PATCH, DELETE
+                                            cmd['uri'],                 # selector                  - '/relation/widget/dependency_js'
+                                            json.dumps(cmd['query']),   # query string arguments    - including event.session id
+                                            json.dumps(cmd['data'])     # post data
+                                        ))
+
+                                        result = cursor.fetchone()
+
                                         uwsgi.websocket_send('''{
-                                            "method": "set_session_id",
-                                            "args": {
-                                                "session_id": "%s"
-                                            }
-                                        }''' % (session_id,))
+                                            "method": "response",
+                                            "data": %s
+                                        }''' % (result.response,))
+
 
                                     elif cmd['method'] == 'attach':
                                         session_id = cmd['session_id']
