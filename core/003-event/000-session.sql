@@ -10,42 +10,43 @@
 begin;
 
 create extension if not exists "uuid-ossp" schema public;
-
 create schema event;
-
 set search_path=event;
 
+
 /************************************************************************
- * session
- *
- * a cross-connection identifier for persistent state
- *
+ * table event.session
+ * persistent session object.
  ***********************************************************************/
 
--- persistent session object.
 create table event.session (
     id uuid default public.uuid_generate_v4() primary key,
-    owner_id meta.role_id not null, -- the owner's role
-    connection_id meta.connection_id
+    owner_id meta.role_id not null -- the owner's role
 );
 
 
+/************************************************************************
+ * funciton event.session_create()
+ * create a new event.session
+ ***********************************************************************/
 
--- create a new event.session
 create or replace function event.session_create() returns uuid as $$
     declare
         session_id uuid;
     begin
-        insert into event.session (owner_id, connection_id)
-            values (meta.current_role_id(), meta.current_connection_id())
+        insert into event.session (owner_id)
+            values (meta.current_role_id())
             returning id into session_id;
         return session_id;
     end;
 $$ language plpgsql;
 
 
+/************************************************************************
+ * funciton event.session_attach()
+ * attach to an existing session
+ ***********************************************************************/
 
--- reattach to an existing session
 create or replace function event.session_attach( session_id uuid ) returns void as $$
     DECLARE
         session_exists boolean;
@@ -66,12 +67,14 @@ create or replace function event.session_attach( session_id uuid ) returns void 
             END LOOP;
         END IF;
 
-        -- to not do?
-        EXECUTE 'update event.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
     END;
 $$ language plpgsql;
 
 
+/************************************************************************
+ * funciton event.session_detach()
+ * detach from an existing session
+ ***********************************************************************/
 
 create or replace function event.session_detach( session_id uuid ) returns void as $$
     begin
@@ -80,18 +83,16 @@ create or replace function event.session_detach( session_id uuid ) returns void 
 $$ language plpgsql;
 
 
+/************************************************************************
+ * funciton event.session_delete()
+ * delete from a session
+ ***********************************************************************/
 
 create or replace function event.session_delete( session_id uuid ) returns void as $$
     begin
         execute 'delete from event.session where id=' || quote_literal(session_id);
     end;
 $$ language plpgsql;
-
-
-
-create or replace function event.current_session_id() returns uuid as $$
-    select id from event.session where connection_id=meta.current_connection_id();
-$$ language sql;
 
 
 commit;

@@ -83,7 +83,7 @@ create table endpoint.resource_file (
 create table endpoint.resource_directory (
     id uuid default public.uuid_generate_v4() primary key,
     directory_id text,
-    indexed boolean
+    indexes boolean
 );
 
 create table "resource" (
@@ -1054,11 +1054,6 @@ create or replace function endpoint.request2(
             -- Look for session_id in query string
             select (query_args->>'session_id')::uuid into session_id;
 
-            -- Allow us to properly subscribe to events, if evented
-            if session_id is not null then
-                execute 'update event.session set connection_id=meta.current_connection_id() where id=' || quote_literal(session_id);
-            end if;
-
         end if;
 
     /*
@@ -1149,7 +1144,7 @@ create or replace function endpoint.request2(
 
                 -- Subscribe to row
                 if session_id is not null then
-                    perform event.subscribe_row(row_id);
+                    perform event.subscribe_row(session_id, row_id);
                 end if;
 
                 -- Get single row
@@ -1184,7 +1179,7 @@ create or replace function endpoint.request2(
                     -- If relation is subscribable
                     select type='BASE TABLE' from meta.relation where id = relation_id into relation_subscribable;
                     if relation_subscribable then
-                        perform event.subscribe_table(relation_id);
+                        perform event.subscribe_table(session_id, relation_id);
                     end if;
 
                 end if;
@@ -1235,7 +1230,7 @@ create or replace function endpoint.request2(
 
                 -- Subscribe to field
                 if session_id is not null then
-                    perform event.subscribe_field(field_id);
+                    perform event.subscribe_field(session_id, field_id);
                 end if;
 
                 -- Get field

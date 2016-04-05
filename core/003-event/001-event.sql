@@ -10,8 +10,8 @@
 begin;
 
 create extension if not exists "uuid-ossp" schema public;
-
 set search_path=event;
+
 
 /************************************************************************
  * subscription tables
@@ -49,6 +49,10 @@ create table event.subscription_field (
     created_at timestamp not null default now()
 );
 
+
+/************************************************************************
+ * view event.subscription
+ ***********************************************************************/
 
 create view event.subscription as 
  select s.id,
@@ -113,6 +117,7 @@ create table event.event (
  ***********************************************************************/
 
 create or replace function event.event_listener_table() returns trigger as $$
+
     declare
         event json; -- TODO: jsonb?
         row_id meta.row_id;
@@ -120,6 +125,7 @@ create or replace function event.event_listener_table() returns trigger as $$
 
         tmp_boolean boolean;
         meta_column_row record;
+
     begin
         -- Loop through the relation-level subscriptions (sub_table, sub_column) that match this TG_OP
         for event_receiver in
@@ -262,6 +268,7 @@ $$ language plpgsql;
  ***********************************************************************/
 
 create or replace function event.event_listener_row() returns trigger as $$
+
     declare
         event json; -- TODO: jsonb?
         row_id meta.row_id;
@@ -269,6 +276,7 @@ create or replace function event.event_listener_row() returns trigger as $$
 
         tmp_boolean boolean;
         meta_column_row record;
+
     begin
         -- Loop through the row-level subscriptions (sub_row, sub_field) that match this TG_OP
         for event_receiver in
@@ -386,14 +394,18 @@ $$ language plpgsql;
 
 
 /************************************************************************
- * function subscribe_table(relation_id)
+ * function subscribe_table(session_id, relation_id)
  * adds a row to the subscription_table table, attaches the trigger
  ***********************************************************************/
 
- create or replace function event.subscribe_table(relation_id meta.relation_id) returns uuid as $$
+create or replace function event.subscribe_table(
+    session_id uuid,
+    relation_id meta.relation_id
+) returns void as $$
+
     declare
-        session_id uuid;
         trigger_name text := relation_id.name || '_evented_table';
+
     begin
         execute format ('drop trigger if exists %I on %I.%I', trigger_name, (relation_id.schema_id).name, relation_id.name);
         execute format ('create trigger %I '
@@ -404,24 +416,26 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_table(session_id, relation_id)
-            values(event.current_session_id(),relation_id)
-            returning id into session_id;
-        return session_id;
+            values(session_id, relation_id);
+
     end;
 $$ language plpgsql;
 
 
-
 /************************************************************************
- * function subscribe_column(column_id)
+ * function subscribe_column(session_id, column_id)
  * adds a row to the subscription_column table, attaches the trigger
  ***********************************************************************/
 
- create or replace function event.subscribe_column(column_id meta.column_id) returns uuid as $$
+create or replace function event.subscribe_column(
+    session_id uuid,
+    column_id meta.column_id
+) returns void as $$
+
     declare
-        session_id uuid;
         relation_id meta.relation_id;
         trigger_name text;
+
     begin
         relation_id := column_id.relation_id;
         trigger_name := relation_id.name || '_evented_table';
@@ -435,24 +449,26 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_column(session_id, column_id)
-            values(event.current_session_id(),column_id)
-            returning id into session_id;
-        return session_id;
+            values(session_id, column_id);
+
     end;
 $$ language plpgsql;
 
 
-
 /************************************************************************
- * function subscribe_row(row_id)
+ * function subscribe_row(session_id, row_id)
  * adds a row to the subscription_row table, attaches the trigger
  ***********************************************************************/
 
- create or replace function event.subscribe_row(row_id meta.row_id) returns uuid as $$
+create or replace function event.subscribe_row(
+    session_id uuid,
+    row_id meta.row_id
+) returns void as $$
+
     declare
-        session_id uuid;
         relation_id meta.relation_id;
         trigger_name text;
+
     begin
         relation_id := (row_id.pk_column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
@@ -466,24 +482,26 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_row(session_id, row_id)
-            values(event.current_session_id(), row_id)
-            returning id into session_id;
-        return session_id;
+            values(session_id, row_id);
+
     end;
 $$ language plpgsql;
 
 
-
 /************************************************************************
- * function subscribe_field(field_id)
+ * function subscribe_field(session_id, field_id)
  * adds a field to the subscription_field table, attaches the trigger
  ***********************************************************************/
 
- create or replace function event.subscribe_field(field_id meta.field_id) returns uuid as $$
+create or replace function event.subscribe_field(
+    session_id uuid,
+    field_id meta.field_id
+) returns void as $$
+
     declare
-        session_id uuid;
         relation_id meta.relation_id;
         trigger_name text;
+
     begin
         relation_id := (field_id.column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
@@ -497,10 +515,10 @@ $$ language plpgsql;
                 relation_id.name);
 
         insert into event.subscription_field(session_id, field_id)
-            values(event.current_session_id(), field_id)
-            returning id into session_id;
-        return session_id;
+            values(session_id, field_id);
+
     end;
 $$ language plpgsql;
+
 
 commit;
