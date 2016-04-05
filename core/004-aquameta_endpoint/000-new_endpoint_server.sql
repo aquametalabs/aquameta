@@ -27,34 +27,63 @@ set search_path = endpoint;
  *
  ******************************************************************************/
 
+
+/******************************************************************************
+ * endpoint.mimetype
+ ******************************************************************************/
+
 create table mimetype (
     id uuid default public.uuid_generate_v4() primary key,
     mimetype text not null
 );
+
+
+/******************************************************************************
+ * endpoint.mimetype_extension
+ ******************************************************************************/
+
+create table endpoint.mimetype_extension (
+    id uuid default public.uuid_generate_v4() primary key,
+    mimetype_id uuid not null references endpoint.mimetype(id),
+    extension text unique
+);
+
 
 -- pulled out: replaced by optional/DATA-endpoint.sql
 -- insert into mimetype (mimetype) values ('text/html');
 -- insert into mimetype (mimetype) values ('text/javascript');
 -- insert into mimetype (mimetype) values ('text/css');
 
-create table column_mimetype (
+create table endpoint.column_mimetype (
     id uuid default public.uuid_generate_v4() primary key,
     column_id meta.column_id not null,
-    mimetype_id uuid not null references mimetype(id)
+    mimetype_id uuid not null references endpoint.mimetype(id)
 );
 
-create table "resource_binary" (
+create table endpoint."resource_binary" (
     id uuid default public.uuid_generate_v4() primary key,
     path text not null unique,
-    mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
+    mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
     content bytea not null
 );
 
-create table "resource_text" (
+create table endpoint."resource_text" (
     id uuid default public.uuid_generate_v4() primary key,
     path text not null unique,
-    mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
+    mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
     content text not null
+);
+
+create table endpoint.resource_file (
+    id uuid default public.uuid_generate_v4() primary key,
+    file_id text
+    --file_id text references filesystem.file(id)
+);
+
+create table endpoint.resource_directory (
+    id uuid default public.uuid_generate_v4() primary key,
+    directory_id text,
+    indexed boolean
 );
 
 create table "resource" (
