@@ -34,7 +34,7 @@ set search_path = endpoint;
 
 create table mimetype (
     id uuid default public.uuid_generate_v4() primary key,
-    mimetype text not null
+    mimetype text not null unique
 );
 
 

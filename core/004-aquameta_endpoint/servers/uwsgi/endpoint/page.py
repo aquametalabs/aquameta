@@ -33,7 +33,7 @@ def application(env, start_response):
             if row is None:
                 cursor.execute('''
                     select f.content, m.mimetype
-                    from (select file_id, '.' || regexp_replace(file_id, '^.*\.', '') as extension from endpoint.resource_file) as r
+                    from (select file_id, regexp_replace(file_id, '^.*\.', '') as extension from endpoint.resource_file) as r
                         join endpoint.mimetype_extension e on e.extension = r.extension
                         join endpoint.mimetype m on m.id = e.mimetype_id
                         join filesystem.file f on f.path = r.file_id
