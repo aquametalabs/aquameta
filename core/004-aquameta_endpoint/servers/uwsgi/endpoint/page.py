@@ -34,8 +34,8 @@ def application(env, start_response):
                 cursor.execute('''
                     select f.content, m.mimetype
                     from (select file_id, regexp_replace(file_id, '^.*\.', '') as extension from endpoint.resource_file) as r
-                        join endpoint.mimetype_extension e on e.extension = r.extension
-                        join endpoint.mimetype m on m.id = e.mimetype_id
+                        left join endpoint.mimetype_extension e on e.extension = r.extension
+                        left join endpoint.mimetype m on m.id = e.mimetype_id
                         join filesystem.file f on f.path = r.file_id
                     where r.file_id = %s
                 ''', (request.path,))
@@ -48,7 +48,7 @@ def application(env, start_response):
             if row is None:
                 raise NotFound
 
-            return Response(row.content, content_type=row.mimetype)
+            return Response(row.content, content_type='text/plain' if row.mimetype is None else row.mimetype)
 
     except HTTPException as e:
         return e

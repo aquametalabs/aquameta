@@ -32,13 +32,9 @@ select distinct on (hm.extension) m.id, hm.extension
 from endpoint.tmp_httpd_mimetype hm
 join endpoint.mimetype m on m.mimetype = hm.mimetype;
 
--- Default mimetype extension
-insert into endpoint.mimetype_extnesion (mimetype_id, extension) values (
-    (select id from endpoint.mimetype where mimetype='text/plain'),
-    ''
-);
 
 -- Drop temporary view
 drop view endpoint.tmp_httpd_mimetype;
+
 
 end;
