@@ -498,17 +498,19 @@ create or replace function endpoint.request(
         args json;
 
     begin
+        raise warning "endpoint.request has been deprecated. use endpoint.request2 instead";
+
         set local search_path = endpoint,meta,public;
         select string_to_array(path, '/') into path_parts;
         select array_length(path_parts, 1) into parts;
-	args := headers;
-	data2 := data;
+        args := headers;
+        data2 := data;
 
         raise notice '###### endpoint.request % %', verb, path;
         raise notice '##### headers: %', headers::text;
         raise notice '##### data: %', data::text;
-        raise notice '##### path_parts: %', path_parts::text;
-        raise notice '##### parts: %', parts::text;
+        -- raise notice '##### path_parts: %', path_parts::text;
+        -- raise notice '##### parts: %', parts::text;
 
         if verb = 'GET' then
             if parts = 5 then
