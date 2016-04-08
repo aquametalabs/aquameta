@@ -60,6 +60,8 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
                     for filename in os.listdir(path):
                         if self.type == 'file' and not stat.S_ISREG( os.stat(path + '/' + filename).st_mode ):
                                 continue
+                        elif self.type == 'directory' and not stat.S_ISDIR( os.stat(path + '/' + filename).st_mode ):
+                                continue
                         # Get stats for path
                         row=self.get_file_stat(columns, filename, path)
                         yield row
