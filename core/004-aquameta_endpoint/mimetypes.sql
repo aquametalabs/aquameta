@@ -36,5 +36,13 @@ join endpoint.mimetype m on m.mimetype = hm.mimetype;
 -- Drop temporary view
 drop view endpoint.tmp_httpd_mimetype;
 
+insert into resource_file(file_id) values ('/s/aquameta/core/004-aquameta_endpoint/js/datum.js');
+insert into resource_file(file_id) values ('/s/aquameta/core/004-aquameta_endpoint/js/socket.html');
+insert into resource_file(file_id) values ('/s/aquameta/core/Dockerfile');
+insert into resource_file(file_id) values ('/s/aquameta/core/build.sh');
+insert into resource_directory(directory_id, indexes) values ('/s/aquameta/core/004-aquameta_endpoint/js', false);
+insert into resource_directory(directory_id, indexes) values ('/s/aquameta/core', true);
+insert into resource_directory(directory_id, indexes) values ('/s/aquameta', true);
+
 
 end;

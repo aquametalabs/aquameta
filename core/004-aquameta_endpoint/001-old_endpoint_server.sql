@@ -498,7 +498,7 @@ create or replace function endpoint.request(
         args json;
 
     begin
-        raise warning "endpoint.request has been deprecated. use endpoint.request2 instead";
+        raise warning 'endpoint.request has been deprecated';
 
         set local search_path = endpoint,meta,public;
         select string_to_array(path, '/') into path_parts;

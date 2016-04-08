@@ -18,7 +18,7 @@ def application(env, start_response):
 
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
-            loggin.info('this version of the data url scheme has been deprecated. use /endpoint/new instead')
+            logging.info('this version of the data url scheme has been deprecated. use /endpoint/new instead')
                 # will be
                 # select status, message, response as json
             cursor.execute('''
