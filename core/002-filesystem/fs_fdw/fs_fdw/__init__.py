@@ -22,7 +22,11 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
         path = None
 
         for qual in quals:
-            if (qual.field_name == 'path' or qual.field_name == 'id') and qual.operator == '=':
+
+            if qual.value is None:
+                yield {}
+
+            elif (qual.field_name == 'path' or qual.field_name == 'id') and qual.operator == '=':
                 path = os.path.abspath(qual.value)
 
                 # If path is not supplied, return empty set

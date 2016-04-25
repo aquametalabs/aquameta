@@ -9,8 +9,25 @@ def build_directory_index(path, rows):
     return '''
             <!doctype html><html><body>
                 <h1>Index of %s</h1>
-                <ul>%s</ul>
-            </body></html>''' % (path, ''.join('<li><a href="'+row.path+'">'+row.path.split('/')[-1]+'</a></li>' for row in rows))
+                <table>
+                    <tr><td><a href="%s">..</a></td><td>-</td><td>-</td></tr>
+                    %s
+                </table>
+            </body></html>''' % (
+                path,
+                '/' + '/'.join(path.split('/')[:-1]), # TODO: Something smarter for parent directory link?
+                ''.join(
+                        '<tr>' +
+                            '<td><a href="' + path + '/' + row.name + '">' + row.name + '</a></td>' +
+                            '<td>' + str(row.last_mod) + '</td>' +
+                            '<td>' + str(row.size) + '</td>' +
+                        '</tr>' 
+                        if row.show
+                        else ''
+                        for row in rows
+                    )
+            )
+
 
 @responder
 def application(env, start_response):
@@ -38,15 +55,16 @@ def application(env, start_response):
                 ''', (request.path,))
                 row = cursor.fetchone()
 
+            # TODO Look to see if path has ancestral index
+
             # File resource
             if row is None:
                 cursor.execute('''
                     select f.content, m.mimetype
-                    from endpoint.resource_file r
-                        left join endpoint.mimetype_extension e on e.extension = regexp_replace(r.file_id, '^.*\.', '')
+                    from filesystem.file f
+                        left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
                         left join endpoint.mimetype m on m.id = e.mimetype_id
-                        join filesystem.file f on f.path = r.file_id
-                    where r.file_id = %s
+                    where f.path = (select file_id from endpoint.resource_file where url=%s);
                 ''', (request.path,))
                 row = cursor.fetchone()
 
@@ -54,14 +72,14 @@ def application(env, start_response):
             # Question: only directories where indexes = true?
             if row is None:
                 cursor.execute('''
-                    select c.path
-                    from endpoint.resource_directory r
-                        join (
-                            select path, parent_id from filesystem.directory
-                            union
-                            select path, directory_id as parent_id from filesystem.file
-                        ) c on c.parent_id = r.directory_id
-                    where r.directory_id = %s and r.indexes = true
+                    with dir as (
+                        select directory_id as dir_id
+                        from endpoint.resource_directory
+                        where url=%s and indexes=true
+                    )
+                    select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.directory where parent_id=(select dir_id from dir)
+                    union
+                    select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.file where directory_id=(select dir_id from dir)
                 ''', (request.path,))
                 rows = cursor.fetchall()
 
