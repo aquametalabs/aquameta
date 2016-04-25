@@ -1284,13 +1284,15 @@ $$ language sql;
  * meta.role_inheritance
  *****************************************************************************/
 create view meta.role_inheritance as
-select r.rolname::text::meta.role_id as role_id,
-	r.rolname as role_name,
-	r2.rolname::text::meta.role_id as member_role_id,
-	r2.rolname as member_role_name
+select 
+    r.rolname::text || '<-->' || r2.rolname::text as id,
+    r.rolname::text::meta.role_id as role_id,
+    r.rolname as role_name,
+    r2.rolname::text::meta.role_id as member_role_id,
+    r2.rolname as member_role_name
 from pg_auth_members m
-	join pg_roles r on r.oid = m.roleid
-	join pg_roles r2 on r2.oid = m.member;
+    join pg_roles r on r.oid = m.roleid
+    join pg_roles r2 on r2.oid = m.member;
 
 
 create function meta.stmt_role_inheritance_create(role_name text, member_role_name text) returns text as $$
@@ -1535,19 +1537,20 @@ $$ language plpgsql;
  *****************************************************************************/
 create view meta.policy_role as 
 select
-	meta.policy_id(relation_id, policy_name) as policy_id,
-	policy_name,
-	relation_id,
-	(relation_id).name as relation_name,
-	((relation_id).schema_id).name as schema_name,
-	role_id,
-	(role_id).name as role_name
+    meta.policy_id(relation_id, policy_name)::text || '<-->' || role_id::text as id,
+    meta.policy_id(relation_id, policy_name) as policy_id,
+    policy_name,
+    relation_id,
+    (relation_id).name as relation_name,
+    ((relation_id).schema_id).name as schema_name,
+    role_id,
+    (role_id).name as role_name
 from ( 
-	select
-		polname as policy_name,
-		polrelid::meta.relation_id as relation_id,
-		unnest(polroles::regrole[]::text[]::meta.role_id[]) as role_id
-	from pg_policy
+    select
+        polname as policy_name,
+        polrelid::meta.relation_id as relation_id,
+        unnest(polroles::regrole[]::text[]::meta.role_id[]) as role_id
+    from pg_policy
 ) a;
 
 

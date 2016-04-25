@@ -278,7 +278,7 @@ as assignment;
  * Source: PostgreSQL Tricks (http://postgres.cz/wiki/postgresql_sql_tricks#function_for_decoding_of_url_code)
  * Decode URLs
  */
-create or replace function urldecode_arr(url text)
+create function urldecode_arr(url text)
 returns text as $$
 begin
   return 
@@ -294,8 +294,8 @@ $$ language plpgsql immutable strict;
 
 create function meta.relation_id(value text) returns meta.relation_id as $$
 select meta.relation_id(
-    urldecode_arr((string_to_array(value, '/'))[1]::text), -- Schema name
-    urldecode_arr((string_to_array(value, '/'))[2]::text) -- Relation name
+    meta.urldecode_arr((string_to_array(value, '/'))[1]::text), -- Schema name
+    meta.urldecode_arr((string_to_array(value, '/'))[2]::text) -- Relation name
 )
 $$ immutable language sql;
 
@@ -587,9 +587,9 @@ declare
     pk_column_name text;
 begin
     select string_to_array(value, '/') into parts;
-    select urldecode_arr(parts[1]::text) into schema_name;
-    select urldecode_arr(parts[2]::text) into relation_name;
-    select urldecode_arr(parts[3]::text) into pk_value;
+    select meta.urldecode_arr(parts[1]::text) into schema_name;
+    select meta.urldecode_arr(parts[2]::text) into relation_name;
+    select meta.urldecode_arr(parts[3]::text) into pk_value;
 
     select c.column_name as name
     from information_schema.columns c
@@ -704,10 +704,10 @@ declare
     pk_column_name text;
 begin
     select string_to_array(value, '/') into parts;
-    select urldecode_arr(parts[1]::text) into schema_name;
-    select urldecode_arr(parts[2]::text) into relation_name;
-    select urldecode_arr(parts[3]::text) into pk_value;
-    select urldecode_arr(parts[4]::text) into column_name;
+    select meta.urldecode_arr(parts[1]::text) into schema_name;
+    select meta.urldecode_arr(parts[2]::text) into relation_name;
+    select meta.urldecode_arr(parts[3]::text) into pk_value;
+    select meta.urldecode_arr(parts[4]::text) into column_name;
 
     select c.column_name as name
     from information_schema.columns c
