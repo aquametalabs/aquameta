@@ -11,6 +11,7 @@ import logging, sys
 logger = logging.getLogger('events')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+import re
 
 @responder
 def application(env, start_response):
@@ -20,7 +21,7 @@ def application(env, start_response):
         with map_errors_to_http(), cursor_for_request(request) as cursor:
 
             # We want to maintain escaped urls as string data
-            path = env['REQUEST_URI'].replace('/endpoint/new', '')
+            path = re.split('\?', env['REQUEST_URI'].replace('/endpoint/new', ''))[0]
             logging.info('attempting endpoint2 %s, %s, query %s, post %s' % (request.method, path, request.args, request.data))
 
             cursor.execute('''

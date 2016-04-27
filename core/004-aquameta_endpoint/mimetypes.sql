@@ -23,7 +23,9 @@ from
 
 -- Insert mimetypes
 insert into endpoint.mimetype (mimetype)
-select distinct(mimetype) from endpoint.tmp_httpd_mimetype;
+select distinct(mimetype)
+from endpoint.tmp_httpd_mimetype
+where mimetype not in (select mimetype from endpoint.mimetype);
 
 
 -- Insert extension
@@ -36,10 +38,12 @@ join endpoint.mimetype m on m.mimetype = hm.mimetype;
 -- Drop temporary view
 drop view endpoint.tmp_httpd_mimetype;
 
-insert into resource_file(file_id) values ('/s/aquameta/core/004-aquameta_endpoint/js/datum.js');
-insert into resource_file(file_id) values ('/s/aquameta/core/004-aquameta_endpoint/js/socket.html');
-insert into resource_file(file_id) values ('/s/aquameta/Dockerfile');
-insert into resource_file(file_id) values ('/s/aquameta/build.sh');
+insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/Datum.js', '/Datum.js');
+insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/jQuery.min.js', '/jQuery.min.js');
+insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/underscore.min.js', '/underscore.min.js');
+insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/datum.html', '/datum.html');
+insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/socket.html', '/socket.html');
+insert into resource_file(file_id, url) values ('/s/aquameta/Dockerfile', '/Dockerfile');
 insert into resource_directory(directory_id, indexes) values ('/s/aquameta/core/004-aquameta_endpoint/js', false);
 insert into resource_directory(directory_id, indexes) values ('/s/aquameta/core', true);
 insert into resource_directory(directory_id, indexes) values ('/s/aquameta', true);
