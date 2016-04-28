@@ -76,13 +76,14 @@ create table endpoint."resource_text" (
 
 create table endpoint.resource_file (
     id uuid default public.uuid_generate_v4() primary key,
-    file_id text
-    --file_id text references filesystem.file(id)
+    file_id text,
+    url text
 );
 
 create table endpoint.resource_directory (
     id uuid default public.uuid_generate_v4() primary key,
     directory_id text,
+    url text,
     indexes boolean
 );
 
