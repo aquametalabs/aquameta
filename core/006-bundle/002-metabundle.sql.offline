@@ -41,5 +41,10 @@ insert into bundle.ignored_row(bundle_id, row_id) values (
     meta.row_id('meta','relation','id',meta.relation_id('meta','trigger')::text)
 );
 
+insert into bundle.ignored_row(bundle_id, row_id) values (
+    (select id from bundle.bundle where name='com.aquameta.bundle'),
+    meta.row_id('meta','relation','id',meta.relation_id('meta','function_parameter')::text)
+);
+
 
 commit;

@@ -628,7 +628,6 @@ create function endpoint.row_select(
                          from endpoint.pk(schema_name, relation_name) p
                      );
 */
-
         execute row_query into row_json;
 
         return '{"columns":' || columns_json(_schema_name, _relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
@@ -715,19 +714,19 @@ create function endpoint.suffix_clause(
             -- Limit clause
             -- URL
             -- /endpoint?$limit=10
-            if r.key = '$limit' then
+            if r.key = 'limit' then
                 _limit := ' limit ' || quote_literal(r.value);
 
             -- Offset clause
             -- URL
             -- /endpoint?$offest=5
-            elsif r.key = '$offset' then
+            elsif r.key = 'offset' then
                 _offset := ' offset ' || quote_literal(r.value);
 
             -- Order by clause
             -- URL
             -- /endpoint?$order_by=city,-state,-full_name
-            elsif r.key = '$order_by' then
+            elsif r.key = 'order_by' then
                 select ' order by ' ||
                     string_agg(case substring(q.val from 1 for 1)
                                when '-' then substring(q.val from 2) || ' desc'
@@ -739,7 +738,7 @@ create function endpoint.suffix_clause(
             -- Where clause
             -- URL
             -- /endpoint?$where={name=NAME1,op=like,value=VALUE1}&$where={name=NAME2,op='=',value=VALUE2}
-            elsif r.key = '$where' then
+            elsif r.key = 'where' then
 
                 select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
 
@@ -808,10 +807,8 @@ language plpgsql;
 /******************************************************************************
  * FUNCTION rows_select_function
 
-maybe?
-some_function?args={ ... }
-some_function?args={ vals: [] }
-some_function?args={ kwargs: {} }
+some_function?args={ vals: [] } -- Array
+some_function?args={ kwargs: {} } -- Key/value object
 some_function?args={ kwargs: {} }&column=name
 
 This function should do some much smarter stuff with return type
@@ -837,9 +834,10 @@ create function endpoint.rows_select_function(
         _row record;
         rows_json text[];
         suffix text;
+        return_column text;
 
     begin
-        -- TODO: mimetype
+        -- TODO: mimetype based on return type id?
         mimetype := 'application/json';
 
 
@@ -849,12 +847,14 @@ create function endpoint.rows_select_function(
         where f.id = _function_id
         into function_row;
 
+
         -- Find is return type is composite
         select t.composite
         from meta.function f
             join meta.type t on t.id = f.return_type_id
         where f.id = _function_id
         into row_is_composite;
+
 
         -- Build columns_json
         if row_is_composite then
@@ -883,29 +883,54 @@ create function endpoint.rows_select_function(
 
         end if;
 
-        -- Build function arguments string
-        -- Cast to type_name found in meta.function_parameter
-        -- Using coalesce(function_args, '') so we can call function without arguments
-        select coalesce(
-            string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
-        '')
-        from json_each_text(args) r
-            join meta.function_parameter fp on
-                fp.function_id = _function_id and
-                fp.name = r.key
-        into function_args;
 
+        -- Function Arguments
+        if args->'kwargs' is not null then
+
+            -- Build function arguments string
+            -- Cast to type_name found in meta.function_parameter
+            -- Using coalesce(function_args, '') so we can call function without arguments
+            select coalesce(
+                string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
+            '')
+            from json_each_text(args->'kwargs') r
+                join meta.function_parameter fp on
+                    fp.function_id = _function_id and
+                    fp.name = r.key
+            into function_args;
+
+        elsif args->'vals' is not null then
+
+            -- Transpose JSON array to comma-separated string
+            select string_agg(value, ',') from json_array_elements_text(args->'vals') into function_args;
+
+        else
+
+            select '' into function_args;
+            -- TODO: what's necessary here?
+
+        end if;
+
+
+        -- Suffix clause: where, order by, offest, limit
         select endpoint.suffix_clause(args) into suffix;
 
+
+        -- Column
+        select coalesce(args->>'column', '*') into return_column;
+
+
         -- Loop through function call results
-        for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
-                            || '(' || function_args || ')' || suffix
+        for _row in execute 'select ' || return_column || ' from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
+                            || '(' || function_args || ') ' || suffix
         loop
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
         end loop;
 
+
+        -- Result JSON object
         select '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
-        --return '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}', mimetype;
+
 
         -- implicitly returning function result and mimetype
 
@@ -1190,10 +1215,10 @@ create or replace function endpoint.request2(
 
             elsif verb = 'POST' then
 
-                if json_array_length(post_data) = 1 then
+                if json_typeof(post_data) = 'object' then
                     -- Insert single row
                     return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text, 'application/json'::text;
-                else
+                elsif json_typeof(post_data) = 'array' then
                     -- Insert multiple rows
                     return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text, 'application/json'::text;
                 end if;
