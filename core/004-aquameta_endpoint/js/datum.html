@@ -1,0 +1,188 @@
+<html>
+    <head>
+        <style>
+            pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+            .string { color: green; }
+            .number { color: darkorange; }
+            .boolean { color: blue; }
+            .null { color: magenta; }
+            .key { color: red; }
+        </style>
+        <script src='/jQuery.min.js'></script>
+        <script src='/underscore.min.js'></script>
+        <script src='/Datum.js'></script>
+        <script>
+            var db = new AQ.Database('/endpoint/new', { evented: 'no' });
+/*
+// Rows
+            db.schema('meta').relation('relation').rows({
+                where: [{ name: 'name', op: 'like', value: '%res%' }]
+            }).then(function(r) { console.log('where', r); });
+
+            db.schema('meta').relation('relation').rows({
+                order_by: { name: 'desc' }
+            }).then(function(r) { console.log('order_by', r); });
+
+            db.schema('meta').relation('relation').rows({
+                limit: 5
+            }).then(function(r) { console.log('limit', r); });
+
+            db.schema('meta').relation('relation').rows({
+                offset: 5
+            }).then(function(r) { console.log('offset', r); });
+*/
+
+
+// Rows related rows
+// Rows related row
+
+
+// Row
+            /*
+            db.schema('meta').relation('relation').row('name', 'resource_file')
+            .then(function(r) {
+                console.log('select row: key, value', r);
+            });
+
+            // Fail with no row found
+            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109a'}})
+            .then(function(r) {
+                // doesn't return row. 400 is logged. 
+                console.log('breaking select', r);
+            }, function(err) {
+                console.log('failing select: no row found', err);
+            });
+            
+            // Fail with invalid uuid
+            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109ezzz'}})
+            .then(function(r) {
+                // doesn't return row. 400 is logged. 
+                console.log('breaking select', r);
+            }, function(err) {
+                console.log('failing select: invalid uuid', err);
+            });
+            */
+
+            // Extra tests
+            /*
+            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'}})
+            .then(function(r) {
+                console.log('select row: obj with where', r);
+            });
+
+            db.schema('widget').relation('widget').row({ name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'})
+            .then(function(r) {
+                console.log('select row: obj', r);
+            });
+            */
+
+// Row related rows
+// Row related row
+
+// Insert row
+            /*
+            db.schema('widget').table('widget').insert({ name: 'hello' + Math.floor(Math.random()*100 + 1) })
+            .then(function(r) {
+                console.log('insert', r);
+            });
+
+            // Fail
+            db.schema('widget').table('widget').insert({ id: 'hello2z' })
+            .then(function(row) {
+                console.log('failing insert: invalid uuid', row);
+            });
+            */
+
+// Multiple row insert
+
+// Update row
+            /*
+            db.schema('widget').table('widget').insert({ name: 'hello' + Math.floor(Math.random()*100 + 1) })
+            .then(function(row) {
+
+                var old_name = row.get('name');
+                var new_name = old_name + 1;
+                console.log('inserted', old_name, 'and updating to', new_name);
+
+                row.set('name', new_name).update().then(function(r) {
+                    console.log('updated to', r.get('name'), r);
+                });
+            });
+            */
+
+// Delete row
+            /*
+            db.schema('widget').table('widget').insert({ name: 'hello' + Math.floor(Math.random()*100 + 1) })
+            .then(function(row) {
+
+                console.log('inserted', row, row.get('name'), 'and deleting');
+                row.delete()
+                .then(function(r) {
+                    console.log('deleted', r);
+                });
+
+            }, function(err) {
+                console.log('it broke', err);
+            });
+            */
+
+// Function
+            /*
+            // Function with no arguments - string arguments
+            db.schema('public').function('uuid_generate_v4', '{}').call()
+            .then(function(result) {
+                console.log(result);
+            });
+
+            // Function with no arguments - array arguments
+            db.schema('public').function('uuid_generate_v4', []).call()
+            .then(function(result) {
+                console.log(result);
+            });
+            */
+
+            // Function with array
+            db.schema('meta').function('relation_id', ['text', 'text']).call(['meta', 'relation'])
+            .then(function(result) {
+                console.log(result);
+            });
+
+            db.schema('meta').function('relation_id', '{text, text}').call(['meta', 'relation'])
+            .then(function(result) {
+                console.log(result);
+            });
+
+            /*
+            // Function with multiple arguments
+            db.schema('meta').function('relation_id', '{text, text}').call('meta', 'relation')
+            .then(function(result) {
+                console.log(result);
+            });
+
+            // Function with key/value pairs
+            db.schema('meta').function('relation_id', '{text, text}').call('meta', 'relation')
+            .then(function(result) {
+                console.log(result);
+            });
+            */
+
+            
+            /* 
+            Decisions to make:
+                - namespacing the object
+                - use require?
+                - how to stucture our OOP
+                - style guide
+
+
+            */
+            
+        </script>
+    </head>
+    <body>
+        <h1>datum.html</h1>
+
+
+
+    </body>
+</html>

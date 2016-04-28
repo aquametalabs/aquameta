@@ -39,8 +39,9 @@ def application(env, start_response):
             # TODO?
             # How come status and message are not used here?
             return Response(
-                row.response,
-                content_type=row.mimetype # "application/json"
+                response=row.response,
+                content_type=row.mimetype,
+                status=row.status
             )
 
     except HTTPException as e:

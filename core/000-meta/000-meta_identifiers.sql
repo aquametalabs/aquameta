@@ -278,7 +278,7 @@ as assignment;
  * Source: PostgreSQL Tricks (http://postgres.cz/wiki/postgresql_sql_tricks#function_for_decoding_of_url_code)
  * Decode URLs
  */
-create function urldecode_arr(url text)
+create function meta.urldecode_arr(url text)
 returns text as $$
 begin
   return 
@@ -811,10 +811,10 @@ as assignment;
 
 create or replace function meta.function_id(value text) returns meta.function_id as $$
 select meta.function_id(
-    (string_to_array(value, '/'))[1]::text, -- schema name
-    (string_to_array(value, '/'))[2]::text, -- function name
-    (string_to_array(value, '/'))[3]::text[] -- array of ordered parameter types, e.g. {uuid,text,text}
-);
+    meta.urldecode_arr((string_to_array(value, '/'))[1]::text), -- schema name
+    meta.urldecode_arr((string_to_array(value, '/'))[2]::text), -- function name
+    meta.urldecode_arr((string_to_array(value, '/'))[3]::text)::text[] -- array of ordered parameter types, e.g. {uuid,text,text}
+)
 $$ immutable language sql;
 
 
