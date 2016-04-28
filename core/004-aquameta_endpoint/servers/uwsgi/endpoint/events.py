@@ -84,14 +84,14 @@ def application(env, start_response):
                                     elif cmd['method'] == 'attach':
                                         session_id = cmd['session_id']
                                         if session_id is not None:
-                                            cursor.execute('select session.session_attach(%s);', (session_id,))
+                                            cursor.execute('select event.session_attach(%s);', (session_id,))
                                             logging.info('session attached: %s (role: %s)' % (session_id, env['DB_USER']))
                                             handle_db_notifications(db_connection)
 
                                     elif cmd['method'] == 'detach':
                                         session_id = cmd['session_id']
                                         if session_id is not None:
-                                            cursor.execute('select session.session_detach(%s);', (session_id,))
+                                            cursor.execute('select event.session_detach(%s);', (session_id,))
                                             logging.info('session detached: %s (role: %s)' % (session_id, env['DB_USER']))
 
 
