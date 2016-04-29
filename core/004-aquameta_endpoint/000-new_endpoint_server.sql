@@ -424,14 +424,14 @@ create or replace function endpoint.row_insert(
 
                 ) || ') values (' || (
                        select string_agg('
-                               case when endpoint.is_json_array($3->>' || quote_literal(json_object_keys) || ') then ((
+                               case when json_typeof($3->>' || quote_literal(json_object_keys) || ') = ''array'' then ((
                                         select ''{'' || string_agg(value::text, '', '') || ''}''
                                         from json_array_elements(($3->>' || quote_literal(json_object_keys) || ')::json)
                                     ))
-                                    when endpoint.is_json_object($3->>' || quote_literal(json_object_keys) || ') then
+                                    when json_typeof($3->>' || quote_literal(json_object_keys) || ') = ''object'' then
                                         ($3->' || quote_literal(json_object_keys) || ')::text
                                     else ($3->>' || quote_literal(json_object_keys) || ')::text
-                               end::' || case when endpoint.is_json_object((args->>json_object_keys)) then 'json::'
+                               end::' || case when json_typeof((args->>json_object_keys)) = 'object' then 'json::'
                                               else ''
                                          end || c.type_name, ',
                                '
@@ -551,14 +551,14 @@ create or replace function endpoint.row_update(
                     set ' || (
                        select string_agg(
                            quote_ident(json_object_keys) || ' =
-                               case when endpoint.is_json_array($1->>' || quote_literal(json_object_keys) || ') then ((
+                               case when json_typeof($1->>' || quote_literal(json_object_keys) || ') = ''array'' then ((
                                         select ''{'' || string_agg(value::text, '', '') || ''}''
                                         from json_array_elements(($1->>' || quote_literal(json_object_keys) || ')::json)
                                     ))
-                                    when endpoint.is_json_object($1->>' || quote_literal(json_object_keys) || ') then
+                                    when json_typeof($1->>' || quote_literal(json_object_keys) || ') = ''object'' then
                                         ($1->' || quote_literal(json_object_keys) || ')::text
                                     else ($1->>' || quote_literal(json_object_keys) || ')::text
-                               end::' || case when endpoint.is_json_object((args->>json_object_keys)) then 'json::'
+                               end::' || case when json_typeof((args->>json_object_keys)) = 'object' then 'json::'
                                               else ''
                                          end || c.type_name, ',
                            '
@@ -743,12 +743,12 @@ create function endpoint.suffix_clause(
                 select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
 
                     -- Value is array
-                    case when endpoint.is_json_array(value) then
+                    case when json_typeof(value) = 'array' then
                        (select quote_literal('{' || string_agg(array_val::text, ', '::text) || '}')
                        from json_array_elements(value::json) as array_val)
 
                     -- Value is object
-                    when endpoint.is_json_object(value) then
+                    when json_typeof(value) = 'object' then
                        quote_literal(value) || '::json'
 
                     -- Value is literal
