@@ -1,9 +1,9 @@
-/*******
-
+/*
 widget.js
-
+---------
 
 a widget is:
+
 - dom element
 - unique id
 - data-widget-name attribute
@@ -11,10 +11,12 @@ a widget is:
 - args link?
 
 
+widget() function
+-----------------
 
+function widget(selector, args, callback) {}
 
-Pipeline of widget():
-
+pipeline:
 
 - fetch widget data
     * widget
@@ -52,6 +54,7 @@ Widget Selector DSL Grammar
 // from bh import *
 function widget_import( bundle_name, local_namespace )
 widget_import('com.aquameta.beehive', 'bh')
+
 // import *
 // is this feature going to collide with the "evolving dsl" below?  probably.  but it simplifies dev environment a lot (true?)
 widget_import('com.aquameta.beehive', '' )
@@ -59,6 +62,7 @@ widget_import('com.aquameta.beehive', '' )
 // ^^ should these be ui?  probably
 
 // use imported widget namespace
+
 widget('bh:pallet_planner', { default_pallet_count: 22 });
 
 
@@ -66,16 +70,7 @@ widget('bh:pallet_planner', { default_pallet_count: 22 });
 // use/edit/integer
 // use/display/temperature
 // ...?
+
 widget('/use/edit/integer', { value: 5 })
-
-
-
-Widget Function
-
-function widget(selector, args, callback) {}
-
-- Runs the pipeline
-
-
 
 */
