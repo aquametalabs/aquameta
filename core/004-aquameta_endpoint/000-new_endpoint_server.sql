@@ -839,6 +839,7 @@ create function endpoint.rows_select_function(
     begin
         -- TODO: mimetype based on return type id?
         mimetype := 'application/json';
+        args := (args->>'args')::json;
 
 
         -- Get function row
@@ -902,7 +903,7 @@ create function endpoint.rows_select_function(
         elsif args->'vals' is not null then
 
             -- Transpose JSON array to comma-separated string
-            select string_agg(value, ',') from json_array_elements_text(args->'vals') into function_args;
+            select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
 
         else
 
