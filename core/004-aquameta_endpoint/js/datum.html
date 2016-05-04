@@ -15,18 +15,22 @@
             var db = new AQ.Database('/endpoint/new', { evented: 'no' });
 /*
 // Rows
+            // Where
             db.schema('meta').relation('relation').rows({
                 where: [{ name: 'name', op: 'like', value: '%res%' }]
             }).then(function(r) { console.log('where', r); });
 
+            // Order by
             db.schema('meta').relation('relation').rows({
                 order_by: { name: 'desc' }
             }).then(function(r) { console.log('order_by', r); });
 
+            // Limit
             db.schema('meta').relation('relation').rows({
                 limit: 5
             }).then(function(r) { console.log('limit', r); });
 
+            // Offset
             db.schema('meta').relation('relation').rows({
                 offset: 5
             }).then(function(r) { console.log('offset', r); });
@@ -39,9 +43,22 @@
 
 // Row
             /*
+            // Key and value
             db.schema('meta').relation('relation').row('name', 'resource_file')
             .then(function(r) {
                 console.log('select row: key, value', r);
+            });
+
+            // Where is an object
+            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'}})
+            .then(function(r) {
+                console.log('select row: obj with where', r);
+            });
+
+            // Where is an object
+            db.schema('widget').relation('widget').row({ name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'})
+            .then(function(r) {
+                console.log('select row: obj', r);
             });
 
             // Fail with no row found
@@ -63,19 +80,6 @@
             });
             */
 
-            // Extra tests
-            /*
-            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'}})
-            .then(function(r) {
-                console.log('select row: obj with where', r);
-            });
-
-            db.schema('widget').relation('widget').row({ name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'})
-            .then(function(r) {
-                console.log('select row: obj', r);
-            });
-            */
-
 // Row related rows
 // Row related row
 
@@ -94,6 +98,13 @@
             */
 
 // Multiple row insert
+            db.schema('widget').table('widget').insert([
+                { name: 'hello' + Math.floor(Math.random()*100 + 1) },
+                { name: 'hello' + Math.floor(Math.random()*100 + 1) },
+                { name: 'hello' + Math.floor(Math.random()*100 + 1) }
+            ]).then(function(rows) {
+                console.log('inserted multiple rows', rows);
+            });
 
 // Update row
             /*
@@ -139,7 +150,6 @@
             .then(function(result) {
                 console.log(result);
             });
-            */
 
             // Function with array
             db.schema('meta').function('relation_id', ['text', 'text']).call(['meta', 'relation'])
@@ -147,10 +157,12 @@
                 console.log(result);
             });
 
+            // Function with array
             db.schema('meta').function('relation_id', '{text, text}').call(['meta', 'relation'])
             .then(function(result) {
                 console.log(result);
             });
+            */
 
             /*
             // Function with multiple arguments

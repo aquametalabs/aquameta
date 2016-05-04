@@ -56,6 +56,11 @@
                     return_url += 'offset=' + parsedOffset;
                 }
             }
+            if (typeof options.args !== 'undefined') { // args: object
+                if (!argsCount) return_url += '?';
+                if (argsCount++) return_url += '&';
+                return_url += 'args=' + encodeURIComponent(JSON.stringify(options.args));
+            }
             return return_url;
         }
 
@@ -381,72 +386,75 @@
     AQ.Rowset = function( relation, response ) {
         this.relation = relation;
         this.columns = response.columns;
+        this.rows = response.result;
+        /*
         this.rows = [];
         for (var i = 0; i < response.result.length; i++) {
             this.rows.push(response.result[i].row);
         }
+        */
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
 
     /**
-     *
      * Call AQ.Rowset.where with (where_obj) or use shorthand notation (field, value) - filter results programmatically
      *
      * @param {Object} where_obj
      * @param {[Boolean]} return_first
+     * @param {[Boolean]} async
      *
      * OR
      *
      * @param {String} field
      * @param {Any} value
      * @param {[Boolean]} return_first
+     * @param {[Boolean]} async
      *
      * @returns {Promise}
      */
     AQ.Rowset.prototype.where = function() {
 
         var first = false, async = true, where_obj = {};
-        if (arguments[0] instanceof Object) {
-
-            /**
-             * AQ.Rowset.where(where_obj [, return_first]);
-             */
-
+        if (typeof arguments[0] == 'object') {
+             // AQ.Rowset.where(where_obj [, return_first] [, async]);
             where_obj = arguments[0];
-            if (arguments.length == 2) first = arguments[1];
-            if (arguments.length == 3) async = arguments[2];
+            var field = where_obj.field;
+            var value = where_obj.value;
+            if (arguments.length > 1) first = arguments[1];
+            if (arguments.length > 2) async = arguments[2];
 
         }
-        else if (arguments[0] instanceof String && arguments.length > 1) {
-
-            /**
-             * AQ.Rowset.where(field, value [, return_first]);
-             */
-
-            // var [ field, value, return_first, async ] = arguments;
+        else if (typeof arguments[0] == 'string' && arguments.length > 1) {
+            // AQ.Rowset.where(field, value [, return_first] [, async]);
             var field = arguments[0];
             var value = arguments[1];
-            where_obj[field] = value;
-
-            if (arguments.length == 3) first = arguments[2];
-            if (arguments.length == 4) async = arguments[3];
-
+            if (arguments.length > 2) first = arguments[2];
+            if (arguments.length > 3) async = arguments[3];
         }
 
-        /**
-         * Does this need to happen?
-         *
-        if (this.length < 1) {
-            // Return Null Row
-            return new AQ.Row(this.relation, null);
-        }
-         */
+        return new Promise(function(resolve, reject) {
 
-        var promise = new Promise(function(resolve, reject) {
+            // TODO lots of logic here
+            // The new rowset that is returned must be in the same format as the response from the server
 
-            // 1
-            var new_rowset = _.where(this.rows, where_obj);
-            return new AQ.Rowset(this.relation, new_rowset);
+            if (first) {
+                for (var i = 0; i < this.rows.length; i++) {
+                    if (this.rows[i].row[field] == value) {
+                        console.log('found val', field, value);
+                        resolve(new AQ.Row(this.relation, { columns: this.columns, result: [ this.rows[i] ] }));
+                    }
+                }
+                reject('could not find ' + field + ' ' + value);
+            }
+            else {
+                var return_rowset = [];
+                for (var i = 0; i < this.rows.length; i++) {
+                    if (this.rows[i].row[field] == value) {
+                        return_rowset.push(this.rows[i]);
+                    }
+                }
+                resolve(new AQ.Rowset(this.relation, { columns: this.columns, result: return_rowset }));
+            }
 
 
             // 2
@@ -455,7 +463,7 @@
             var new_rowset = _.filter(this.rows, function(el) {
                 return AQ.equals.call(this, el[field], val);
             });
-            if (new_rowset.length == 1 ) {
+            if (new_rowset.length == 1) {
                 return new AQ.Row(this.relation(), new_rowset);
             }
             else if (new_rowset.length > 1) {
@@ -464,9 +472,8 @@
 
             // if row does not exist
             return null;
-        });
 
-        return promise;
+        }.bind(this));
 
     };
 
@@ -481,12 +488,10 @@
     };
 
     AQ.Rowset.prototype.limit = function( lim ) {
-        if (lim === 1) {
-            return new AQ.Row(this.relation(), this.rows()[0]);
+        if (lim <= 0) {
+            throw 'Bad limit';
         }
-        else if (lim > 1) {
-            return new AQ.Rowset(this.relation(), this.rows().slice(0, lim));
-        }
+        return new AQ.Rowset(this.relation(), this.rows().slice(0, lim));
     };
         
     AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name ) {
@@ -633,8 +638,21 @@
 
     };
     AQ.Function.prototype.constructor = AQ.Function;
-    AQ.Function.prototype.call = function() {
-        return this.schema.database.endpoint.get(this.id, arguments)
+    AQ.Function.prototype.call = function(fn_args) {
+
+/*
+some_function?args={ vals: [] } -- Array
+some_function?args={ kwargs: {} } -- Key/value object
+some_function?args={ kwargs: {} }&column=name
+*/
+
+        var options_obj = { args: {} };
+
+        if (fn_args instanceof Array) {
+            options_obj.args.vals = fn_args;
+        }
+
+        return this.schema.database.endpoint.get(this.id, options_obj)
             .then(function(response) {
 
                 if(response == null) {
