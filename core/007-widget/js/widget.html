@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <style>
+            pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+            .string { color: green; }
+            .number { color: darkorange; }
+            .boolean { color: blue; }
+            .null { color: magenta; }
+            .key { color: red; }
+        </style>
+        <script src='/jQuery.min.js'></script>
+        <script src='/underscore.min.js'></script>
+        <script src='/Datum.js'></script>
+        <script src='/widget.js'></script>
+    </head>
+    <body>
+        <h1>widget.html</h1>
+    </body>
+    <script>
+        var db = new AQ.Database('/endpoint/new', { evented: 'no' });
+        widget.import('', '', db);
+        $('body').append(widget('aquameta'));
+    </script>
+</html>
