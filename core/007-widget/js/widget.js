@@ -75,18 +75,10 @@ widget('/use/edit/integer', { value: 5 })
 
 */
 
-function uuid() {
-    var d = new Date().getTime();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = (d + Math.random()*16)%16 | 0;
-        d = Math.floor(d/16);
-        return (c=='x' ? r : (r&0x7|0x8)).toString(16);
-    });
-}
-
 var retrieve_promises = {};
 var prepare_promises = {};
 widget.namespaces = {};
+
 
 
 function widget( name, input, callback ) {
@@ -134,16 +126,23 @@ function widget( name, input, callback ) {
 
 }
 
+
+
 widget.import = function( bundle_name, namespace, endpoint ) {
-    // This will have to be a sweet lookup of widget through bundle and head_db_stage
+
+    // TODO: This will have to be a sweet lookup of widget through bundle and head_db_stage
     widget.namespaces[namespace] = endpoint.schema('widget').table('widget').rows();
+
 };
+
+
 
 widget.retrieve = function( namespace, name ) {
 
     return widget.namespaces[namespace]
         .then(function(rows) {
 
+            // Get the correct widget
             //console.log('widget namespace rows', name, rows);
             return rows.where('name', name, true);
 
@@ -154,55 +153,118 @@ widget.retrieve = function( namespace, name ) {
                 throw 'Widget does not exist';
             }
 
-            return Promise.all(
-                row.related_rows('id', 'widget.widget_view', 'widget_id'),
+            // Boot off to all related widget data
+            return Promise.all([
+                row,
                 row.related_rows('id', 'widget.input', 'widget_id'),
+                row.related_rows('id', 'widget.widget_view', 'widget_id'),
                 row.related_rows('id', 'widget.widget_dependency_js', 'widget_id')
                     .then(function(dep_js) {
+                        if (!dep_js) {
+                            return null;
+                        }
                         return dep_js.related_row('dependency_js_id', 'widget.dependency_js', 'id')
                     })
-            );
+            ]);
 
         });
 };
 
+
+
 widget.prepare = function( retrieve_promise, context, callback ) {
     console.log('args to prepare', arguments);
     return retrieve_promise.then(function( widget_data ) {
-        console.log('my widget data', widget_data);
+
+        console.log('retrieve_promise resolved', widget_data);
+
+        var widget_row = widget_data[0];
+        var inputs = widget_data[1];
+        var views = widget_data[2];
+        var deps_js = widget_data[3];
+
+        // Do some preparation, evaluate inputs, views, deps
+
+        var rendered_widget = widget.render(widget_row, context);
+        var post_js_function = widget.create_post_js_function(widget_row, context, deps_js);
+
+        // Return rendered widget and post_js function
+        return {
+            html: rendered_widget,
+            widget_id: context.id,
+            post_js: post_js_function,
+            callback: callback
+        };
+
     });
 };
+widget.render = function( widget_row, context ) {
+    // Compile html and css templates
+    // Add css to dom
+    if (widget_row.get('css') != null && $('style[data-widget="' + context.name + '"]').length == 0) {
+        /*
+        var css_template = cached_get_or_create('css', widget_row, function() {
+            return doT.template(widget_row.field('css').value || '');
+        });
+        */
+        $('<style type="text/css" data-widget="' + context.name + '">' + widget_row.get('css') + '</style>').appendTo(document.head);
+    }
+
+
+    return widget_row.get('html');
+};
+widget.create_post_js_function = function( widget_row, context, deps_js ) {
+    // Create post_js function with deps, inputs, views, required deps, sourceMap
+    return function() { console.log('post_js called'); };
+};
+
+
 
 widget.swap = function( $el, id ) {
-    console.log('swapping widgets', retrieve_promises, prepare_promises);
-    prepare_promises[id].then(function(widget_data) {
+
+    prepare_promises[id].then(function(rendered_widget) {
+
+        console.log('prepare_promise resolved', rendered_widget, $el);
 
         // Replace stub
-        $el.replaceWith(widget_data.rendered_widget);
+        $el.replaceWith(rendered_widget.html);
 
-        // Run post_js
-        widget_data.post_js();
+        // Run post_js - or this may have to be done with a script tag appended to the widget
+        rendered_widget.post_js();
 
-        var w = $('#' + widget_data.widget_id);
+        var w = $('#' + rendered_widget.widget_id);
 
         // Call widget callback
-        if(widget_data.callback) {
-            widget_data.callback(w);
+        if(rendered_widget.callback) {
+            rendered_widget.callback(w);
         }
 
         // Trigger widget_loaded? Necessary?
         w.trigger('widget_loaded', w);
 
         // Delete prepeared_promise
-        delete widget.prepare_promises[id];
+        delete prepare_promises[id];
     });
 };
+
+
+
+function uuid() {
+    var d = new Date().getTime();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (d + Math.random()*16)%16 | 0;
+        d = Math.floor(d/16);
+        return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+    });
+}
+
 
 
 function error( err, widget_name, step_name ) {
     console.error("widget('" + widget_name + "', ...) " + step_name + " failed!");
     throw err;
 }
+
 
 
 /********************************************************************
