@@ -107,10 +107,10 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
     AQ.Widget = {};
 
 
-    AQ.Widget.load = function ( name, input, callback ) {
+    AQ.Widget.load = function ( selector, input, callback ) {
 
-        if (!name || typeof name != 'string') {
-            throw "in call to widget, name argument is invalid or missing";
+        if (!selector || typeof selector != 'string') {
+            throw "in call to widget, selector argument is invalid or missing";
         }
 
         var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
@@ -122,7 +122,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
         }
         else {
 
-            var name_parts = name.split(':');
+            var name_parts = selector.split(':');
 
             if (name_parts.length == 1) {
                 // Default namespace lookup
@@ -170,18 +170,16 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
         return namespaces[namespace]
             .then(function(rows) {
 
-                // Get the correct widget
-                //console.log('widget namespace rows', name, rows);
+                // Get the widget
                 return rows.where('name', name, true);
 
             }).then(function(row) {
 
-                //console.log('using this row for a widget!', row);
                 if(!row) {
                     throw 'Widget does not exist';
                 }
 
-                // Boot off to all related widget data
+                // Get all related widget data
                 return Promise.all([
                     row,
                     row.related_rows('id', 'widget.input', 'widget_id'),
@@ -246,7 +244,6 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                     endpoint: widget_row.relation.schema.database
                 }, context);
 
-            // Do some preparation
             // Process inputs
             if (inputs != null) {
 
@@ -361,6 +358,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             context_vals.push( context[context_keys[i]] );
         }
 
+        // Dependency names and values
         var dep_names = [];
         var dep_values = [];
         if (deps_js != null) {
@@ -371,15 +369,6 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
         }
 
         try {
-            /*
-            var post_js = Function.apply(context, context_keys.concat([
-                    '\n\nvar w = $("#"+id);\n\n' +
-                    widget_row.get('post_js') +
-                    '\n\n//# sourceURL=' + widget_row.get('id') + '/' + widget_row.get('name') + '/post_js\n\n'
-                ])
-            );
-            */
-
             /*
             * Creating an script that looks like this
             * function(dep1_name, dep2_name, ...) {
@@ -412,7 +401,6 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
     AQ.Widget.swap = function( $element, id ) {
 
         prepare_promises[id].then(function(rendered_widget) {
-            //console.log('prepare_promise resolved', rendered_widget);
 
             // Replace stub
             $element.replaceWith(rendered_widget.html);
@@ -492,6 +480,8 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
           throw "widget.sync failed:  the specified container is not a jQuery object";
           return;
         }
+
+        // TODO
 
     }
 

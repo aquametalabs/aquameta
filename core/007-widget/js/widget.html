@@ -1,82 +1,10 @@
 <html>
     <head>
-        <style>
-            pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
-            .string { color: green; }
-            .number { color: darkorange; }
-            .boolean { color: blue; }
-            .null { color: magenta; }
-            .key { color: red; }
-        </style>
         <script src='/system.js'></script>
     </head>
     <body>
         <h1>widget.html</h1>
     </body>
-    <script>
-        /*
-        function uuid() {
-            return Math.floor(Math.random() * 10) + 1;
-        }
-
-
-        function Loader() {
-
-            var modules = {};
-
-            return {
-                load: function(name, deps, source) {
-                    name = name || uuid();
-                    modules[name] = { deps: deps, module: source.call({}) };
-                    console.log('loaded new module', modules);
-                },
-
-                set: function(name, deps, source) {
-                    name = name || uuid();
-                    modules[name] = { deps: deps, module: source };
-                    console.log('loaded new module', modules);
-                },
-
-                get: function(name) {
-                    var mod = modules[name];
-                    mod.deps.forEach(function(el, i) {
-                        console.log(el, i);
-                        //this.get(el);
-                    });
-                    console.log(mod.module);
-                }
-            };
-        }
-        this.loader = new Loader();
-
-        function define(v1, v2, v3) {
-            var name, deps, fn;
-            if (typeof v1 == 'string') name = v1, deps = v2, fn = v3;
-            else if (typeof v1 == 'array') deps = v1, fn = v2;
-            else fn = v1;
-
-            console.log('define called');
-            loader.load(name, deps, fn);
-        }
-        define.amd = true;
-
-        function handle_module(module) {
-            try {
-                var fn = Function(module.get('content'));
-                var scope = {};
-                fn.call(scope);
-                var parts = Object.keys(scope);
-                console.log('scope', scope, parts.length, fn);
-                if (parts.length) {
-                    loader.set(module.get('name') + module.get('version'), [], scope[parts[0]])
-                }
-            }
-            catch(e) {
-                console.error(e);
-            }
-        }
-    */
-    </script>
     <script>
     System.import('/widget.js').then(function() {
 
@@ -88,21 +16,6 @@
         /*
         $('body').append(widget('aatest'));
         */
-
-    /*
-            // marked - sets using define()
-            db.schema('widget').table('dependency_js').row('name', 'marked.js')
-            .then(function(module) { handle_module(module); });
-
-            // jwerty - sets global var
-            db.schema('widget').table('dependency_js').row('name', 'jwerty')
-            .then(function(module) { handle_module(module); });
-
-            // uuid
-            db.schema('widget').table('dependency_js').row('name', 'uuid')
-            .then(function(module) { handle_module(module); });
-    */
-
     });
     </script>
 </html>
