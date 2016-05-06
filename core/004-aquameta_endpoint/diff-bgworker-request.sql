@@ -1,0 +1,110 @@
+diff --git a/core/004-aquameta_endpoint/000-endpoint_server.sql b/core/004-aquameta_endpoint/000-endpoint_server.sql
+index 91b176b..59cb1b2 100644
+--- a/core/004-aquameta_endpoint/000-endpoint_server.sql
++++ b/core/004-aquameta_endpoint/000-endpoint_server.sql
+@@ -922,105 +922,6 @@ create or replace function endpoint.request(
+ $$ language plpgsql;
+ 
+ 
+-
+-
+-
+-/****************************************************************************************************
+- * FUNCTION request                                                                                 *
+- ****************************************************************************************************/
+-
+-create or replace function endpoint.request(
+-    verb text,
+-    path text,
+-    headers public.hstore,
+-    data text,
+-    out status integer,
+-    out message text,
+-    out data2 text --FIXME INOUT breaks meta
+-) returns setof record as $$
+-    declare
+-        args_str text;
+-        path_parts text[];
+-        parts integer;
+-        args json;
+-        args_text text;
+-
+-    begin
+-        set local search_path = endpoint,meta,public;
+-        select string_to_array(path, '/') into path_parts;
+-        select array_length(path_parts, 1) into parts;
+-
+-        raise notice '###### endpoint.request % %', verb, path;
+-        -- raise notice '##### data: %', data::text;
+-        -- raise notice '##### verb: %', verb::text;
+-        -- raise notice '##### path: %', path::text;
+-        -- raise notice '##### headers: %', headers::text;
+-        -- raise notice '##### path_parts: %', path_parts::text;
+-        -- raise notice '##### parts: %', parts::text;
+-
+-        with unnested as (
+-            select string_to_array(
+-                unnest(
+-                    string_to_array(headers->'Uri-Args:', '&')
+-                ),
+-                '='
+-            ) as arg_parts
+-        )
+-        select ('{' || string_agg('"' || replace(arg_parts[1], '"', '\"') || '":"' || replace(arg_parts[2], '"', '\"') || '"', ',') || '}')
+-        from unnested
+-        into args_text;
+-        -- raise notice '##### args: %', args_text;
+-        args := args_text::json;
+-        data2 := data; --FIXME use inout for efficiency
+-        -- raise notice '##### data2: %', data2::text;
+-
+-        if verb = 'GET' then
+-            if parts = 5 then
+-                if path_parts[3] = 'function' then
+-                    return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args))::text;
+-                else
+-                    return query select 200, 'OK'::text, (select endpoint.rows_select(path_parts[2], path_parts[4], path_parts[3], args))::text;
+-                end if;
+-            elsif parts = 6 then
+-                if path_parts[3] = 'function' then
+-                    return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
+-                else
+-                    return query select 200, 'OK'::text, (select endpoint.row_select(path_parts[2], path_parts[4], path_parts[3], path_parts[6]))::text;
+-                end if;
+-            elsif parts = 7 then
+-                return query select 200, 'OK'::text, (select endpoint.field_select(path_parts[2], path_parts[4], path_parts[3], path_parts[6], path_parts[7]))::text;
+-            else
+-                raise notice '############## 404 not found ##############';
+-                return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::json;
+-            end if;
+-
+-        elsif verb = 'POST' then
+-            if path_parts[2] = 'insert' then
+-                -- raise notice 'INSERT MULTIPLE';
+-                return query select 200, 'OK'::text, (select endpoint.rows_insert(data2::json))::text;
+-            else
+-                return query select 200, 'OK'::text, (select endpoint.row_insert(path_parts[2], path_parts[3], path_parts[4], data2::json))::text;
+-            end if;
+-
+-        elsif verb = 'PATCH' then
+-            return query select 200, 'OK'::text, (select endpoint.row_update(path_parts[2], path_parts[3], path_parts[4], path_parts[6], data2::json))::text;
+-
+-        elsif verb = 'DELETE' then
+-            return query select 200, 'OK'::text, (select endpoint.row_delete(path_parts[2], path_parts[4], path_parts[3], path_parts[6]))::text;
+-        else
+-            return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::json;
+-        end if;
+-
+-    exception
+-        when undefined_table then
+---             return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text;
+-             return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text;
+---        when others then -- TODO map db exceptions to HTTP status and message here
+- --            return query select 400, 'Bad Request'::text, ('{"status": 400, "message": "Bad Request: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}');
+-    end;
+-$$ language plpgsql;
+-
+-
+ /******************************************************************************
+  * endpoint.user
+  ******************************************************************************/
