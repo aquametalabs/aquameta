@@ -8,10 +8,10 @@
             .null { color: magenta; }
             .key { color: red; }
         </style>
-        <script src='/jQuery.min.js'></script>
-        <script src='/underscore.min.js'></script>
-        <script src='/Datum.js'></script>
+        <script src='/system.js'></script>
         <script>
+        System.import('/Datum.js').then(function() {
+
             var db = new AQ.Database('/endpoint/new', { evented: 'no' });
 /*
 // Rows
@@ -188,6 +188,7 @@
 
 
             */
+        });
             
         </script>
     </head>

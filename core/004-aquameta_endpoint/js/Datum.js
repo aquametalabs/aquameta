@@ -5,8 +5,12 @@
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
-(function(window, $, _, AQ, undefined) {
+define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
+//(function(window, $, _, AQ, undefined) {
+
     'use strict';
+    var AQ = AQ || {};
+
     function Endpoint( url, evented ) {
 
         this.url = url;
@@ -838,4 +842,6 @@ some_function?args={ kwargs: {} }&column=name
     };
 
     window.AQ = AQ;
-}(window, jQuery, _, {}));
+    return AQ;
+//}(window, jQuery, _, {}));
+});
