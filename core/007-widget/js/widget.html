@@ -10,15 +10,40 @@
         </style>
         <script src='/jQuery.min.js'></script>
         <script src='/underscore.min.js'></script>
+        <script src='/doT.min.js'></script>
         <script src='/Datum.js'></script>
         <script src='/widget.js'></script>
     </head>
     <body>
         <h1>widget.html</h1>
     </body>
+        <script>
+
+            /*
+            function Loader() {
+                this.deps = {};
+                this.get = function() {
+                };
+
+            }
+            this.loader = new Loader();
+
+            function define(v1, v2, v3) {
+                var name, deps, fn;
+                if (typeof v1 == 'string') name = v1, deps = v2, fn = v3;
+                else if (typeof v1 == 'array') deps = v1, fn = v2;
+                else fn = v1;
+
+                this.loader.push();
+            }
+            define.amd = true;
+            */
+        </script>
     <script>
         var db = new AQ.Database('/endpoint/new', { evented: 'no' });
         widget.import('', '', db);
-        $('body').append(widget('aquameta'));
+        $('body').append(widget('development', {
+            endpoint: db
+        }));
     </script>
 </html>
