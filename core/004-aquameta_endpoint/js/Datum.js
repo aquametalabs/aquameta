@@ -440,7 +440,6 @@
             if (first) {
                 for (var i = 0; i < this.rows.length; i++) {
                     if (this.rows[i].row[field] == value) {
-                        console.log('found val', field, value);
                         resolve(new AQ.Row(this.relation, { columns: this.columns, result: [ this.rows[i] ] }));
                     }
                 }
@@ -464,7 +463,7 @@
                 return AQ.equals.call(this, el[field], val);
             });
             if (new_rowset.length == 1) {
-                return new AQ.Row(this.relation(), new_rowset);
+                return new AQ.Row(this.relation, new_rowset);
             }
             else if (new_rowset.length > 1) {
                 throw 'Multiple Rows Returned';
@@ -478,45 +477,76 @@
     };
 
     AQ.Rowset.prototype.order_by = function( column, direction ) {
-        var ordered = _.sortBy(this.rows(), function(el) {
-            return el[column];
+        var ordered = _.sortBy(this.rows, function(el) {
+            return el.row[column];
         });
         if (direction !== 'asc') {
             ordered.reverse();
         }
-        return new AQ.Rowset(this.relation(), ordered);
+        return new AQ.Rowset(this.relation, { columns: this.columns, result: ordered });
     };
 
     AQ.Rowset.prototype.limit = function( lim ) {
         if (lim <= 0) {
             throw 'Bad limit';
         }
-        return new AQ.Rowset(this.relation(), this.rows().slice(0, lim));
+        return new AQ.Rowset(this.relation, { columns: this.columns, result: this.rows.slice(0, lim) });
     };
         
     AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name ) {
 
-        var rel_array = related_relation_name.split('.');
-        if (rel_array.length < 2) {
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
             console.error("Related relation name must be schema qualified (schema_name.relation_name)");
             // throw "Related relation name must be schema qualified (schema_name.relation_name)";
         }
 
-        var options = { where: {} };
-        options.where[related_column_name] = _.pluck(this.rows(), self_column_name);
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
 
-        return this.database().schema(rel_array[0]).relation(rel_array[1]).rows(options);
+        var values = [];
+        for (var i = 0; i < this.rows.length; i++) {
+            values.push(this.rows[i].row[self_column_name]);
+        }
+
+        var options = {
+            where: {
+                name: related_column_name,
+                op: 'in',
+                value: values
+            }
+        };
+
+        var db = this.relation.schema.database;
+        return db.schema(schema_name).relation(relation_name).rows(options);
     };
 
     AQ.Rowset.prototype.related_row = function( self_column_name, related_relation_name, related_column_name ) {
 
-        var rel_array = related_relation_name.split('.');
-        if (rel_array.length < 2) {
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
             console.error("Related relation name must be schema qualified (schema_name.relation_name)");
             // throw "Related relation name must be schema qualified (schema_name.relation_name)";
         }
 
-        return this.database().schema(rel_array[0]).relation(rel_array[1]).row(related_column_name, this.get(self_column_name));
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+
+        var values = [];
+        for (var i = 0; i < this.rows.length; i++) {
+            values.push(this.rows[i].row[self_column_name]);
+        }
+
+        var options = {
+            where: {
+                name: related_column_name,
+                op: 'in',
+                value: values
+            }
+        };
+
+        var db = this.relation.schema.database;
+        return db.schema(schema_name).relation(relation_name).row(options);
 
     };
 
@@ -568,15 +598,25 @@
 
     AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name )  {
 
-        var rel_array = related_relation_name.split('.');
-        if (rel_array.length < 2) {
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
             console.error("Related relation name must be schema qualified (schema_name.relation_name)");
             // throw "Related relation name must be schema qualified (schema_name.relation_name)";
         }
-        var options = { where: {} };
-        options.where[related_column_name] = this.get(self_column_name);
 
-        return this.database().schema(rel_array[0]).relation(rel[1]).rows(options);
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+
+        var options = {
+            where: {
+                name: related_column_name,
+                op: '=',
+                value: this.get(self_column_name)
+            }
+        };
+
+        var db = this.relation.schema.database;
+        return db.schema(schema_name).relation(relation_name).rows(options);
     };
 
     AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name ) {
