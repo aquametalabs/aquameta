@@ -744,8 +744,8 @@ create function endpoint.suffix_clause(
 
                     -- Value is array
                     case when json_typeof(value) = 'array' then
-                       (select quote_literal('{' || string_agg(array_val::text, ', '::text) || '}')
-                       from json_array_elements(value::json) as array_val)
+                       (select '(' || string_agg(quote_literal(array_val), ',') || ')'
+                       from json_array_elements_text(value::json) as array_val)
 
                     -- Value is object
                     when json_typeof(value) = 'object' then
