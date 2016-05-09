@@ -456,8 +456,6 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
     ********************************************************************/
     AQ.Widget.load.sync = function(rowlist_promise, container, widget_maker, handlers) {
 
-        console.log('calling widget sync');
-
         if(handlers === undefined) {
             handlers = {};
         }
@@ -481,7 +479,14 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
           return;
         }
 
-        // TODO
+        rowlist_promise.then(function(rowset) {
+            if (!rowset) {
+                return null;
+            }
+            rowset.map_rows().forEach(function(row) {
+                container.append(widget_maker(row));
+            });
+        });
 
     }
 

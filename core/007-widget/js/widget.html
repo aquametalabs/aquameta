@@ -6,6 +6,7 @@
         <h1>widget.html</h1>
     </body>
     <script>
+
     System.import('/widget.js').then(function() {
 
         var db = new AQ.Database('/endpoint/new', { evented: 'no' });
@@ -13,9 +14,7 @@
         $('body').append(widget('development', {
             endpoint: db
         }));
-        /*
-        $('body').append(widget('aatest'));
-        */
     });
+
     </script>
 </html>

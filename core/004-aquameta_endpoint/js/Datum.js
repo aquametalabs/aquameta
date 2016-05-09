@@ -400,6 +400,12 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
 
+    AQ.Rowset.prototype.map_rows = function() {
+        return this.rows.map(function(row) {
+            return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
+        }.bind(this));
+    };
+
     /**
      * Call AQ.Rowset.where with (where_obj) or use shorthand notation (field, value) - filter results programmatically
      *
@@ -573,7 +579,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         get: function( name )           { return this.row_data[name]; },
         set: function( name, value )    { this.row_data[name] = value; return this; },
         to_string: function()           { return JSON.stringify(this.row_data); },
-        field: function( name )         { return AQ.Field(this, name); }
+        field: function( name )         { return new AQ.Field(this, name); }
     };
 
     AQ.Row.prototype.update = function() {
@@ -640,9 +646,9 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
      * ---------------------------------
      */
     AQ.Column = function( relation, name ) {
-        this._relation = relation;
-        this._name = name;
-        this._id = new AQ.ColumnID(this);
+        this.relation = relation;
+        this.name = name;
+        this.id = new AQ.ColumnID(this);
     };
     AQ.Column.prototype.constructor = AQ.Column;
 
@@ -653,6 +659,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
      */
     AQ.Field = function( row, name ) {
         this.row = row;
+        this.column = new AQ.Column(row.relation, name);
         this.name = name;
         this.value = row.get(name);
         this.id = new AQ.FieldID(this);
