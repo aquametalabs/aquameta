@@ -400,10 +400,16 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
 
-    AQ.Rowset.prototype.map_rows = function() {
+    AQ.Rowset.prototype.map = function(fn) {
         return this.rows.map(function(row) {
             return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
-        }.bind(this));
+        }.bind(this)).map(fn);
+    };
+
+    AQ.Rowset.prototype.forEach = function(fn) {
+        return this.rows.map(function(row) {
+            return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
+        }.bind(this)).forEach(fn);
     };
 
     /**
