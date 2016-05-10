@@ -355,13 +355,16 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     AQ.Table.prototype.constructor = AQ.Table;
     AQ.Table.prototype.insert = function( data ) {
 
-        var insert_promise = this.schema.database.endpoint.post(this.id, data);
+        var insert_promise = this.schema.database.endpoint.patch(this.id, data);
 
         // Return inserted row promise
         return insert_promise.then(function(inserted_row) {
 
             if (inserted_row == null) {
                 return null;
+            }
+            if (typeof data.length != 'undefined' && data.length > 1) {
+                return new AQ.Rowset(this, inserted_row);
             }
             return new AQ.Row(this, inserted_row);
 
