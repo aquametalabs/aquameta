@@ -637,13 +637,16 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
     AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name ) {
 
-        var rel_array = related_relation_name.split('.');
-        if (rel_array.length < 2) {
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
             console.error("Related relation name must be schema qualified (schema_name.relation_name)");
             // throw "Related relation name must be schema qualified (schema_name.relation_name)";
         }
 
-        return this.database().schema(rel_array[0]).relation(rel_array[1]).row(related_column_name, this.get(self_column_name));
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+        var db = this.relation.schema.database;
+        return db.schema(schema_name).relation(relation_name).row(related_column_name, this.get(self_column_name));
     };
 
     /**
