@@ -205,12 +205,12 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                             var base_url = deps.relation.schema.database.url;
                             return Promise.all(
 
-                                deps.rows.map(function(dep) {
-                                    return System.import(base_url + '/field/widget/dependency_js/' + dep.row.id + '/content').then(function(dep_module) {
+                                deps.map(function(dep) {
+                                    return System.import(base_url + '/field/widget/dependency_js/' + dep.get('id') + '/content').then(function(dep_module) {
                                         console.log('my module', dep_module);
                                         return {
-                                            url: base_url + '/field/widget/dependency_js/' + dep.row.id + '/content',
-                                            name: dep.row.variable || 'non_amd_module',
+                                            url: base_url + '/field/widget/dependency_js/' + dep.get('id') + '/content',
+                                            name: dep.get('variable') || 'non_amd_module',
                                             /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
                                             value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
                                         };
@@ -241,40 +241,40 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             // Process inputs
             if (inputs != null) {
 
-                for (var i = 0; i < inputs.length; i++) {
-                    var input_name = inputs[i].get('name');
+                inputs.forEach(function(input) {
+                    var input_name = input.get('name');
 
-                    if(typeof context[input_name] != 'undefined') {
-                        if(inputs[i].get('optional')) {
-                            context[input_name] = (function() {
-                                var default_code = inputs[i].get('default_value');
+                    if (typeof context[input_name] == 'undefined') {
+                        if (input.get('optional')) {
+                            var default_code = input.get('default_value');
+                            try {
 
-                                try {
-                                    if(default_code) {
-                                        return eval('(' + default_code + ')');
-                                    }
-                                    else {
-                                        return undefined;
-                                    }
+                                if (default_code) {
+                                    context[input_name] = eval('(' + default_code + ')');
                                 }
-                                catch (e) {
-                                    console.error("Widget default eval failure", input_row.field('default_value').value);
-                                    throw e;
+                                else {
+                                    context[input_name] =  undefined;
                                 }
-                            }());
+
+                            }
+                            catch (e) {
+                                console.error("Widget default eval failure", default_code);
+                                throw e;
+                            }
+
                         }
                         else {
                             error('Missing required input ' + input_name, context.name, 'Inputs');
                         }
                     }
-                }
+                });
             }
 
             // Load views into context
             if (views != null) {
-                for (var i = 0; i < views.length; i++) {
-                    context[views[i].schema.name + '_' + views[i].name] = views[i];
-                }
+                views.forEach(function(view) {
+                    context[view.schema.name + '_' + view.name] = view;
+                });
             }
 
             var rendered_widget = render(widget_row, context);
@@ -463,7 +463,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             if (!rowset) {
                 return null;
             }
-            rowset.map_rows().forEach(function(row) {
+            rowset.forEach(function(row) {
                 container.append(widget_maker(row));
             });
         });
