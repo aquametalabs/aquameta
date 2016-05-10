@@ -94,13 +94,12 @@ widget('/use/edit/integer', { value: 5 })
 * Project: http://blog.aquameta.com/
 ******************************************************************************/
 define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
-//(function(window, $, doT, AQ, uuid, undefined) {
+
     'use strict';
 
     doT.templateSettings.strip = false;
 
-    var retrieve_promises = {};
-    var prepare_promises = {};
+    var widget_promises = {};
     var namespaces = {};
 
 
@@ -136,16 +135,11 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             }
 
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
-            if (context.name in retrieve_promises) {
-                var retrieve_promise = retrieve_promises[context.name];
-            }
-            else {
-                var retrieve_promise = retrieve(context.namespace, context.name);
-            }
+            var widget_retrieve_promise = retrieve(context.namespace, context.name);
         }
 
         // Prepare and render the widget - each prepare_promise is unique because inputs are different - they are cached by the unique uuid created for the context
-        prepare_promises[context.id] = prepare(retrieve_promise, context, callback);
+        widget_promises[context.id] = prepare(widget_retrieve_promise, context, callback);
 
         // Return script that calls swap
         return '<script id="widget-stub_' + context.id  + '" data-widget_id="' + context.id + '">' +
@@ -193,7 +187,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                             var view_id = widget_view.get('view_id');
                             return db.schema(view_id.schema_id.name).view(view_id.name);
 
-                        }), // This may need .bind(this)
+                        }), // TODO: This may need .bind(this)
                     row.related_rows('id', 'widget.widget_dependency_js', 'widget_id')
                         .then(function(deps_js) {
 
@@ -312,16 +306,11 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             error(e, context.name, 'HTML');
         }
 
-        //var help = widget_row.get('help');
-
         // Render html
         try {
             var rendered = $(html).attr('data-widget', context.name)
-                .attr('data-widget_id', context.id);
-                /*
-                .data('inputs', inputs)
-                .data('help', help);
-                */
+                .attr('data-widget_id', context.id)
+                .data('help', widget_row.get('help'));
         } catch(e) {
             error(e, context.name, 'HTML (adding data-* attributes)');
         }
@@ -353,14 +342,13 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
         var context_keys = Object.keys(context).sort();
 
         // Get context values
-        var context_vals = [];
-        for (var i = 0; i < context_keys.length; i++) {
-            context_vals.push( context[context_keys[i]] );
-        }
+        var context_vals = context_keys.map(function(key) {
+            return context[key];
+        });
 
         // Dependency names and values
-        var dep_names = [];
-        var dep_values = [];
+        var dep_names = [],
+            dep_values = [];
         if (deps_js != null) {
             deps_js.forEach(function(dep_js) {
                 dep_names.push(dep_js.name);
@@ -400,7 +388,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
 
     AQ.Widget.swap = function( $element, id ) {
 
-        prepare_promises[id].then(function(rendered_widget) {
+        widget_promises[id].then(function(rendered_widget) {
 
             // Replace stub
             $element.replaceWith(rendered_widget.html);
@@ -419,15 +407,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             // w.trigger('widget_loaded', w);
 
             // Delete prepeared_promise
-            delete prepare_promises[id];
-        });
-    };
-
-
-
-    AQ.Widget.purge_cache = function( widget_name ) {
-        return retrieve(widget_name).then(function(resources) {
-            delete retrieve_promises[widget_name];
+            delete widget_promises[id];
         });
     };
 
@@ -492,8 +472,6 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
 
     window.widget = AQ.Widget.load;
     return AQ.Widget.load;
-
-//}(this, jQuery, doT, AQ || {}, uuid));
 
 });
 
