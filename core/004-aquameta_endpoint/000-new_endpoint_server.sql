@@ -352,6 +352,48 @@ language plpgsql;
 
 
 /****************************************************************************************************
+ * FUNCTION multiple_row_insert                                                                      *
+ ****************************************************************************************************/
+
+create or replace function endpoint.multiple_row_insert(
+    relation_id meta.relation_id,
+    args json
+) returns setof json as $$
+
+    declare
+        _schema_name text;
+        _relation_name text;
+        r json;
+        q text;
+
+    begin
+        select (relation_id).schema_id.name into _schema_name;
+        select (relation_id).name into _relation_name;
+
+        select array_to_json(array_agg(t.json_array_elements))
+        from
+            (
+                select json_array_elements(endpoint.row_insert(relation_id, json_array_elements)->'result')
+                from json_array_elements(args)
+            ) t
+        into r;
+
+        q := 'select (''{
+                "columns":'' || endpoint.columns_json($1, $2) || '',
+                "result":'' || ($3) || ''
+            }'')::json';
+
+        return query execute q
+        using _schema_name,
+            _relation_name,
+            r;
+    end;
+
+$$
+language plpgsql;
+
+
+/****************************************************************************************************
  * FUNCTION rows_insert                                                                              *
  ****************************************************************************************************/
 
@@ -384,7 +426,7 @@ create or replace function endpoint.rows_insert(
             -- raise notice '(NOT) QUERY: %', q;
             -- execute q;
 
-            perform endpoint.row_insert2(row_id::meta.relation_id, args->i->'row');
+            perform endpoint.row_insert(row_id::meta.relation_id, args->i->'row');
             --perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
         end loop;
 
@@ -424,14 +466,14 @@ create or replace function endpoint.row_insert(
 
                 ) || ') values (' || (
                        select string_agg('
-                               case when json_typeof($3->>' || quote_literal(json_object_keys) || ') = ''array'' then ((
+                               case when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''array'' then ((
                                         select ''{'' || string_agg(value::text, '', '') || ''}''
                                         from json_array_elements(($3->>' || quote_literal(json_object_keys) || ')::json)
                                     ))
-                                    when json_typeof($3->>' || quote_literal(json_object_keys) || ') = ''object'' then
+                                    when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''object'' then
                                         ($3->' || quote_literal(json_object_keys) || ')::text
                                     else ($3->>' || quote_literal(json_object_keys) || ')::text
-                               end::' || case when json_typeof((args->>json_object_keys)) = 'object' then 'json::'
+                               end::' || case when json_typeof((args->json_object_keys)) = 'object' then 'json::'
                                               else ''
                                          end || c.type_name, ',
                                '
@@ -551,14 +593,14 @@ create or replace function endpoint.row_update(
                     set ' || (
                        select string_agg(
                            quote_ident(json_object_keys) || ' =
-                               case when json_typeof($1->>' || quote_literal(json_object_keys) || ') = ''array'' then ((
+                               case when json_typeof($1->' || quote_literal(json_object_keys) || ') = ''array'' then ((
                                         select ''{'' || string_agg(value::text, '', '') || ''}''
                                         from json_array_elements(($1->>' || quote_literal(json_object_keys) || ')::json)
                                     ))
-                                    when json_typeof($1->>' || quote_literal(json_object_keys) || ') = ''object'' then
+                                    when json_typeof($1->' || quote_literal(json_object_keys) || ') = ''object'' then
                                         ($1->' || quote_literal(json_object_keys) || ')::text
                                     else ($1->>' || quote_literal(json_object_keys) || ')::text
-                               end::' || case when json_typeof((args->>json_object_keys)) = 'object' then 'json::'
+                               end::' || case when json_typeof((args->json_object_keys)) = 'object' then 'json::'
                                               else ''
                                          end || c.type_name, ',
                            '
@@ -1075,26 +1117,27 @@ create or replace function endpoint.request2(
     begin
         set local search_path = endpoint,meta,public;
 
-        -- We will only be subscribing to something on a GET request, wouldn't make sense otherwise
+        -- GET/POST requests are synonymous. Long query strings are converted to POST in the client
+        -- We will only be subscribing to something on a GET or POST request
         if verb = 'GET' then
 
             -- Look for session_id in query string
             select (query_args->>'session_id')::uuid into session_id;
 
+        elsif verb = 'POST' then
+
+            -- Look for session_id in post data
+            select (post_data->>'session_id')::uuid into session_id;
+
         end if;
 
     /*
-     URL					VERB(s)			RESPONSE TYPE
+     URL					            VERB(s)			            RESPONSE TYPE
      ----------------------------------------------------------------------------------------------------
-     /endpoint/row/{row_id}          	GET, DELETE, PATCH	row
-     /endpoint/relation/{relation_id}	GET, POST		rows
-     /endpoint/function/{function_id}	GET			variable????
-     /endpoint/field/{field_id}		GET			value????
-
-        unnecessary?
-     /endpoint/table/{relation_id}	GET, POST		rows
-     /endpoint/view/{relation_id}	GET			rows
-
+     /endpoint/row/{row_id}          	GET/POST, PATCH, DELETE	    row
+     /endpoint/relation/{relation_id}	GET/POST, PATCH		        rows
+     /endpoint/function/{function_id}	GET/POST			        variable????
+     /endpoint/field/{field_id}		    GET/POST			        value????
 
         questions: 
         does a single row format exist?
@@ -1102,46 +1145,9 @@ create or replace function endpoint.request2(
                 - columns / types / primary key ?   --- YES
                 - row_ids ?  (aka selectors)        --- NO
 
-
-
-{
-	"columns": [
-		{
-			"name": "id",
-			"type": "meta.relation_id"
-		},
-		...
-	],
-	"result": [
-		{
-			"row": {
-				"id": {
-					"schema_id": {
-						"name": "meta"
-					},
-					"name": "schema"
-				},
-				"overview_widget_id": null,
-				"grid_view_widget_id": null,
-				"list_view_widget_id": null,
-				"list_item_identifier_widget_id": "b842d2af-4869-4119-955f-02b8e522a5df",
-				"row_detail_widget_id": null,
-				"grid_view_row_widget_id": null,
-				"new_row_widget_id": null
-			},
-			"selector": "semantics\/table\/relation\/rows\/(\"(meta)\",schema)"
-		},
-		...
-	]
-}
-
-
-
    */
 /*
-
  All 9 subroutines
--- How do we handle subscriptions?
 
 - How should this url work?
 1. rows_select_function(function_id, query_args, path_parts[6])
@@ -1154,7 +1160,6 @@ create or replace function endpoint.request2(
 -done- 7. row_insert(relation_id, post_data)
 -done- 8. rows_insert(post_data)
 -done- 9. field_select(field_id)
-
 */
 
         raise notice '###### endpoint.request % %', verb, path;
@@ -1167,7 +1172,7 @@ create or replace function endpoint.request2(
             -- URL /endpoint/row/{row_id}
             row_id := substring(path from 6)::meta.row_id;
 
-            if verb = 'GET' then
+            if verb = 'GET' or verb = 'POST' then
 
                 -- Subscribe to row
                 if session_id is not null then
@@ -1216,12 +1221,29 @@ create or replace function endpoint.request2(
 
             elsif verb = 'POST' then
 
+                -- Subscribe to relation
+                if session_id is not null then
+
+                    -- TODO: Fix when views become subscribable
+                    -- If relation is subscribable
+                    select type='BASE TABLE' from meta.relation where id = relation_id into relation_subscribable;
+                    if relation_subscribable then
+                        perform event.subscribe_table(session_id, relation_id);
+                    end if;
+
+                end if;
+
+                -- Get rows 
+                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, post_data))::text, 'application/json'::text;
+
+            elsif verb = 'PATCH' then
+
                 if json_typeof(post_data) = 'object' then
                     -- Insert single row
                     return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text, 'application/json'::text;
                 elsif json_typeof(post_data) = 'array' then
                     -- Insert multiple rows
-                    return query select 200, 'OK'::text, (select endpoint.rows_insert(post_data))::text, 'application/json'::text;
+                    return query select 200, 'OK'::text, (select endpoint.multiple_row_insert(relation_id, post_data))::text, 'application/json'::text;
                 end if;
 
             else
@@ -1243,6 +1265,10 @@ create or replace function endpoint.request2(
                 -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
                 --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
 
+            elsif verb = 'POST' then
+                -- Get record from function call
+                return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, post_data) as rsf;
+
             else
                 -- HTTP method not allowed for this resource: 405
                 return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
@@ -1253,7 +1279,7 @@ create or replace function endpoint.request2(
             -- URL /endpoint/field/{field_id}
             field_id := substring(path from 8)::meta.field_id;
 
-            if verb = 'GET' then
+            if verb = 'GET' or verb = 'POST' then
 
                 -- Subscribe to field
                 if session_id is not null then
@@ -1267,31 +1293,7 @@ create or replace function endpoint.request2(
                 -- HTTP method not allowed for this resource: 405
                 return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
             end if;
-/*
-            when path like '/endpoint/table%' then
 
-                    relation_id := substring(path from 17)::meta.relation_id;
-
-                    if verb = 'GET' then
-                    elsif verb = 'POST' then
-                    else
-                            -- HTTP method not allowed for this resource: 405
-                            --raise exception 'HTTP method not allowed for this resource';
-                            return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                    end if;
-
-            when path like '/endpoint/view%' then
-
-                    relation_id := substring(path from 16)::meta.relation_id;
-
-                    if verb = 'GET' then
-                    elsif verb = 'POST' then
-                    else
-                            -- HTTP method not allowed for this resource: 405
-                            --raise exception 'HTTP method not allowed for this resource';
-                            return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text;
-                    end if;
-*/
         else
             -- Resource not found: 404
             return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::text, 'application/json'::text;
