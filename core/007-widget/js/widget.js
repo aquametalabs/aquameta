@@ -153,7 +153,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
     AQ.Widget.import = function( bundle_name, namespace, endpoint ) {
 
         // TODO: This will have to be a sweet lookup of widget through bundle and head_db_stage
-        namespaces[namespace] = endpoint.schema('widget').table('widget').rows();
+        namespaces[namespace] = endpoint.schema('widget').table('widget');
 
     };
 
@@ -161,13 +161,9 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
 
     function retrieve( namespace, name ) {
 
-        return namespaces[namespace]
-            .then(function(rows) {
-
-                // Get the widget
-                return rows.where('name', name, true);
-
-            }).then(function(row) {
+        // Get the widget
+        return namespaces[namespace].row({ where: { name: 'name', op: '=', value: name }, use_cache: true })
+            .then(function(row) {
 
                 if(!row) {
                     throw 'Widget does not exist';
@@ -176,8 +172,8 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                 // Get all related widget data
                 return Promise.all([
                     row,
-                    row.related_rows('id', 'widget.input', 'widget_id'),
-                    row.related_rows('id', 'widget.widget_view', 'widget_id')
+                    row.related_rows('id', 'widget.input', 'widget_id', true),
+                    row.related_rows('id', 'widget.widget_view', 'widget_id', true)
                         .then(function(widget_view) {
 
                             if (!widget_view) {
@@ -188,13 +184,13 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                             return db.schema(view_id.schema_id.name).view(view_id.name);
 
                         }), // TODO: This may need .bind(this)
-                    row.related_rows('id', 'widget.widget_dependency_js', 'widget_id')
+                    row.related_rows('id', 'widget.widget_dependency_js', 'widget_id', true)
                         .then(function(deps_js) {
 
                             if (!deps_js) {
                                 return null;
                             }
-                            return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id');
+                            return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id', true);
 
                         }).then(function(deps) {
 
