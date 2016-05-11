@@ -1,20 +1,18 @@
 <html>
     <head>
-        <style>
-            pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
-            .string { color: green; }
-            .number { color: darkorange; }
-            .boolean { color: blue; }
-            .null { color: magenta; }
-            .key { color: red; }
-        </style>
         <script src='/system.js'></script>
         <script>
         System.import('/Datum.js').then(function() {
 
+            /* 
+            Decisions to make:
+                - how to stucture our OOP
+                - style guide
+            */
+
             var db = new AQ.Database('/endpoint/new', { evented: 'no' });
-/*
 // Rows
+/*
             // Where
             db.schema('meta').relation('relation').rows({
                 where: [{ name: 'name', op: 'like', value: '%res%' }]
@@ -37,10 +35,6 @@
 */
 
 
-// Rows related rows
-// Rows related row
-
-
 // Row
             /*
             // Key and value
@@ -50,15 +44,15 @@
             });
 
             // Where is an object
-            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'}})
-            .then(function(r) {
-                console.log('select row: obj with where', r);
-            });
-
-            // Where is an object
             db.schema('widget').relation('widget').row({ name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'})
             .then(function(r) {
                 console.log('select row: obj', r);
+            });
+
+            // Where is an object
+            db.schema('widget').relation('widget').row({ where: { name: 'id', op: '=', value: '17a50da2-eba6-4295-8875-a6936ca4109e'}})
+            .then(function(r) {
+                console.log('select row: obj with where', r);
             });
 
             // Fail with no row found
@@ -80,9 +74,6 @@
             });
             */
 
-// Row related rows
-// Row related row
-
 // Insert row
             /*
             db.schema('widget').table('widget').insert({ name: 'hello' + Math.floor(Math.random()*100 + 1) })
@@ -98,6 +89,7 @@
             */
 
 // Multiple row insert
+            /*
             db.schema('widget').table('widget').insert([
                 { name: 'hello' + Math.floor(Math.random()*100 + 1) },
                 { name: 'hello' + Math.floor(Math.random()*100 + 1) },
@@ -105,6 +97,7 @@
             ]).then(function(rows) {
                 console.log('inserted multiple rows', rows);
             });
+            */
 
 // Update row
             /*
@@ -164,8 +157,23 @@
             });
             */
 
+
+// Select with composite type
+// Insert composite type
+// Update composite type
+// Delete with composite type
+
+// Rows related rows
+// Rows related row
+
+// Row related rows
+// Row related row
+
+// Row select that is upgraded to POST
+// Rows select that is upgraded to POST
+
+// Function with multiple arguments
             /*
-            // Function with multiple arguments
             db.schema('meta').function('relation_id', '{text, text}').call('meta', 'relation')
             .then(function(result) {
                 console.log(result);
@@ -178,24 +186,10 @@
             });
             */
 
-            
-            /* 
-            Decisions to make:
-                - namespacing the object
-                - use require?
-                - how to stucture our OOP
-                - style guide
-
-
-            */
         });
-            
         </script>
     </head>
     <body>
         <h1>datum.html</h1>
-
-
-
     </body>
 </html>

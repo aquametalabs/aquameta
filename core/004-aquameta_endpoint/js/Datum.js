@@ -6,7 +6,6 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
-//(function(window, $, _, AQ, undefined) {
 
     'use strict';
     var AQ = AQ || {};
@@ -15,6 +14,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
         this.url = url;
         this.evented = false;
+        this.cache = {};
         if(this.evented) {
         }
 
@@ -92,7 +92,19 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         // Grabs current connection and sends method
         var socket_send = function(message) { return; }; 
 
-        var resource = function( method, meta_id, args, data ) {
+        var resource = function( method, meta_id, args, data, use_cache ) {
+
+            // Default use_cache to false
+            use_cache = use_cache || false;
+
+            // URLs
+            var url_without_query = url + meta_id.to_url();
+            var url_with_query = url_without_query + build_query_string(args);
+
+            // Check cache
+            if (use_cache && url_with_query in this.cache) {
+                return this.cache[url_with_query];
+            }
 
             // If this connection is evented, get event session_id
             if (this.evented && typeof args['session_id'] == 'undefined') {
@@ -103,14 +115,11 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
             if (socket_connected()) {
                 return socket_send({
                         verb: method,
-                        uri: url + meta_id.to_url(),
+                        uri: url_without_query,
                         query: args,
                         data: data
                     });
             }
-
-            // Else use HTTP
-            var url_with_query = url + meta_id.to_url() + build_query_string(args);
 
             // If query string is too long, upgrade GET method to POST
             if(method == 'GET' && (location.host + url_with_query).length > 1000) {
@@ -121,6 +130,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
             var headers = new Headers();
             headers.append('Content-Type', 'application/json');
 
+            // Settings object to send with 'fetch' method
             var init_obj = {
                 method: method,
                 headers: headers
@@ -131,7 +141,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                 init_obj.body = JSON.stringify(data);
             }
 
-            return fetch(url_with_query, init_obj)
+            var request = fetch(method == 'GET' ? url_with_query : url_without_query, init_obj)
                 .then(function(response) {
 
                     // Read json stream
@@ -153,13 +163,19 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                     return null;
 
                 }.bind(this));
+
+            if (use_cache && (method == 'GET' || method == 'POST')) {
+                this.cache[url_with_query] = request;
+            }
+
+            return request;
         }
 
         return {
-            get: function( meta_id, args )        { return resource.call(this, 'GET', meta_id, args); }.bind(this),
-            post: function( meta_id, data )       { return resource.call(this, 'POST', meta_id, {}, data); }.bind(this),
-            patch: function( meta_id, data )      { return resource.call(this, 'PATCH', meta_id, {}, data); }.bind(this),
-            delete: function( meta_id, args )     { return resource.call(this, 'DELETE', meta_id, args); }.bind(this)
+            get: function( meta_id, args, use_cache )        { return resource.call(this, 'GET', meta_id, args, {}, use_cache); }.bind(this),
+            post: function( meta_id, data, use_cache )       { return resource.call(this, 'POST', meta_id, {}, data, use_cache); }.bind(this),
+            patch: function( meta_id, data )                 { return resource.call(this, 'PATCH', meta_id, {}, data); }.bind(this),
+            delete: function( meta_id, args )                { return resource.call(this, 'DELETE', meta_id, args); }.bind(this)
         };
     }
 
@@ -292,7 +308,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     };
     AQ.Relation.prototype.constructor = AQ.Relation;
     AQ.Relation.prototype.rows = function( options ) {
-        return this.schema.database.endpoint.get(this.id, options)
+        return this.schema.database.endpoint.get(this.id, options, options.use_cache)
             .then(function(rows) {
 
                 if (rows == null || rows.result.length < 1) {
@@ -304,6 +320,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     };
     AQ.Relation.prototype.row = function() {
         var args = {};
+        var use_cache = false;
 
         // 2 different ways to call 'row' function
         if (arguments.length == 1) {
@@ -317,20 +334,25 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                 args.where = obj;
             }
 
+            if (typeof obj['use_cache'] != 'undefined') {
+                use_cache = obj['use_cache'];
+            }
+
         }
-        else if (arguments.length == 2) {
+        else if (arguments.length >= 2) {
             // column_name and value
             var name = arguments[0];
             var value = arguments[1];
+            use_cache = arguments[2] || false;
 
             args.where = { name: name, op: '=', value: value };
 
         }
         else {
-            throw 'bad call';
+            throw 'Unsupported call to AQ.Relation.row()';
         }
 
-        return this.schema.database.endpoint.get(this.id, args)
+        return this.schema.database.endpoint.get(this.id, args, use_cache)
             .then(function(row) {
 
                 if (row == null || row.result.length != 1) {
@@ -394,12 +416,6 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         this.relation = relation;
         this.columns = response.columns;
         this.rows = response.result;
-        /*
-        this.rows = [];
-        for (var i = 0; i < response.result.length; i++) {
-            this.rows.push(response.result[i].row);
-        }
-        */
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
 
@@ -512,7 +528,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         return new AQ.Rowset(this.relation, { columns: this.columns, result: this.rows.slice(0, lim) });
     };
         
-    AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name ) {
+    AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -533,14 +549,15 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                 name: related_column_name,
                 op: 'in',
                 value: values
-            }
+            },
+            use_cache: use_cache || false
         };
 
         var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
 
-    AQ.Rowset.prototype.related_row = function( self_column_name, related_relation_name, related_column_name ) {
+    AQ.Rowset.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -561,7 +578,8 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                 name: related_column_name,
                 op: 'in',
                 value: values
-            }
+            },
+            use_cache: use_cache || false
         };
 
         var db = this.relation.schema.database;
@@ -615,7 +633,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
             });
     };
 
-    AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name )  {
+    AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -631,14 +649,15 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                 name: related_column_name,
                 op: '=',
                 value: this.get(self_column_name)
-            }
+            },
+            use_cache: use_cache || false
         };
 
         var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
 
-    AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name ) {
+    AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -649,7 +668,15 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
         var db = this.relation.schema.database;
-        return db.schema(schema_name).relation(relation_name).row(related_column_name, this.get(self_column_name));
+        var options = {
+            where: {
+                name: related_column_name,
+                op: '=',
+                value: this.get(self_column_name)
+            },
+            use_cache: use_cache || false
+        };
+        return db.schema(schema_name).relation(relation_name).row(options);
     };
 
     /**
@@ -862,5 +889,5 @@ some_function?args={ kwargs: {} }&column=name
 
     window.AQ = AQ;
     return AQ;
-//}(window, jQuery, _, {}));
+
 });
