@@ -203,13 +203,14 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                             }
 
                             var base_url = deps.relation.schema.database.url;
+
                             return Promise.all(
 
                                 deps.map(function(dep) {
-                                    return System.import(base_url + '/field/widget/dependency_js/' + dep.get('id') + '/content').then(function(dep_module) {
-                                        console.log('my module', dep_module);
+                                    return System.import(base_url + dep.field('content').id.to_url()).then(function(dep_module) {
+                                        //console.log('my module', dep_module);
                                         return {
-                                            url: base_url + '/field/widget/dependency_js/' + dep.get('id') + '/content',
+                                            url: base_url + dep.field('content').id.to_url(),
                                             name: dep.get('variable') || 'non_amd_module',
                                             /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
                                             value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module

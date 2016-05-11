@@ -784,14 +784,24 @@ create function endpoint.suffix_clause(
 
                 select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
 
+                    case when op = 'in' then
+                        -- Value is array
+                        case when json_typeof(value::json) = 'array' then
+                           (select '(' || string_agg(quote_literal(array_val), ',') || ')'
+                           from json_array_elements_text(value::json) as array_val)
+                    end
+                    
+                    /* TODO: There are more use cases here to explore
                     -- Value is array
-                    case when json_typeof(value) = 'array' then
+                    case when json_typeof(value::json) = 'array' then
                        (select '(' || string_agg(quote_literal(array_val), ',') || ')'
                        from json_array_elements_text(value::json) as array_val)
 
                     -- Value is object
-                    when json_typeof(value) = 'object' then
+                    when json_typeof(value::json) = 'object' then
                        quote_literal(value) || '::json'
+                   */
+
 
                     -- Value is literal
                     else
