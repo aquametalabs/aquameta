@@ -739,7 +739,7 @@ language plpgsql;
  *
  ****************************************************************************************************/
 
-create function endpoint.suffix_clause(
+create or replace function endpoint.suffix_clause(
     args json
 ) returns text as $$
 
@@ -751,67 +751,116 @@ create function endpoint.suffix_clause(
         r record;
 
     begin
-        for r in select * from json_each_text(args) loop
+        for r in select * from json_each(args) loop
 
             -- Limit clause
             -- URL
             -- /endpoint?$limit=10
             if r.key = 'limit' then
-                _limit := ' limit ' || quote_literal(r.value);
+                _limit := ' limit ' || quote_literal(r.value::text);
 
             -- Offset clause
             -- URL
             -- /endpoint?$offest=5
             elsif r.key = 'offset' then
-                _offset := ' offset ' || quote_literal(r.value);
+                _offset := ' offset ' || quote_literal(r.value::text);
 
             -- Order by clause
             -- URL
-            -- /endpoint?$order_by=city,-state,-full_name
+            -- /endpoint?$order_by=city
+            -- /endpoint?$order_by=[city,-state,-full_name]
             elsif r.key = 'order_by' then
-                select ' order by ' ||
-                    string_agg(case substring(q.val from 1 for 1)
-                               when '-' then substring(q.val from 2) || ' desc'
-                               else q.val end,
-                    ', ')
-                from (select unnest(string_to_array(r.value, ',')) as val) q
-                into _order_by;
+                
+                if pg_typeof(r.value) = 'json'::regtype then
+                    select ' order by ' || 
+                        string_agg(case substring(q.val from 1 for 1)
+                                       when '-' then substring(q.val from 2) || ' desc'
+                                       else q.val end,
+                        ', ')
+                    from (select json_array_elements_text as val from json_array_elements_text(r.value)) q
+                    into _order_by;
+                else
+                    select ' order by ' ||
+                        case substring(r.value::text from 1 for 1)
+                            when '-' then substring(r.value::text from 2) || ' desc'
+                            else r.value::text
+                            end
+                    into _order_by;
+                end if;
 
             -- Where clause
             -- URL
-            -- /endpoint?$where={name=NAME1,op=like,value=VALUE1}&$where={name=NAME2,op='=',value=VALUE2}
+            -- /endpoint?$where={name=NAME1,op=like,value=VALUE1}
+            -- /endpoint?$where=[{name=NAME1,op=like,value=VALUE1},{name=NAME2,op='=',value=VALUE2}]
             elsif r.key = 'where' then
 
-                select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
+                if pg_typeof(r.value) = 'json'::regtype then
 
-                    case when op = 'in' then
-                        -- Value is array
-                        case when json_typeof(value::json) = 'array' then
-                           (select '(' || string_agg(quote_literal(array_val), ',') || ')'
-                           from json_array_elements_text(value::json) as array_val)
-                    end
-                    
-                    /* TODO: There are more use cases here to explore
-                    -- Value is array
-                    case when json_typeof(value::json) = 'array' then
-                       (select '(' || string_agg(quote_literal(array_val), ',') || ')'
-                       from json_array_elements_text(value::json) as array_val)
+                    if json_typeof(r.value) = 'array' then -- { where: JSON array }
 
-                    -- Value is object
-                    when json_typeof(value::json) = 'object' then
-                       quote_literal(value) || '::json'
-                   */
+                        /*
+                        select json->>'name' as name, json->>'op' as op, json->>'value' as value from
+                            (select json_array_elements_text(value)::json as json from
+                                (( select value from json_each('{"where": ["{\"name\":\"bundle_name\",\"op\":\"=\",\"value\":\"com.aquameta.core.ide\"}", "{\"name\":\"name\",\"op\":\"=\",\"value\":\"development\"}"]}'))
+                                ) v)
+                            b;
+                        */
+                        select _where || ' and ' || string_agg( quote_ident(name) || ' ' || op || ' ' ||
 
 
-                    -- Value is literal
-                    else
-                       quote_literal(value)
+                            case when op = 'in' then
+                                -- Value is array
+                                case when json_typeof(json) = 'array' then
+                                   (select '(' || string_agg(quote_literal(array_val), ',') || ')'
+                                   from json_array_elements_text(json) as array_val)
+                                -- Value is object
+                                when json_typeof(json) = 'object' then
+                                   quote_literal(json) || '::json'
+                                else
+                                    quote_literal(value)
+                                end
+                            else
+                                quote_literal(value)
+                            end
 
-                    end
+                            , ' and ' )
 
-                from json_to_record(r.value::json) as x(name text, op text, value text)
-                into _where;
+                        from (
+                            select element->>'name' as name, element->>'op' as op, element->'value' as json, element->>'value' as value
+                            from (select json_array_elements_text::json as element from json_array_elements_text(r.value)) j
+                            ) v
+                        into _where;
 
+                    elsif json_typeof(r.value) = 'object' then -- { where: JSON object }
+                        select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
+
+                            case when op = 'in' then
+                                -- Value is array
+                                case when json_typeof(value::json) = 'array' then
+                                   (select '(' || string_agg(quote_literal(array_val), ',') || ')'
+                                   from json_array_elements_text(value::json) as array_val)
+                                -- Value is object
+                                when json_typeof(value::json) = 'object' then
+                                   quote_literal(value) || '::json'
+                                else
+                                    quote_literal(value)
+                                end
+                            end
+
+                        from json_to_record(r.value::json) as x(name text, op text, value text)
+                        into _where;
+
+                    end if;
+
+                else -- Else { where: regular value } -- This is not used in the client
+
+                    select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' || quote_literal(value)
+                    from json_to_record(r.value::json) as x(name text, op text, value text)
+                    into _where;
+
+                end if;
+
+            else
             end if;
         end loop;
         return  _where || _order_by || _limit || _offset;

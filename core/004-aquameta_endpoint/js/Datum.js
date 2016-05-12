@@ -25,7 +25,9 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
             var return_url = '',
                 argsCount = 0;
 
-            if (typeof options.where !== 'undefined') { // where: { 'column_name': 'value' }
+            // where: { name: 'column_name', op: '=', value: 'value' }
+            // where: [{ name: 'column_name', op: '=', value: 'value' }]
+            if (typeof options.where != 'undefined') {
                 if (!argsCount) return_url += '?';
                 if (typeof options.where.length == 'undefined') options.where = [options.where];
                 for (var i = 0; i < options.where.length; i++) {
@@ -34,17 +36,27 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                     return_url += 'where=' + encodeURIComponent(JSON.stringify(where));
                 }
             }
-            if (typeof options.order_by !== 'undefined') { // order_by: [{ 'column_name': 'asc|desc' }]
+            // So many possibilities...
+            // order_by: '-?column_name'
+            // order_by: ['-?column_name']
+            // order_by: { 'column_name': 'asc|desc' }
+            // order_by: [{ 'column_name': 'asc|desc' }]
+            // order_by: { column: 'column_name', direction: 'asc|desc' }
+            // order_by: [{ column: 'column_name', direction: 'asc|desc' }]
+            if (typeof options.order_by != 'undefined') {
                 if (!argsCount) return_url += '?';
                 if (typeof options.order_by.length == 'undefined') options.order_by = [options.order_by];
-                for (var i = 0; i < options.order_by; i++) {
-                    var order_by = options.order_by[i];
+
+                var order_by_array = options.order_by.map(function(o) {
+                    return ((typeof o.direction != 'undefined' && o.direction != 'asc') ? '-' : '') + o.column;
+                });
+
+                if (order_by_array.length) {
                     if (argsCount++) return_url += '&';
-                    return_url += 'order_by=' + (typeof order_by['column'] !== 'undefined' && order_by['direction'] == 'asc') ? '+' : '-';
-                    return_url += encodeURIComponent(order_by['column']);
+                    return_url += 'order_by=' + encodeURIComponent(order_by_array.join(','));
                 }
             }
-            if (typeof options.limit !== 'undefined') { // limit: number
+            if (typeof options.limit != 'undefined') { // limit: number
                 if (!argsCount) return_url += '?';
                 var parsedLimit = parseInt(options.limit);
                 if (!isNaN(parsedLimit)) {
@@ -52,7 +64,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                     return_url += 'limit=' + parsedLimit;
                 }
             }
-            if (typeof options.offset !== 'undefined') { // offset: number
+            if (typeof options.offset != 'undefined') { // offset: number
                 if (!argsCount) return_url += '?';
                 var parsedOffset = parseInt(options.offset);
                 if (!isNaN(parsedOffset)) {
@@ -60,7 +72,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
                     return_url += 'offset=' + parsedOffset;
                 }
             }
-            if (typeof options.args !== 'undefined') { // args: object
+            if (typeof options.args != 'undefined') { // args: object
                 if (!argsCount) return_url += '?';
                 if (argsCount++) return_url += '&';
                 return_url += 'args=' + encodeURIComponent(JSON.stringify(options.args));
