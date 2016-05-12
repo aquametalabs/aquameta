@@ -6,10 +6,8 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
-
     'use strict';
     var AQ = AQ || {};
-
     function Endpoint( url, evented ) {
 
         this.url = url;
@@ -115,6 +113,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
             // Check cache
             if (use_cache && url_with_query in this.cache) {
+                console.log('using cache', url_with_query);
                 return this.cache[url_with_query];
             }
 
@@ -176,6 +175,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
                 }.bind(this));
 
+            // Check cache for GET/POST
             if (use_cache && (method == 'GET' || method == 'POST')) {
                 this.cache[url_with_query] = request;
             }
@@ -191,31 +191,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         };
     }
 
-    /**
-     * for checking object equality for meta id composite types
-     * function id_object_equality(obj1, obj2) {
-     *
-     * @param {(AQ.CompositeType,Object)} obj1
-     * @param {(AQ.CompositeType,Object)} obj2
-     * @returns {Boolean} Whether obj1 equals obj2
-     */
-    AQ.equals = function( obj1, obj2 ) {
-        if (obj1 instanceof AQ.CompositeType && obj2 instanceof AQ.CompositeType) {
-            return obj1.equals(obj2);
-        }
-        else if (obj1 instanceof Object && obj2 instanceof Object) {
-            return _.isEqual.apply(this, arguments);
-        }
-        else {
-            return obj1 === obj2;
-        }
-    }
-
-    /**
-     * ---------------------------------
-     * Database
-     * ---------------------------------
-     */
+    /*--------------------------------- * Database * ---------------------------------*/
     AQ.Database = function( url, settings, ready_callback ) {
         this.url = url;
         this.settings = settings;
@@ -240,67 +216,11 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     AQ.Database.prototype.constructor = AQ.Database;
     AQ.Database.prototype.schema = function( name ) { return new AQ.Schema(this, name); };
 
-    /**
-     * Shortcut method to get a relation from a relation_id
-     * 
-     *  var table = db.relation(relation_id);
-     *
-     *  In lieu of:
-     *
-     *  var table;
-     *  db.schema('meta').view('relation').row('id', row.get('relation_id'))
-     *  .result(function(relation_row) {
-     *      table = schema(relation_row.get('schema_name')).relation(relation_row.get('name'));
-     *  });
-     *
-     * @param {[AQ.RelationID,Object]} relation_id
-     * @returns {AQ.Relation}
-     */
-    AQ.Database.prototype.relation = function( relation_id ) {
-        if (relation_id instanceof AQ.RelationID) {
-
-            // think more about this
-            return new AQ.Schema(relation_id.schema().name()).relation(relation_id.name());
-
-            // wouldn't this be the appropriate way to write this?
-            // return relation_id.schema().relation(relation_id.name());
-        }
-        else {
-            // Ordinary object
-            return new AQ.Schema(relation_id.schema_id.name).relation(relation_id.name);
-        }
-    };
-
-    /*
-     * Shortcut method to get a row from a row_id
-     *
-     * @param {[AQ.RowID,Object]} row_id
-     * @returns {AQ.Row}
-     */
-    AQ.Database.prototype.row = function( row_id ) {
-        if (row_id instanceof AQ.RowID) {
-
-            return new AQ.Schema(row_id.relation().schema().name()).relation(row_id.relation().name()).row(row_id);
-
-            // and this too?
-            return row_id.relation().row(row_id);
-
-        }
-        else {
-            // Ordinary object
-            return new AQ.Schema(row_id.relation_id.schema_id.name).relation(row_id.relation_id.name).row(row_id.pk_column_name, row_id.pk_value);
-        }
-    };
-
-    /**
-     * ---------------------------------
-     * Schema
-     * ---------------------------------
-     */
+    /*--------------------------------- * Schema * ---------------------------------*/
     AQ.Schema = function( database, name ) {
         this.database = database;
         this.name = name;
-        this.id = new AQ.SchemaID(this);
+        this.id = { name: this.name };
     };
     AQ.Schema.prototype.constructor = AQ.Schema;
     AQ.Schema.prototype.relation = function( name )         { return new AQ.Relation(this, name); };
@@ -308,19 +228,22 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
     AQ.Schema.prototype.view = function( name )             { return new AQ.View(this, name); };
     AQ.Schema.prototype.function = function( name, args )   { return new AQ.Function(this, name, args); };
 
-    /**
-     * ---------------------------------
-     * Relation
-     * ---------------------------------
-     */
+    /*--------------------------------- * Relation * ---------------------------------*/
     AQ.Relation = function( schema, name ) {
         this.schema = schema;
         this.name = name;
-        this.id = new AQ.RelationID(this);
+        this.id = { schema_id: this.schema.id, name: this.name };
     };
     AQ.Relation.prototype.constructor = AQ.Relation;
+    AQ.Relation.prototype.to_url = function() { return '/relation/' + this.schema.name + '/' + this.name; };
     AQ.Relation.prototype.rows = function( options ) {
-        return this.schema.database.endpoint.get(this.id, options, options.use_cache)
+        var use_cache = false;
+        if (typeof options != 'undefined') {
+            if (typeof options[use_cache] != 'undefined') {
+                use_cache = options[use_cache] || false;
+            }
+        }
+        return this.schema.database.endpoint.get(this, options, use_cache)
             .then(function(rows) {
 
                 if (rows == null || rows.result.length < 1) {
@@ -334,25 +257,31 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         var args = {};
         var use_cache = false;
 
-        // 2 different ways to call 'row' function
+        // Multiple different ways to call 'row' function
+
         if (arguments.length == 1) {
-            // options object
+            // Calling with Options object
+
             var obj = arguments[0];
 
+            // AQ.Relation.row({ where: { 'column_name': 'value' } })
             if (typeof obj['where'] != 'undefined') {
                 args.where = obj.where;
             }
+            // AQ.Relation.row({ 'column_name': 'value' })
             else {
                 args.where = obj;
             }
 
             if (typeof obj['use_cache'] != 'undefined') {
-                use_cache = obj['use_cache'];
+                use_cache = obj['use_cache'] || false;
             }
 
         }
         else if (arguments.length >= 2) {
-            // column_name and value
+            // Calling with column_name and value
+
+            // AQ.Relation.row('column_name', 'value' [, use_cache])
             var name = arguments[0];
             var value = arguments[1];
             use_cache = arguments[2] || false;
@@ -361,10 +290,11 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
         }
         else {
+            // Calling AQ.Relation.row() without arguments
             throw 'Unsupported call to AQ.Relation.row()';
         }
 
-        return this.schema.database.endpoint.get(this.id, args, use_cache)
+        return this.schema.database.endpoint.get(this, args, use_cache)
             .then(function(row) {
 
                 if (row == null || row.result.length != 1) {
@@ -375,21 +305,17 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
             }.bind(this));
     };
 
-    /**
-     * ---------------------------------
-     * Table
-     * ---------------------------------
-     */
+    /*--------------------------------- * Table * ---------------------------------*/
     AQ.Table = function( schema, name ) {
         this.schema = schema;
         this.name = name;
-        this.id = new AQ.RelationID(this);
+        this.id = { schema_id: this.schema.id, name: this.name };
     };
     AQ.Table.prototype = Object.create(AQ.Relation.prototype);
     AQ.Table.prototype.constructor = AQ.Table;
     AQ.Table.prototype.insert = function( data ) {
 
-        var insert_promise = this.schema.database.endpoint.patch(this.id, data);
+        var insert_promise = this.schema.database.endpoint.patch(this, data);
 
         // Return inserted row promise
         return insert_promise.then(function(inserted_row) {
@@ -406,37 +332,27 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
     };
 
-    /**
-     * ---------------------------------
-     * View
-     * ---------------------------------
-     */
+    /*--------------------------------- * View * ---------------------------------*/
     AQ.View = function( schema, name ) {
         this.schema = schema;
         this.name = name;
-        this.id = new AQ.RelationID(this);
+        this.id = { schema_id: this.schema.id, name: this.name };
     };
     AQ.View.prototype = Object.create(AQ.Relation.prototype);
     AQ.View.prototype.constructor = AQ.View;
 
-    /**
-     * ---------------------------------
-     * Rowset
-     * ---------------------------------
-     */
+    /*--------------------------------- * Rowset * ---------------------------------*/
     AQ.Rowset = function( relation, response ) {
         this.relation = relation;
         this.columns = response.columns;
         this.rows = response.result;
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
-
     AQ.Rowset.prototype.map = function(fn) {
         return this.rows.map(function(row) {
             return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
         }.bind(this)).map(fn);
     };
-
     AQ.Rowset.prototype.forEach = function(fn) {
         return this.rows.map(function(row) {
             return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
@@ -507,7 +423,7 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
             // maybe we don't need to search the entire row and instead we return the first item found
             var new_rowset = _.filter(this.rows, function(el) {
-                return AQ.equals.call(this, el[field], val);
+                //return AQ.equals.call(this, el[field], val);
             });
             if (new_rowset.length == 1) {
                 return new AQ.Row(this.relation, new_rowset);
@@ -522,7 +438,6 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         }.bind(this));
 
     };
-
     AQ.Rowset.prototype.order_by = function( column, direction ) {
         var ordered = _.sortBy(this.rows, function(el) {
             return el.row[column];
@@ -532,14 +447,12 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         }
         return new AQ.Rowset(this.relation, { columns: this.columns, result: ordered });
     };
-
     AQ.Rowset.prototype.limit = function( lim ) {
         if (lim <= 0) {
             throw 'Bad limit';
         }
         return new AQ.Rowset(this.relation, { columns: this.columns, result: this.rows.slice(0, lim) });
     };
-        
     AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
 
         var relation_parts = related_relation_name.split('.');
@@ -568,7 +481,6 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
-
     AQ.Rowset.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
 
         var relation_parts = related_relation_name.split('.');
@@ -599,19 +511,16 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
     };
 
-    /**
-     * ---------------------------------
-     * Row
-     * ---------------------------------
-     */
+    /*--------------------------------- * Row * ---------------------------------*/
     AQ.Row = function( relation, response ) {
         this.relation = relation;
         this.row_data = response.result[0].row;
         this.columns = response.columns;
-        this.id = new AQ.RowID(this);
         this.pk_value = this.row_data.id; // TODO hardcoded
-        this.pk_column_name = null; // TODO this too
-        this.pk = function() { return; }; // ?
+        this.pk_column_name = 'id'; // TODO this too
+        //this.pk = function() { return; }; // ?
+        this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
+        this.to_url = function() { return '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
     };
     AQ.Row.prototype = {
         constructor: AQ.Row,
@@ -620,9 +529,8 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         to_string: function()           { return JSON.stringify(this.row_data); },
         field: function( name )         { return new AQ.Field(this, name); }
     };
-
     AQ.Row.prototype.update = function() {
-        return this.relation.schema.database.endpoint.patch(this.id, this.row_data)
+        return this.relation.schema.database.endpoint.patch(this, this.row_data)
             .then(function(response) {
 
                 if(response == null) {
@@ -632,9 +540,8 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
             }.bind(this));
     };
-
     AQ.Row.prototype.delete = function() { 
-        return this.relation.schema.database.endpoint.delete(this.id)
+        return this.relation.schema.database.endpoint.delete(this)
             .then(function(response) {
 
                 if(response == null) {
@@ -644,7 +551,6 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
             });
     };
-
     AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
 
         var relation_parts = related_relation_name.split('.');
@@ -668,7 +574,6 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
-
     AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
 
         var relation_parts = related_relation_name.split('.');
@@ -691,70 +596,56 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
         return db.schema(schema_name).relation(relation_name).row(options);
     };
 
-    /**
-     * ---------------------------------
-     * Column
-     * ---------------------------------
-     */
+    /*--------------------------------- * Column * ---------------------------------*/
     AQ.Column = function( relation, name ) {
         this.relation = relation;
         this.name = name;
-        this.id = new AQ.ColumnID(this);
+        this.id = { relation_id: relation.id, name: name };
     };
     AQ.Column.prototype.constructor = AQ.Column;
 
-    /**
-     * ---------------------------------
-     * Field
-     * ---------------------------------
-     */
+    /*--------------------------------- * Field * ---------------------------------*/
+
     AQ.Field = function( row, name ) {
         this.row = row;
         this.column = new AQ.Column(row.relation, name);
         this.name = name;
         this.value = row.get(name);
-        this.id = new AQ.FieldID(this);
+        this.id = { row_id: this.row.id, column_id: this.column.id };
+        this.to_url = function() { return '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
     };
     AQ.Field.prototype = {
         constructor: AQ.Field,
         update: function()       { return this.row.update(); }
     };
 
-    /**
-     * ---------------------------------
-     * Function
-     * ---------------------------------
-     */
+    /*--------------------------------- * Function * ---------------------------------*/
     AQ.Function = function( schema, name, args ) {
         this.schema = schema;
         this.name = name;
-
         if(args instanceof Array) {
             this.args = '{' + args.join(',') + '}';
         }
         else {
             this.args = args;
         }
-
-        this.id = new AQ.FunctionID(this);
-
+        this.id = { schema_id: this.schema.id, name: this.name, args: this.args };
+        this.to_url = function() { return '/function/' + this.schema.name + '/' + this.name + '/' + this.args; };
     };
     AQ.Function.prototype.constructor = AQ.Function;
     AQ.Function.prototype.call = function(fn_args) {
-
-/*
-some_function?args={ vals: [] } -- Array
-some_function?args={ kwargs: {} } -- Key/value object
-some_function?args={ kwargs: {} }&column=name
-*/
-
+        /*
+        some_function?args={ vals: [] } -- Array
+        some_function?args={ kwargs: {} } -- Key/value object
+        some_function?args={ kwargs: {} }&column=name
+        */
         var options_obj = { args: {} };
 
         if (fn_args instanceof Array) {
             options_obj.args.vals = fn_args;
         }
 
-        return this.schema.database.endpoint.get(this.id, options_obj)
+        return this.schema.database.endpoint.get(this, options_obj)
             .then(function(response) {
 
                 if(response == null) {
@@ -764,142 +655,6 @@ some_function?args={ kwargs: {} }&column=name
 
             });
     };
-
-    /**
-     * ---------------------------------
-     * CompositeType Base
-     * ---------------------------------
-     */
-    AQ.CompositeType = function( obj ) {
-        this.json = obj;
-    };
-    AQ.CompositeType.prototype = {
-        constructor: AQ.CompositeType,
-        isCompositeType: function()     { return true; },
-        to_json: function()             { return this.json; },
-        to_string: function()           { return JSON.stringify(this.json); },
-    };
-        /* Could do some multi dimension thing? Not sure if this means anything
-        get: function(key)              { return this.json[key]; },
-        set: function(key, value)       { return this.json[key] = value; },
-        */
-
-    /**
-     * ---------------------------------
-     * SchemaID
-     * ---------------------------------
-     */
-    AQ.SchemaID = function( schema ) {
-        this.schema = schema;
-        this.json = { name: schema.name };
-    };
-    AQ.SchemaID.prototype = Object.create(AQ.CompositeType.prototype);
-    AQ.SchemaID.prototype.constructor = AQ.SchemaID;
-    AQ.SchemaID.prototype.equals = function (that) {
-        return ( that instanceof AQ.Schema || that instanceof AQ.SchemaID ) ?
-            this.name === that.name :
-            _.isEqual(this, that);
-    };
-
-    /**
-     * ---------------------------------
-     * RelationID
-     * ---------------------------------
-     */
-    AQ.RelationID = function( relation ) {
-        this.relation = relation;
-        this.json = { schema_id: this.relation.schema.id.to_json(), name: this.relation.name };
-    };
-    AQ.RelationID.prototype = Object.create(AQ.CompositeType.prototype);
-    AQ.RelationID.prototype.constructor = AQ.RelationID;
-    AQ.RelationID.prototype.to_url = function() {
-        return '/relation/' + this.relation.schema.name + '/' + this.relation.name;
-    };
-    AQ.RelationID.prototype.equals = function (that) {
-        return ( that instanceof AQ.Relation || that instanceof AQ.RelationID ) ?
-            ( this.schema_id.equals(that.schema.id) && this.name === that.name ) :
-            _.isEqual(this, that);
-    };
-
-    /**
-     * ---------------------------------
-     * RowID
-     * ---------------------------------
-     */
-    AQ.RowID = function( row ) {
-        this.row = row;
-        this.json = { relation_id: row.relation.id.json, pk_column_name: row.pk_column_name, pk_value: row.pk_value }; 
-    };
-    AQ.RowID.prototype = Object.create(AQ.CompositeType.prototype);
-    AQ.RowID.prototype.constructor = AQ.RowID;
-    AQ.RowID.prototype.to_url = function() {
-        return '/row/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value;
-    };
-    AQ.RowID.prototype.equals = function (that) {
-        return ( that instanceof AQ.Row || that instanceof AQ.RowID ) ?
-            ( this.row.relation.id.equals(that.relation.id) && this.row.pk_column_name === that.pk_column_name && this.row.pk_value === that.pk_value ) :
-            _.isEqual(this, that);
-    };
-
-    /**
-     * ---------------------------------
-     * ColumnID
-     * ---------------------------------
-     */
-    AQ.ColumnID = function( column ) {
-        this.column = column;
-        this.json = { relation_id: column.relation.id.json, name: column.name };
-    };
-    AQ.ColumnID.prototype = Object.create(AQ.CompositeType.prototype);
-    AQ.ColumnID.prototype.constructor = AQ.ColumnID;
-    AQ.ColumnID.prototype.equals = function (that) {
-        return ( that instanceof AQ.Column || that instanceof AQ.ColumnID ) ?
-            ( this.relation_id.equals(that.relation.id) && this.name === that.name ) :
-            _.isEqual(this, that);
-    };
-
-    /**
-     * ---------------------------------
-     * FieldID
-     * ---------------------------------
-     */
-    AQ.FieldID = function( field ) {
-        this.field = field;
-        this.json = { row_id: field.row.id.json, column_id: field.column.id.json };
-    };
-    AQ.FieldID.prototype = Object.create(AQ.CompositeType.prototype);
-    AQ.FieldID.prototype.constuctor = AQ.FieldID;
-    AQ.FieldID.prototype.to_url = function() {
-        return '/field/' + this.field.row.relation.schema.name + '/' + this.field.row.relation.name + '/' + this.field.row.pk_value + '/' + this.field.column.name;
-    };
-    AQ.FieldID.prototype.equals = function (that) {
-        return ( that instanceof AQ.Field || that instanceof AQ.FieldID ) ?
-            ( this.field.row.id.equals(that.row.id) && this.name === that.name ) :
-            _.isEqual(this, that);
-    };
-
-    /**
-     * ---------------------------------
-     * FunctionID
-     * ---------------------------------
-     */
-    AQ.FunctionID = function( fn ) {
-        this.fn = fn;
-        this.json = { schema_id: fn.schema.id.json, name: fn.name, args: fn.args };
-    };
-    AQ.FunctionID.prototype = Object.create(AQ.CompositeType.prototype);
-    AQ.FunctionID.prototype.constructor = AQ.FunctionID;
-    AQ.FunctionID.prototype.to_url = function() {
-        return '/function/' + this.fn.schema.name + '/' + this.fn.name + '/' + this.fn.args;
-    };
-    AQ.FunctionID.prototype.equals = function (that) {
-        return ( that instanceof AQ.Function || that instanceof AQ.FunctionID ) ?
-            // TODO: the rest of function id comparison logic
-            ( this.schema_id.equals(that.schema.id) && false ) :
-            _.isEqual(this, that);
-    };
-
     window.AQ = AQ;
     return AQ;
-
 });
