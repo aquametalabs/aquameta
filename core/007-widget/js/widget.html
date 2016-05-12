@@ -10,10 +10,14 @@
     System.import('/widget.js').then(function() {
 
         var db = new AQ.Database('/endpoint/new', { evented: 'no' });
-        AQ.Widget.import('', '', db);
-        $('body').append(widget('development', {
+        console.log(db);
+        AQ.Widget.import('com.aquameta.core.ide', 'core', db);
+        AQ.Widget.import('com.aquameta.core.ide', '', db);
+        $('body').append(widget('core:development', {
             endpoint: db
         }));
+    }).catch(function(e) {
+        console.error(e);
     });
 
     </script>

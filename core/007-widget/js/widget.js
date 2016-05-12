@@ -152,8 +152,20 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
 
     AQ.Widget.import = function( bundle_name, namespace, endpoint ) {
 
-        // TODO: This will have to be a sweet lookup of widget through bundle and head_db_stage
-        namespaces[namespace] = endpoint.schema('widget').table('widget');
+        namespaces[namespace] = {
+            endpoint: endpoint,
+            bundle_name: bundle_name
+        };
+        /*
+        endpoint.schema('widget').view('bundled_widget').rows({
+            where: {
+                name: 'bundle_name',
+                op: '=',
+                value: bundle_name
+            }
+        });
+        */
+        //namespaces[namespace] = endpoint.schema('widget').table('widget');
 
     };
 
@@ -161,11 +173,24 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
 
     function retrieve( namespace, name ) {
 
+        // Namespace not found
+        if (!(namespace in namespaces)) {
+            console.error("Widget namespace has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace");
+            throw "Widget namespace has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace";
+        }
+
         // Get the widget
-        return namespaces[namespace].row({ where: { name: 'name', op: '=', value: name }, use_cache: true })
-            .then(function(row) {
+        //return namespaces[namespace].row({ where: { name: 'name', op: '=', value: name }, use_cache: true })
+        return namespaces[namespace].endpoint.schema('widget').view('bundled_widget').row({
+            where: [
+                { name: 'bundle_name', op: '=', value: namespaces[namespace].bundle_name },
+                { name: 'name', op: '=', value: name }
+            ],
+            use_cache: true
+        }).then(function(row) {
 
                 if(!row) {
+                    console.error('Widget does not exist, ' + namespace + ':' + name);
                     throw 'Widget does not exist';
                 }
 
@@ -203,10 +228,10 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                             return Promise.all(
 
                                 deps.map(function(dep) {
-                                    return System.import(base_url + dep.field('content').id.to_url()).then(function(dep_module) {
+                                    return System.import(base_url + dep.field('content').to_url()).then(function(dep_module) {
                                         //console.log('my module', dep_module);
                                         return {
-                                            url: base_url + dep.field('content').id.to_url(),
+                                            url: base_url + dep.field('content').to_url(),
                                             name: dep.get('variable') || 'non_amd_module',
                                             /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
                                             value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
@@ -255,8 +280,11 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
 
                             }
                             catch (e) {
+                                error(e, context.name, "Widget default eval failure: " + default_code);
+                                /*
                                 console.error("Widget default eval failure", default_code);
                                 throw e;
+                                */
                             }
 
                         }

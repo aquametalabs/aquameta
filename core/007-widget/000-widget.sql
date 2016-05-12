@@ -27,6 +27,14 @@ create table widget (
 );
 
 
+create view widget.bundled_widget as
+select b.name as bundle_name, hds.commit_id, w.*
+from bundle.bundle b
+    join bundle.head_db_stage hds on hds.bundle_id = b.id
+    join widget.widget w on w.id = (hds.row_id).pk_value::uuid
+where hds.row_id::meta.relation_id = meta.relation_id('widget', 'widget');
+
+
 
 /*******************************************************************************
 * TABLE dependency_css
