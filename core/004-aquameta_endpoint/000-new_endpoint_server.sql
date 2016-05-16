@@ -95,6 +95,60 @@ create table "resource" (
 );
 
 
+create function endpoint.is_indexed(_path text) returns boolean as $$
+begin
+    return true;
+    /*
+    select *
+    from (
+        select path, parent_id, 'directory' as type
+        from filesystem.directory
+        where id=_path
+    
+        union
+    
+        select path, directory_id as parent_id, 'file' as type
+        from filesystem.file
+        where id=_path;
+    ) a;
+    
+    
+    with recursive t as (
+    
+        select indexes, path
+        from endpoint.resource_directory
+        where path = _path
+    
+        union all
+    
+        select t.indexes, d.parent_id as path from t
+            join filesystem.directory d on d.path = t.path
+    
+    )
+    select indexes from t;
+   */ 
+    
+    /*
+    
+    select indexes from endpoint.resource_directory where directory_id=_path;
+    
+    if indexes then
+        return true;
+    else
+        select indexes from endpoint.resource_directory where directory_id=(select parent_id from filesystem.directory where path=_path);
+    end if;
+    
+    */
+
+
+/*
+we start with a single url
+
+*/
+end;
+$$ language plpgsql;
+
+
 /******************************************************************************
  *
  *
