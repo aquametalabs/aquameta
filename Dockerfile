@@ -68,7 +68,7 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.con
 #################### docker container ###############################
 # finally, setup our container
 USER root
-EXPOSE 80 8080 5432
+EXPOSE 80 5432
 # VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 ENTRYPOINT ["/usr/bin/supervisord"]
 
