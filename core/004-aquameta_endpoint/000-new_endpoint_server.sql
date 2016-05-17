@@ -1607,6 +1607,7 @@ as $$
 
         -- 4. send email?
         -- TODO: call email function or insert into queued emails
+        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
 
         return;
     end
@@ -1667,6 +1668,27 @@ $$;
  * endpoint.email
  ******************************************************************************/
 
+create function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
+
+# Import smtplib for the actual sending function
+
+import smtplib
+from email.mime.text import MIMEText
+
+# -- Create the container (outer) email message.
+msg = MIMEText(body)
+msg['Subject'] = subject
+msg['From'] = from_email
+msg['To'] = ', '.join(to_email)
+
+# -- Send the email via our own SMTP server.
+s = smtplib.SMTP("localhost")
+s.sendmail(from_email, to_email, msg.as_string())
+s.quit()
+
+$$ language plpythonu;
+
+/*
 create table endpoint.email (
     id serial primary key,
     recipient_email text,
@@ -1674,7 +1696,6 @@ create table endpoint.email (
     body text
 );
 
-/*
 create function endpoint.email_insert () returns trigger
 as $$
 
