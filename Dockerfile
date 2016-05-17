@@ -5,7 +5,7 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #   docker build -t aquametalabs/aquameta .
 #
 # to run:
-#   docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta -v $PWD:/s/aquameta
+#   docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
 #                      ^uwsgi   ^postgres   ^fuse
 #
 # access PostgreSQL (password 'postgres') with:
@@ -18,24 +18,27 @@ ENV REFRESHED_AT 2015-11-10
 RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx supervisor python-setuptools
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.5 postgresql-plpython-9.5 postgresql-server-dev-9.5 pgxnclient fuse libfuse-dev
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.5 postgresql-plpython-9.5 postgresql-server-dev-9.5 pgxnclient fuse libfuse-dev sendmail
 RUN pgxn install multicorn pgtap
 RUN pip install requests sphinx sphinx-autobuild fusepy
 RUN locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
 
 
 # cp the repo to /s
-#RUN mkdir -p /s/aquameta
-#ADD . /s/aquameta/
+RUN mkdir -p /s/aquameta
+ADD . /s/aquameta/
 
 
+# FQDN for sendmail
+RUN echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts && \
+	service sendmail restart
 
 
 
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
 WORKDIR /etc/nginx/sites-available
-RUN cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf . && \
+RUN cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf .
 
 WORKDIR /etc/nginx/sites-enabled
 RUN rm ./default && \
