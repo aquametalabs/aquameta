@@ -5,7 +5,7 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #   docker build -t aquametalabs/aquameta .
 #
 # to run:
-#   docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
+#   docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta -v $PWD:/s/aquameta
 #                      ^uwsgi   ^postgres   ^fuse
 #
 # access PostgreSQL (password 'postgres') with:
@@ -25,8 +25,8 @@ RUN locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
 
 
 # cp the repo to /s
-RUN mkdir -p /s/aquameta
-ADD . /s/aquameta/
+#RUN mkdir -p /s/aquameta
+#ADD . /s/aquameta/
 
 
 
@@ -34,15 +34,18 @@ ADD . /s/aquameta/
 
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
-RUN cd /etc/nginx/sites-available && \
-        cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf . && \
-        cd ../sites-enabled && \
-        rm ./default && \
+WORKDIR /etc/nginx/sites-available
+RUN cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf . && \
+
+WORKDIR /etc/nginx/sites-enabled
+RUN rm ./default && \
         ln -s ../sites-available/aquameta_endpoint.conf
 
 
 # build the aquameta db python egg
-RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi && pip install .
+WORKDIR /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi
+RUN pip install .
+
 
 ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
@@ -51,11 +54,11 @@ RUN mkdir /mnt/aquameta
 
 #################### build aquameta ###############################
 USER postgres
+WORKDIR /s/aquameta
 RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.conf && \
 	sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/9.5/main/pg_hba.conf && \
 	echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
 	/etc/init.d/postgresql start && \
-	cd /s/aquameta && \
 	./build.sh && \
 	psql -c "alter role postgres password 'postgres'" aquameta && \
 	/etc/init.d/postgresql stop
