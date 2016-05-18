@@ -1449,7 +1449,7 @@ create or replace function endpoint.user_insert() returns trigger as $$
         end if;
     
         -- Create a new role
-        insert into meta.role(name) values((NEW.role_id).name);
+        insert into meta.role(name, inherit) values((NEW.role_id).name, true);
     
         return NEW;
     end;
@@ -1550,11 +1550,14 @@ create function endpoint.register (_email text, _password text) returns void
 as $$
 
     declare
+	_user_row record;
         _role_id meta.role_id;
 
     begin
         -- Create user
-        insert into endpoint.user (email, active) values (_email, false) returning (role_id).name into _role_id;
+        insert into endpoint.user (email, active) values (_email, false) returning * into _user_row;
+
+	select (_user_row.role_id).name into _role_id;
 
         -- Set role password
         update meta.role set password = _password where id = _role_id;
@@ -1563,7 +1566,7 @@ as $$
         insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
         -- Send email to {email}
-        -- TODO: call email function or insert into queued emails
+        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
 
         return;
 
@@ -1606,8 +1609,7 @@ as $$
 
 
         -- 4. send email?
-        -- TODO: call email function or insert into queued emails
-        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
+        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Account created successfully!', 'You have successfully created your account');
 
         return;
     end
