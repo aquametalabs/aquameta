@@ -1566,7 +1566,7 @@ create function meta.stmt_policy_role_create(schema_name text, relation_name tex
 						where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
 					),
 				'-'), -- Remove public from list of roles
-			role_name),
+			quote_ident(role_name)),
 		 ', '));
 $$ language sql;
 
