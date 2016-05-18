@@ -41,8 +41,13 @@ grant execute on function endpoint.login(text, text) to anonymous;
 grant execute on function endpoint.register(text, text) to anonymous;
 grant execute on function endpoint.register_confirm(text, text) to anonymous;
 
+-- widget.dependency_js
+grant select on widget.dependency_js to anonymous;
+
 -- meta
 grant select on meta.function to anonymous;
+
+
 
 
 -- Generic user permissions

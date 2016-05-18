@@ -70,7 +70,7 @@ USER root
 WORKDIR /s/aquameta/core/002-filesystem/fs_fdw
 RUN pip install . --upgrade && \
 	/etc/init.d/postgresql start && \
-	cat fs_fdw.sql | psql -a -U postgres aquameta 2>&1 | grep -B 2 -A 10 ERROR: && \
+	cat fs_fdw.sql | psql -a -U postgres aquameta 2>&1 && \
 	/etc/init.d/postgresql stop
 
 
