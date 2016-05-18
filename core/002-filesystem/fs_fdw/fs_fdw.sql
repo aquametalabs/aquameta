@@ -1,4 +1,13 @@
+/******************************************************************************
+ * Filesystem Foreign Data Wrapper
+ * 
+ * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
+ * Company: http://aquameta.com/
+ * Project: http://blog.aquameta.com/
+ ******************************************************************************/
 begin;
+
+create extension if not exists multicorn;
 
 set search_path=filesystem;
 

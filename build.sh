@@ -18,4 +18,7 @@ cat core/0*/semantics.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 echo "Loading default permissions ..."
 cat core/004-aquameta_endpoint/default_permissions.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
+echo "Loading mimetypes ..."
+cat core/004-aquameta_endpoint/mimetypes.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+
 exit 0

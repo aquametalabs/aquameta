@@ -19,7 +19,8 @@ RUN apt-get update -y && apt-get install -y wget ca-certificates lsb-release git
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y postgresql-9.5 postgresql-plpython-9.5 postgresql-server-dev-9.5 pgxnclient fuse libfuse-dev sendmail
-RUN pgxn install multicorn pgtap
+RUN pgxn install multicorn
+RUN pgxn install pgtap
 RUN pip install requests sphinx sphinx-autobuild fusepy
 RUN locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
 
@@ -30,8 +31,7 @@ ADD . /s/aquameta/
 
 
 # FQDN for sendmail
-RUN echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts && \
-	service sendmail restart
+RUN echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 
 
@@ -63,7 +63,14 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.con
 	echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
 	/etc/init.d/postgresql start && \
 	./build.sh && \
-	psql -c "alter role postgres password 'postgres'" aquameta && \
+	psql -c "alter role postgres password 'postgres'" aquameta
+
+# Install FS FDW
+USER root
+WORKDIR /s/aquameta/core/002-filesystem/fs_fdw
+RUN pip install . --upgrade && \
+	/etc/init.d/postgresql start && \
+	cat fs_fdw.sql | psql -a -U postgres aquameta 2>&1 | grep -B 2 -A 10 ERROR: && \
 	/etc/init.d/postgresql stop
 
 
@@ -71,6 +78,7 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.con
 #################### docker container ###############################
 # finally, setup our container
 USER root
+WORKDIR /s/aquameta
 EXPOSE 80 5432
 # VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 ENTRYPOINT ["/usr/bin/supervisord"]
