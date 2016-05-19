@@ -37,8 +37,7 @@ values 	('endpoint', 'mimetype', 'anonymous', 'select'), -- endpoint.mimetype
 	('endpoint', 'session', 'anonymous', 'select'), -- endpoint.session
 	('endpoint', 'resource', 'anonymous', 'select'), -- endpoint.resource
 	('widget', 'dependency_js', 'anonymous', 'select'), -- widget.dependency_js
-	('meta', 'function', 'anonymous', 'select') -- meta.function
-);
+	('meta', 'function', 'anonymous', 'select'); -- meta.function
 
 
 -- function privileges
