@@ -43,6 +43,7 @@ insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_e
 insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/underscore.min.js', '/underscore.min.js');
 insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/datum.html', '/datum.html');
 insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/socket.html', '/socket.html');
+insert into resource_file(file_id, url) values ('/s/aquameta/core/004-aquameta_endpoint/js/system.js', '/system.js');
 insert into resource_file(file_id, url) values ('/s/aquameta/Dockerfile', '/Dockerfile');
 insert into resource_directory(directory_id, indexes) values ('/s/aquameta/core/004-aquameta_endpoint/js', false);
 insert into resource_directory(directory_id, indexes) values ('/s/aquameta/core', true);
