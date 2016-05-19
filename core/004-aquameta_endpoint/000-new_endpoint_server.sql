@@ -1514,8 +1514,6 @@ create role "user" nologin;
 
 
 -- Guest role
--- To find default permissions further up the stack
--- `cd aquameta/core && grep -R default_permissions`
 create role anonymous login;
 
 
@@ -1667,13 +1665,24 @@ $$;
 
 
 /******************************************************************************
+ * endpoint.logout
+ ******************************************************************************/
+
+create function endpoint.superuser (_email text) returns void
+    language sql strict security invoker
+as $$
+    insert into meta.role_inheritance (role_name, member_role_name) values ('aquameta', (select (role_id).name from endpoint."user" where email=_email));
+    update meta.role set superuser=true where name=(select (role_id).name from endpoint."user" where email=_email);
+$$;
+
+
+/******************************************************************************
  * endpoint.email
  ******************************************************************************/
 
 create function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
 
-# Import smtplib for the actual sending function
-
+# -- Import smtplib for the actual sending function
 import smtplib
 from email.mime.text import MIMEText
 
@@ -1690,32 +1699,6 @@ s.quit()
 
 $$ language plpythonu;
 
-/*
-create table endpoint.email (
-    id serial primary key,
-    recipient_email text,
-    sender_email text,
-    body text
-);
-
-create function endpoint.email_insert () returns trigger
-as $$
-
-	--perform endpoint.email_send(NEW.to, NEW.from, NEW.subject, NEW.body);
-	--return NEW;
-
-$$
-language plpgsql;
-
-
-create trigger endpoint_email_insert_trigger after insert on endpoint.email for each row execute procedure endpoint.email_insert();
-
-
-create function endpoint.email_send (to text, from text, subject text, body text) returns void
-as $$
-$$
-language plpython;
-*/
 
 
 commit;
