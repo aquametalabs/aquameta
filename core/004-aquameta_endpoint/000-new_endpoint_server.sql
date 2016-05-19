@@ -232,7 +232,7 @@ create function pk_name(
           c.relation_name = _relation_name and
           c.primary_key
 $$
-language sql;
+language sql security definer;
 
 
 /*******************************************************************************
