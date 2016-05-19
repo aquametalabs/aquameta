@@ -5,7 +5,7 @@
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
-define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
+define(['/jQuery.min.js', '/underscore.min.js'], function($, undefined) {
     'use strict';
     var AQ = AQ || {};
     function Endpoint( url, evented ) {
@@ -422,9 +422,11 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
             // 2
 
             // maybe we don't need to search the entire row and instead we return the first item found
+/*
             var new_rowset = _.filter(this.rows, function(el) {
                 //return AQ.equals.call(this, el[field], val);
             });
+*/
             if (new_rowset.length == 1) {
                 return new AQ.Row(this.relation, new_rowset);
             }
@@ -439,9 +441,11 @@ define(['/jQuery.min.js', '/underscore.min.js'], function($, _, undefined) {
 
     };
     AQ.Rowset.prototype.order_by = function( column, direction ) {
+/*
         var ordered = _.sortBy(this.rows, function(el) {
             return el.row[column];
         });
+*/
         if (direction !== 'asc') {
             ordered.reverse();
         }
