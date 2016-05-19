@@ -5,7 +5,7 @@
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
-define(['/jQuery.min.js', '/underscore.min.js'], function($, undefined) {
+define(['/jQuery.min.js'], function($, undefined) {
     'use strict';
     var AQ = AQ || {};
     function Endpoint( url, evented ) {
