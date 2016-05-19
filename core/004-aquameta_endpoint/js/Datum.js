@@ -119,7 +119,8 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // If this connection is evented, get event session_id
             if (this.evented && typeof args['session_id'] == 'undefined') {
-                args['session_id'] = document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+                //args['session_id'] = document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+		// TODO: Some confusion here. This is the auth session cookie
             }
 
             // Send websocket method if this connection uses websocket
@@ -144,7 +145,8 @@ define(['/jQuery.min.js'], function($, undefined) {
             // Settings object to send with 'fetch' method
             var init_obj = {
                 method: method,
-                headers: headers
+                headers: headers,
+                credentials: 'same-origin'
             };
 
             // Don't add data on GET requests
