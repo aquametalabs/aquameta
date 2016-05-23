@@ -113,7 +113,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // Check cache
             if (use_cache && url_with_query in this.cache) {
-                console.log('using cache', url_with_query);
+                //console.log('using cache', url_with_query);
                 return this.cache[url_with_query];
             }
 

@@ -309,6 +309,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             return {
                 html: rendered_widget,
                 widget_id: context.id,
+                widget_name: context.name,
                 post_js: post_js_function,
                 callback: callback
             };
@@ -419,7 +420,12 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             $element.replaceWith(rendered_widget.html);
 
             // Run post_js - or this may have to be done with a script tag appended to the widget
-            rendered_widget.post_js();
+            try {
+                rendered_widget.post_js();
+            }
+            catch(e) {
+                error(e, rendered_widget.widget_name, 'Running post_js function');
+            }
 
             var w = $('#' + rendered_widget.widget_id);
 
