@@ -994,8 +994,6 @@ create function endpoint.rows_select_function(
     begin
         -- TODO: mimetype based on return type id?
         mimetype := 'application/json';
-        args := (args->>'args')::json;
-
 
         -- Get function row
         select *
@@ -1040,8 +1038,19 @@ create function endpoint.rows_select_function(
         end if;
 
 
+        -- Suffix clause: where, order by, offest, limit
+        select endpoint.suffix_clause(args) into suffix;
+
+
+        select json_array_elements_text::json
+        from json_array_elements_text(args->'args') into args;
+
+        raise warning 'args = %', args::json;
+
         -- Function Arguments
         if args->'kwargs' is not null then
+
+            raise warning 'kwargs = %', args->'kwargs';
 
             -- Build function arguments string
             -- Cast to type_name found in meta.function_parameter
@@ -1057,6 +1066,8 @@ create function endpoint.rows_select_function(
 
         elsif args->'vals' is not null then
 
+            raise warning 'vals = %', args->'vals';
+
             -- Transpose JSON array to comma-separated string
             select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
 
@@ -1066,10 +1077,6 @@ create function endpoint.rows_select_function(
             -- TODO: what's necessary here?
 
         end if;
-
-
-        -- Suffix clause: where, order by, offest, limit
-        select endpoint.suffix_clause(args) into suffix;
 
 
         -- Column
@@ -1082,7 +1089,6 @@ create function endpoint.rows_select_function(
         loop
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
         end loop;
-
 
         -- Result JSON object
         select '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
