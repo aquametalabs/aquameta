@@ -1189,23 +1189,27 @@ create function endpoint.row_delete(
 ) returns json as $$
 
     declare
-        schema_name text;
-        table_name text;
+        _schema_name text;
+        _table_name text;
         pk text;
 
     begin
-        select (row_id::meta.schema_id).name into schema_name;
-        select (row_id::meta.relation_id).name into table_name;
+        select (row_id::meta.schema_id).name into _schema_name;
+        select (row_id::meta.relation_id).name into _table_name;
         select row_id.pk_value::text into pk;
 
-        execute 'delete from ' || quote_ident(schema_name) || '.' || quote_ident(table_name) ||
+        execute 'delete from ' || quote_ident(_schema_name) || '.' || quote_ident(_table_name) ||
                 ' where ' || (
-                    select quote_ident(pk_name) || ' = ' || quote_literal(pk) || '::' || pk_type
-                    from endpoint.pk(schema_name, table_name) p
+                    select quote_ident(c.name) || ' = ' || quote_literal(pk) || '::' || c.type_name
+                    from meta.column c
+                    where schema_name = _schema_name
+                       and relation_name = _table_name
+                       and name = (row_id).pk_column_id.name
                 );
 
         return '{}';
     end;
+
 $$
 language plpgsql;
 
