@@ -36,7 +36,13 @@
 
 
 // Row
+            // No arguments
             /*
+            db.schema('endpoint').relation('session').row()
+            .then(function(r) {
+                console.log('select row: no args', r);
+            });
+
             // Key and value
             db.schema('meta').relation('relation').row('name', 'resource_file')
             .then(function(r) {
@@ -99,6 +105,7 @@
             });
             */
 
+
 // Update row
             /*
             db.schema('widget').table('widget').insert({ name: 'hello' + Math.floor(Math.random()*100 + 1) })
@@ -144,19 +151,33 @@
                 console.log(result);
             });
 
-            // Function with array
+// Function with multiple arguments
+            // Function with array args selector and array arguments
             db.schema('meta').function('relation_id', ['text', 'text']).call(['meta', 'relation'])
             .then(function(result) {
                 console.log(result);
             });
 
-            // Function with array
+            // Function with string args selector and array arguments
             db.schema('meta').function('relation_id', '{text, text}').call(['meta', 'relation'])
+            .then(function(result) {
+                console.log(result);
+            });
+
+            // Function with key/value pair arguments
+            db.schema('meta').function('relation_id', '{text, text}').call({
+               schema_name: 'meta',
+               name: 'relation'
+            })
             .then(function(result) {
                 console.log(result);
             });
             */
 
+
+// --------------------
+// Not yet tested below
+// --------------------
 
 // Select with composite type
 // Insert composite type
@@ -172,19 +193,6 @@
 // Row select that is upgraded to POST
 // Rows select that is upgraded to POST
 
-// Function with multiple arguments
-            /*
-            db.schema('meta').function('relation_id', '{text, text}').call('meta', 'relation')
-            .then(function(result) {
-                console.log(result);
-            });
-
-            // Function with key/value pairs
-            db.schema('meta').function('relation_id', '{text, text}').call('meta', 'relation')
-            .then(function(result) {
-                console.log(result);
-            });
-            */
 
         });
         </script>

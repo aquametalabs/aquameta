@@ -649,16 +649,64 @@ define(['/jQuery.min.js'], function($, undefined) {
             options_obj.args.vals = fn_args;
         }
 
+        else if (typeof fn_args == 'object') {
+            options_obj.args.kwargs = fn_args;
+        }
+
         return this.schema.database.endpoint.get(this, options_obj)
             .then(function(response) {
 
                 if(response == null) {
                     return null;
                 }
-                return response;
+                if(response.result.length > 1) {
+                    return new AQ.FunctionResultSet(this, response);
+                }
+	        return new AQ.FunctionResult(this, response);
 
-            });
+            }.bind(this));
     };
+
+    /*--------------------------------- * Function Result * ---------------------------------*/
+    AQ.FunctionResult = function( fn, response ) {
+	this.function = fn;
+        this.row_data = response.result[0].row;
+        this.rows = response.result;
+    };
+    AQ.FunctionResult.prototype = {
+        constructor: AQ.FunctionResult,
+        get: function( name )           { return this.row_data[name]; },
+        to_string: function()           { return JSON.stringify(this.row_data); }
+    };
+    AQ.FunctionResult.prototype.map = function(fn) {
+        return this.rows.map(function(row) {
+            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+        }.bind(this)).map(fn);
+    };
+    AQ.FunctionResult.prototype.forEach = function(fn) {
+        return this.rows.map(function(row) {
+            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+        }.bind(this)).forEach(fn);
+    };
+
+    /*--------------------------------- * Function Result Set * ---------------------------------*/
+    AQ.FunctionResultSet = function( fn, response ) {
+	this.function = fn;
+        this.columns = response.columns;
+        this.rows = response.result;
+    };
+    AQ.FunctionResultSet.prototype.constructor = AQ.FunctionResultSet;
+    AQ.FunctionResultSet.prototype.map = function(fn) {
+        return this.rows.map(function(row) {
+            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+        }.bind(this)).map(fn);
+    };
+    AQ.FunctionResultSet.prototype.forEach = function(fn) {
+        return this.rows.map(function(row) {
+            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+        }.bind(this)).forEach(fn);
+    };
+
     window.AQ = AQ;
     return AQ;
 });
