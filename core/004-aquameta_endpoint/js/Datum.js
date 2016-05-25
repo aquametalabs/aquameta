@@ -104,9 +104,6 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var resource = function( method, meta_id, args, data, use_cache ) {
 
-            // Default use_cache to false
-            use_cache = use_cache || false;
-
             // URLs
             var url_without_query = url + meta_id.to_url();
             var url_with_query = url_without_query + build_query_string(args);
@@ -241,8 +238,8 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Relation.prototype.rows = function( options ) {
         var use_cache = false;
         if (typeof options != 'undefined') {
-            if (typeof options[use_cache] != 'undefined') {
-                use_cache = options[use_cache] || false;
+            if (typeof options.use_cache != 'undefined') {
+                use_cache = options.use_cache || false;
             }
         }
         return this.schema.database.endpoint.get(this, options, use_cache)
@@ -275,8 +272,8 @@ define(['/jQuery.min.js'], function($, undefined) {
                 args.where = obj;
             }
 
-            if (typeof obj['use_cache'] != 'undefined') {
-                use_cache = obj['use_cache'] || false;
+            if (typeof obj.use_cache != 'undefined') {
+                use_cache = obj.use_cache || false;
             }
 
         }
