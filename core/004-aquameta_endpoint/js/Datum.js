@@ -290,7 +290,8 @@ define(['/jQuery.min.js'], function($, undefined) {
         }
         else {
             // Calling AQ.Relation.row() without arguments
-            throw 'Unsupported call to AQ.Relation.row()';
+            //throw 'Unsupported call to AQ.Relation.row()';
+            // Maybe this is supported
         }
 
         return this.schema.database.endpoint.get(this, args, use_cache)
@@ -345,6 +346,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.relation = relation;
         this.columns = response.columns;
         this.rows = response.result;
+        this.length = response.result.length;
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
     AQ.Rowset.prototype.map = function(fn) {
@@ -608,7 +610,6 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Column.prototype.constructor = AQ.Column;
 
     /*--------------------------------- * Field * ---------------------------------*/
-
     AQ.Field = function( row, name ) {
         this.row = row;
         this.column = new AQ.Column(row.relation, name);
