@@ -669,8 +669,10 @@ define(['/jQuery.min.js'], function($, undefined) {
         }
 
         var use_cache = false;
-        if (typeof options != 'undefined' && typeof options.use_cache != 'undefined') {
-            use_cache = options.use_cache;
+        if (typeof options != 'undefined') {
+            if (typeof options.use_cache != 'undefined') {
+                use_cache = options.use_cache;
+            }
             args_obj = Object.assign(options, args_obj);
         }
 
