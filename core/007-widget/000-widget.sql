@@ -27,12 +27,28 @@ create table widget (
 );
 
 
+create function widget.bundled_widget (
+	bundle_name text,
+	widget_name text
+) returns setof widget.widget as $$
+    begin
+        return query select w.*
+        from bundle.head_rows(bundle_name) hr
+            join widget.widget w on w.id = hr.pk_value::uuid
+        where hr.schema_name='widget'
+            and hr.relation_name='widget'
+            and w.name=widget_name;
+    end;
+$$ language plpgsql;
+
+/*
 create view widget.bundled_widget as
 select b.name as bundle_name, hds.commit_id, w.*
 from bundle.bundle b
     join bundle.head_db_stage hds on hds.bundle_id = b.id
     join widget.widget w on w.id = (hds.row_id).pk_value::uuid
 where hds.row_id::meta.relation_id = meta.relation_id('widget', 'widget');
+*/
 
 
 

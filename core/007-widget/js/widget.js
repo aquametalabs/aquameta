@@ -93,7 +93,7 @@ widget('/use/edit/integer', { value: 5 })
 * Company: http://aquameta.com/
 * Project: http://blog.aquameta.com/
 ******************************************************************************/
-define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
+define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undefined) {
 
     'use strict';
 
@@ -156,8 +156,8 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             endpoint: endpoint,
             bundle_name: bundle_name
         };
-        /*
-        endpoint.schema('widget').view('bundled_widget').rows({
+        /* Much faster way, but not right
+        namespaces[namespace] = endpoint.schema('widget').view('bundled_widget').rows({
             where: {
                 name: 'bundle_name',
                 op: '=',
@@ -165,7 +165,6 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             }
         });
         */
-        //namespaces[namespace] = endpoint.schema('widget').table('widget');
 
     };
 
@@ -180,12 +179,16 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
         }
 
         // Get the widget
-        //return namespaces[namespace].row({ where: { name: 'name', op: '=', value: name }, use_cache: true })
-        return namespaces[namespace].endpoint.schema('widget').view('bundled_widget').row({
-            where: [
-                { name: 'bundle_name', op: '=', value: namespaces[namespace].bundle_name },
-                { name: 'name', op: '=', value: name }
-            ],
+        /* Much faster way, but not right
+        return namespaces[namespace].then(function(rows) {
+              return rows.where('name', name, true, true);
+        })
+        .then(function(row) {
+        */
+        return namespaces[namespace].endpoint.schema('widget').function('bundled_widget','{text,text}').call({
+                bundle_name: namespaces[namespace].bundle_name,
+                widget_name: name
+        }, {
             use_cache: true
         }).then(function(row) {
 
@@ -204,7 +207,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                             if (!widget_view) {
                                 return null;
                             }
-                            var db = row.relation.schema.database;
+                            var db = row.schema.database;
                             var view_id = widget_view.get('view_id');
                             return db.schema(view_id.schema_id.name).view(view_id.name);
 
@@ -223,7 +226,7 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
                                 return [];
                             }
 
-                            var base_url = deps.relation.schema.database.url;
+                            var base_url = deps.schema.database.url;
 
                             return Promise.all(
 
@@ -256,8 +259,8 @@ define(['/doT.min.js', '/Datum.js'], function(doT, AQ, undefined) {
             var [ widget_row, inputs, views, deps_js ] = widget_data;
 
             context = Object.assign({
-                    db: widget_row.relation.schema.database,
-                    endpoint: widget_row.relation.schema.database
+                    db: widget_row.schema.database,
+                    endpoint: widget_row.schema.database
                 }, context);
 
             // Process inputs

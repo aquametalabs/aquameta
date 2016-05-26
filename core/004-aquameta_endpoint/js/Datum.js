@@ -344,6 +344,7 @@ define(['/jQuery.min.js'], function($, undefined) {
     /*--------------------------------- * Rowset * ---------------------------------*/
     AQ.Rowset = function( relation, response ) {
         this.relation = relation;
+        this.schema = relation.schema;
         this.columns = response.columns;
         this.rows = response.result;
         this.length = response.result.length;
@@ -469,10 +470,9 @@ define(['/jQuery.min.js'], function($, undefined) {
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
 
-        var values = [];
-        for (var i = 0; i < this.rows.length; i++) {
-            values.push(this.rows[i].row[self_column_name]);
-        }
+        var values = this.map(function(row) {
+            return row.get(self_column_name);
+	});
 
         var options = {
             where: {
@@ -497,10 +497,9 @@ define(['/jQuery.min.js'], function($, undefined) {
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
 
-        var values = [];
-        for (var i = 0; i < this.rows.length; i++) {
-            values.push(this.rows[i].row[self_column_name]);
-        }
+        var values = this.map(function(row) {
+            return row.get(self_column_name);
+	});
 
         var options = {
             where: {
@@ -519,6 +518,7 @@ define(['/jQuery.min.js'], function($, undefined) {
     /*--------------------------------- * Row * ---------------------------------*/
     AQ.Row = function( relation, response ) {
         this.relation = relation;
+        this.schema = relation.schema;
         this.row_data = response.result[0].row;
         this.columns = response.columns;
         this.pk_value = this.row_data.id; // TODO hardcoded
@@ -637,23 +637,29 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.to_url = function() { return '/function/' + this.schema.name + '/' + this.name + '/' + this.args; };
     };
     AQ.Function.prototype.constructor = AQ.Function;
-    AQ.Function.prototype.call = function(fn_args) {
+    AQ.Function.prototype.call = function(fn_args, options) {
         /*
         some_function?args={ vals: [] } -- Array
         some_function?args={ kwargs: {} } -- Key/value object
         some_function?args={ kwargs: {} }&column=name
         */
-        var options_obj = { args: {} };
+        var args_obj = { args: {} };
 
         if (fn_args instanceof Array) {
-            options_obj.args.vals = fn_args;
+            args_obj.args.vals = fn_args;
         }
 
         else if (typeof fn_args == 'object') {
-            options_obj.args.kwargs = fn_args;
+            args_obj.args.kwargs = fn_args;
         }
 
-        return this.schema.database.endpoint.get(this, options_obj)
+        var use_cache = false;
+        if (typeof options != 'undefined' && typeof options.use_cache != 'undefined') {
+            use_cache = options.use_cache;
+            args_obj = Object.assign(options, args_obj);
+        }
+
+        return this.schema.database.endpoint.get(this, args_obj, use_cache)
             .then(function(response) {
 
                 if(response == null) {
@@ -670,6 +676,7 @@ define(['/jQuery.min.js'], function($, undefined) {
     /*--------------------------------- * Function Result * ---------------------------------*/
     AQ.FunctionResult = function( fn, response ) {
 	this.function = fn;
+	this.schema = fn.schema;
         this.row_data = response.result[0].row;
         this.rows = response.result;
     };
@@ -688,10 +695,49 @@ define(['/jQuery.min.js'], function($, undefined) {
             return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
         }.bind(this)).forEach(fn);
     };
+    AQ.FunctionResult.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
+            console.error("Related relation name must be schema qualified (schema_name.relation_name)");
+            // throw "Related relation name must be schema qualified (schema_name.relation_name)";
+        }
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+        var options = {
+            where: {
+                name: related_column_name,
+                op: '=',
+                value: this.get(self_column_name)
+            },
+            use_cache: use_cache || false
+        };
+        var db = this.function.schema.database;
+        return db.schema(schema_name).relation(relation_name).rows(options);
+    };
+    AQ.FunctionResult.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
+            console.error("Related relation name must be schema qualified (schema_name.relation_name)");
+            // throw "Related relation name must be schema qualified (schema_name.relation_name)";
+        }
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+        var db = this.function.schema.database;
+        var options = {
+            where: {
+                name: related_column_name,
+                op: '=',
+                value: this.get(self_column_name)
+            },
+            use_cache: use_cache || false
+        };
+        return db.schema(schema_name).relation(relation_name).row(options);
+    };
 
     /*--------------------------------- * Function Result Set * ---------------------------------*/
     AQ.FunctionResultSet = function( fn, response ) {
 	this.function = fn;
+	this.schema = fn.schema;
         this.columns = response.columns;
         this.rows = response.result;
     };
@@ -705,6 +751,61 @@ define(['/jQuery.min.js'], function($, undefined) {
         return this.rows.map(function(row) {
             return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
         }.bind(this)).forEach(fn);
+    };
+    AQ.FunctionResultSet.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
+            console.error("Related relation name must be schema qualified (schema_name.relation_name)");
+            // throw "Related relation name must be schema qualified (schema_name.relation_name)";
+        }
+
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+
+        var values = this.map(function(row) {
+            return row.get(self_column_name);
+	});
+
+        var options = {
+            where: {
+                name: related_column_name,
+                op: 'in',
+                value: values
+            },
+            use_cache: use_cache || false
+        };
+
+        var db = this.function.schema.database;
+        return db.schema(schema_name).relation(relation_name).rows(options);
+    };
+    AQ.FunctionResultSet.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+
+        var relation_parts = related_relation_name.split('.');
+        if (relation_parts.length < 2) {
+            console.error("Related relation name must be schema qualified (schema_name.relation_name)");
+            // throw "Related relation name must be schema qualified (schema_name.relation_name)";
+        }
+
+        var schema_name = relation_parts[0];
+        var relation_name = relation_parts[1];
+
+        var values = this.map(function(row) {
+            return row.get(self_column_name);
+	});
+
+        var options = {
+            where: {
+                name: related_column_name,
+                op: 'in',
+                value: values
+            },
+            use_cache: use_cache || false
+        };
+
+        var db = this.function.schema.database;
+        return db.schema(schema_name).relation(relation_name).row(options);
+
     };
 
     window.AQ = AQ;
