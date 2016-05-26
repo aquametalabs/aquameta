@@ -13,6 +13,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.url = url;
         this.evented = false;
         this.cache = {};
+        this.session_id = get_session_cookie();
+
+        function get_session_cookie() {
+            return document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        }
+
         if(this.evented) {
         }
 
@@ -103,6 +109,15 @@ define(['/jQuery.min.js'], function($, undefined) {
         var socket_send = function(message) { return; }; 
 
         var resource = function( method, meta_id, args, data, use_cache ) {
+
+            var current_session_cookie =  get_session_cookie();
+            if (this.session_id != current_session_cookie) {
+                // session has changed
+                // update session_id
+                this.session_id = current_session_cookie;
+                // dump cache
+                this.cache = {};
+            }
 
             // URLs
             var url_without_query = url + meta_id.to_url();
