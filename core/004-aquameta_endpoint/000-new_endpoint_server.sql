@@ -1537,6 +1537,10 @@ create role aquameta superuser createdb createrole login replication bypassrls;
 
 create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
 
+create function endpoint."current_user"() returns uuid as $$
+    SELECT id from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
+$$ language sql;
+
 
 /******************************************************************************
  * endpoint.session
