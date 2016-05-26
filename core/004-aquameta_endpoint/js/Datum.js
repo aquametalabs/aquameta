@@ -662,7 +662,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         return this.schema.database.endpoint.get(this, args_obj, use_cache)
             .then(function(response) {
 
-                if(response == null) {
+                if(!response || !response.result.length) {
                     return null;
                 }
                 if(response.result.length > 1) {

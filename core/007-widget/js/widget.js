@@ -193,8 +193,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         }).then(function(row) {
 
                 if(!row) {
-                    console.error('Widget does not exist, ' + namespace + ':' + name);
-                    throw 'Widget does not exist';
+                    throw 'Widget does not exist, ' + namespace + ':' + name;
                 }
 
                 // Get all related widget data
@@ -442,7 +441,14 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
             // Delete prepeared_promise
             delete widget_promises[id];
-        });
+
+        }).catch(function(error) {
+	    console.error('Widget swap failed - ', error);
+            // Remove stub
+            $element.remove();
+            // Delete promise
+            delete widget_promises[id];
+	});
     };
 
 
