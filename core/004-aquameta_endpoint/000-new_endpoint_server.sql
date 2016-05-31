@@ -743,19 +743,20 @@ create or replace function endpoint.field_select(
 ) returns record as $$
 
     declare
-        schema_name text;
-        relation_name text;
+        _schema_name text;
+        _relation_name text;
         pk text;
         pk_column_name text;
-        field_name text;
         pk_type text;
+        field_name text;
+        field_type text;
 
     begin
         -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
         set local search_path = endpoint;
 
-        select (field_id).column_id.relation_id.schema_id.name into schema_name;
-        select (field_id).column_id.relation_id.name into relation_name;
+        select (field_id).column_id.relation_id.schema_id.name into _schema_name;
+        select (field_id).column_id.relation_id.name into _relation_name;
         select (field_id).row_id.pk_value into pk;
         select (field_id).row_id.pk_column_id.name into pk_column_name;
         select (field_id).column_id.name into field_name;
@@ -766,6 +767,14 @@ create or replace function endpoint.field_select(
         where id = (field_id).row_id.pk_column_id
         into pk_type;
 
+        -- Find field_type
+        select type_name
+        from meta.column
+        where schema_name = _schema_name
+            and relation_name = _relation_name
+            and name = field_name
+        into field_type;
+
         -- Find mimetype for this field
         select m.mimetype
         from endpoint.column_mimetype cm
@@ -775,9 +784,13 @@ create or replace function endpoint.field_select(
 
         -- Default mimetype
         mimetype := coalesce(mimetype, 'application/json');
-
-        execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name)
+        if field_type = 'pg_catalog.bytea' then
+            execute 'select encode(' || quote_ident(field_name) || ', ''escape'') from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
                 || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
+        else
+            execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
+                || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
+        end if;
 
         -- implicitly returning field and mimetype
     end;
