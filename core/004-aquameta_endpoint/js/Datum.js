@@ -29,6 +29,12 @@ define(['/jQuery.min.js'], function($, undefined) {
             var return_url = '',
                 argsCount = 0;
 
+            if (typeof options.exclude != 'undefined') {
+                if (!argsCount) return_url += '?';
+                if (argsCount++) return_url += '&';
+                return_url += 'exclude=' + encodeURIComponent(JSON.stringify(options.exclude));
+            }
+
             // where: { name: 'column_name', op: '=', value: 'value' }
             // where: [{ name: 'column_name', op: '=', value: 'value' }]
             if (typeof options.where != 'undefined') {

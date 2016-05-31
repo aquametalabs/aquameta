@@ -32,7 +32,13 @@
             db.schema('meta').relation('relation').rows({
                 offset: 5
             }).then(function(r) { console.log('offset', r); });
+
+            // Exclude columns
+            db.schema('meta').relation('relation').rows({
+                exclude: ['id', 'name', 'schema_name', 'schema_id']
+            }).then(function(r) { console.log('exclude', r); });
 */
+
 
 
 // Row

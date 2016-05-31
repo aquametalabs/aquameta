@@ -937,6 +937,31 @@ language plpgsql;
 
 
 /****************************************************************************************************
+ * FUNCTION column_list
+ ****************************************************************************************************/
+
+create function endpoint.column_list(
+    _schema_name text,
+    _relation_name text,
+    table_alias text,
+    exclude text[],
+    out column_list text
+) as $$
+    begin
+        if table_alias = '' then
+            table_alias := schema_name || '.' || relation_name;
+        end if;
+
+        select string_agg(table_alias || '.' || name, ', ')
+        from meta.column
+        where schema_name = _schema_name and
+            relation_name = _relation_name and
+            not name = any(exclude) into column_list;
+    end;
+$$ language plpgsql;
+
+
+/****************************************************************************************************
  * FUNCTION rows_select                                                                             *
  ****************************************************************************************************/
 
@@ -950,16 +975,33 @@ create function endpoint.rows_select(
         row_query text;
         rows_json text;
         suffix text;
+        exclude text[];
+        column_list text;
 
     begin
         select (relation_id).schema_id.name into schema_name;
         select (relation_id).name into relation_name;
 
+        -- Suffix
         select endpoint.suffix_clause(args) into suffix;
+
+        -- Column list
+        select array_agg(val)
+        from ((
+            select json_array_elements_text(value::json) as val
+            from json_array_elements_text(args->'exclude')
+        )) q
+        into exclude;
+
+        if exclude is not null then
+            select endpoint.column_list(schema_name, relation_name, 'r'::text, exclude) into column_list;
+        else
+            select 'r.*' into column_list;
+        end if;
 
         row_query := 'select ''['' || string_agg(q.js, '','') || '']'' from (
                           select ''{ "row":'' || row_to_json(t.*) || '' }'' js
-                          from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' as t '
+                          from ((select ' || column_list || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' r)) as t '
                           || suffix ||
                      ') q';
 
