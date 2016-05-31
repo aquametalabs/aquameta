@@ -225,15 +225,13 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                                 return [];
                             }
 
-                            var base_url = deps.schema.database.url;
-
                             return Promise.all(
 
                                 deps.map(function(dep) {
-                                    return System.import(base_url + dep.field('content').to_url()).then(function(dep_module) {
+                                    return System.import(dep.field('content').to_url()).then(function(dep_module) {
                                         //console.log('my module', dep_module);
                                         return {
-                                            url: base_url + dep.field('content').to_url(),
+                                            url: dep.field('content').to_url(),
                                             name: dep.get('variable') || 'non_amd_module',
                                             /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
                                             value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module

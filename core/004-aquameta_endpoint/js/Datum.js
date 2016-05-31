@@ -126,7 +126,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             }
 
             // URLs
-            var url_without_query = url + meta_id.to_url();
+            var url_without_query = meta_id.to_url();
             var url_with_query = url_without_query + build_query_string(args);
 
             // Check cache
@@ -204,6 +204,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         }
 
         return {
+            url: this.url,
             get: function( meta_id, args, use_cache )        { return resource.call(this, 'GET', meta_id, args, {}, use_cache); }.bind(this),
             post: function( meta_id, data, use_cache )       { return resource.call(this, 'POST', meta_id, {}, data, use_cache); }.bind(this),
             patch: function( meta_id, data )                 { return resource.call(this, 'PATCH', meta_id, {}, data); }.bind(this),
@@ -213,11 +214,10 @@ define(['/jQuery.min.js'], function($, undefined) {
 
     /*--------------------------------- * Database * ---------------------------------*/
     AQ.Database = function( url, settings, ready_callback ) {
-        this.url = url;
         this.settings = settings;
 
         // Not sure which name is better
-        this.endpoint = this.connection = new Endpoint(this.url);
+        this.endpoint = this.connection = new Endpoint(url);
 
         if(this.settings.evented != 'no') {
 
@@ -255,7 +255,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.id = { schema_id: this.schema.id, name: this.name };
     };
     AQ.Relation.prototype.constructor = AQ.Relation;
-    AQ.Relation.prototype.to_url = function() { return '/relation/' + this.schema.name + '/' + this.name; };
+    AQ.Relation.prototype.to_url = function() { return this.schema.database.endpoint.url + '/relation/' + this.schema.name + '/' + this.name; };
     AQ.Relation.prototype.rows = function( options ) {
         var use_cache = false;
         if (typeof options != 'undefined') {
@@ -546,7 +546,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.pk_column_name = 'id'; // TODO this too
         //this.pk = function() { return; }; // ?
         this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
-        this.to_url = function() { return '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
+        this.to_url = function() { return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
     };
     AQ.Row.prototype = {
         constructor: AQ.Row,
@@ -637,7 +637,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.name = name;
         this.value = row.get(name);
         this.id = { row_id: this.row.id, column_id: this.column.id };
-        this.to_url = function() { return '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
+        this.to_url = function() { return this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
     };
     AQ.Field.prototype = {
         constructor: AQ.Field,
@@ -655,7 +655,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             this.args = args;
         }
         this.id = { schema_id: this.schema.id, name: this.name, args: this.args };
-        this.to_url = function() { return '/function/' + this.schema.name + '/' + this.name + '/' + this.args; };
+        this.to_url = function() { return this.schema.database.endpoint.url + '/function/' + this.schema.name + '/' + this.name + '/' + this.args; };
     };
     AQ.Function.prototype.constructor = AQ.Function;
     AQ.Function.prototype.call = function(fn_args, options) {
