@@ -641,7 +641,9 @@ define(['/jQuery.min.js'], function($, undefined) {
     };
     AQ.Field.prototype = {
         constructor: AQ.Field,
-        update: function()       { return this.row.update(); }
+        get: function()       	{ return this.row.get(this.name); },
+        set: function(value)      { this.value = value; return this.row.set(this.name, value); },
+        update: function()       	{ return this.row.update(); }
     };
 
     /*--------------------------------- * Function * ---------------------------------*/
