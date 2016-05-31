@@ -326,7 +326,10 @@ begin
     set local search_path='';
     return id from meta.relation where 
         schema_name = (select (string_to_array(rel::regclass::text, '.'))[1]) and
-        name = (select (string_to_array(rel::regclass::text, '.'))[2]);
+        name = (select regexp_replace(((string_to_array(rel::regclass::text, '.'))[2]), '"', '', 'g'));
+        -- This sucks. For quoted tables (e.g. "user") we are doing a find/replace on the quote. Not great,
+        -- but it goes along with the rule that tables should never be created with quotes except for keywords.
+        -- Though those should be avoided too
 end;
 $$ language plpgsql;
 
