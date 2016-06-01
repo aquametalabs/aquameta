@@ -115,6 +115,13 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
         context.id = uuid();
 
+        var default_namespace = '';
+        if (typeof this != 'undefined' && typeof this.namespace != 'undefined') {
+            // Same namespace as calling widget, instead of global '' namespace
+            default_namespace = this.namespace;
+        }
+
+
         // However we define this
         if (typeof is_dsl_lookup != 'undefined' && is_dsl_lookup == true) {
             // Whatever the DSL lookup is
@@ -125,7 +132,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
             if (name_parts.length == 1) {
                 // Default namespace lookup
-                context.namespace = '';
+                context.namespace = default_namespace;
                 context.name = name_parts[0];
             }
             else {
@@ -137,6 +144,11 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
             var widget_retrieve_promise = retrieve(context.namespace, context.name);
         }
+
+        // Setup default namespace for child widget
+        context.widget = AQ.Widget.load.bind({ namespace: context.namespace });
+        context.widget.sync = AQ.Widget.load.sync;
+        context.widget.import = AQ.Widget.import;
 
         // Prepare and render the widget - each prepare_promise is unique because inputs are different - they are cached by the unique uuid created for the context
         widget_promises[context.id] = prepare(widget_retrieve_promise, context, callback);
@@ -249,7 +261,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
     function prepare( retrieve_promise, context, callback ) {
-        //console.log('args to prepare', arguments);
+
         return retrieve_promise.then(function( widget_data ) {
 
             //console.log('retrieve_promise resolved', widget_data);
@@ -320,7 +332,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
     function render( widget_row, context ) {
-        //console.log('render params', arguments);
 
         // Create html template
         var html_template = doT.template(widget_row.get('html') || '');
@@ -405,7 +416,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             error(e, widget_row.get('name'), 'Creating post_js function');
         }
 
-        //console.log('my js code', post_js);
         return post_js;
 
     };
@@ -469,9 +479,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
 
-    /********************************************************************
-    COPIED OVER
-    ********************************************************************/
     AQ.Widget.load.sync = function(rowlist_promise, container, widget_maker, handlers) {
 
         if(handlers === undefined) {
@@ -508,7 +515,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
     }
 
-    window.widget = AQ.Widget.load;
     return AQ.Widget.load;
 
 });
