@@ -1104,12 +1104,12 @@ create function endpoint.rows_select_function(
         select json_array_elements_text::json
         from json_array_elements_text(args->'args') into args;
 
-        raise warning 'args = %', args::json;
+        -- raise warning 'args = %', args::json;
 
         -- Function Arguments
         if args->'kwargs' is not null then
 
-            raise warning 'kwargs = %', args->'kwargs';
+            -- raise warning 'kwargs = %', args->'kwargs';
 
             -- Build function arguments string
             -- Cast to type_name found in meta.function_parameter
@@ -1125,7 +1125,7 @@ create function endpoint.rows_select_function(
 
         elsif args->'vals' is not null then
 
-            raise warning 'vals = %', args->'vals';
+            -- raise warning 'vals = %', args->'vals';
 
             -- Transpose JSON array to comma-separated string
             select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
@@ -1500,7 +1500,7 @@ create table endpoint.user (
     email text not null unique,
     name text not null default '',
     active boolean not null default false,
-    activation_code uuid not null default public.uuid_generate_v4()
+    activation_code uuid default public.uuid_generate_v4()
 );
 
 
@@ -1672,7 +1672,7 @@ as $$
 
 
         -- 2. update user set active=true;
-        update endpoint.user set active = true where email = _email and activation_code = _confirmation_code::uuid returning (role_id).name into _role_id;
+        update endpoint.user set active=true, activation_code=null::uuid where email=_email and activation_code=_confirmation_code::uuid returning (role_id).name into _role_id;
 
 
         -- 3. update role set login=true
