@@ -824,13 +824,17 @@ create or replace function endpoint.suffix_clause(
             -- URL
             -- /endpoint?$limit=10
             if r.key = 'limit' then
-                _limit := ' limit ' || quote_literal(r.value::text);
+                select ' limit ' || quote_literal(json_array_elements_text)
+                from json_array_elements_text(r.value::text::json)
+                into _limit;
 
             -- Offset clause
             -- URL
             -- /endpoint?$offest=5
             elsif r.key = 'offset' then
-                _offset := ' offset ' || quote_literal(r.value::text);
+                select ' offset ' || quote_literal(json_array_elements_text)
+                from json_array_elements_text(r.value::text::json)
+                into _offset;
 
             -- Order by clause
             -- URL
