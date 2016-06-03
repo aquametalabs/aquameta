@@ -148,7 +148,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         // Setup default namespace for child widget
         context.widget = AQ.Widget.load.bind({ namespace: context.namespace });
         context.widget.sync = AQ.Widget.load.sync;
-        context.widget.import = AQ.Widget.import;
 
         // Prepare and render the widget - each prepare_promise is unique because inputs are different - they are cached by the unique uuid created for the context
         widget_promises[context.id] = prepare(widget_retrieve_promise, context, callback);
