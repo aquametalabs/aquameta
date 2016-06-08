@@ -203,58 +203,47 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             use_cache: true
         }).then(function(row) {
 
-                if(!row) {
-                    throw 'Widget does not exist, ' + namespace + ':' + name;
-                }
+            // Get all related widget data
+            return Promise.all([
+                row,
+                row.related_rows('id', 'widget.input', 'widget_id', true).catch(function(){ return; }),
+                row.related_rows('id', 'widget.widget_view', 'widget_id', true)
+                    .then(function(widget_views) {
 
-                // Get all related widget data
-                return Promise.all([
-                    row,
-                    row.related_rows('id', 'widget.input', 'widget_id', true),
-                    row.related_rows('id', 'widget.widget_view', 'widget_id', true)
-                        .then(function(widget_view) {
-
-                            if (!widget_view) {
-                                return null;
-                            }
-                            var db = row.schema.database;
+                        var db = row.schema.database;
+                        return widget_views.map(function(widget_view) {
                             var view_id = widget_view.get('view_id');
                             return db.schema(view_id.schema_id.name).view(view_id.name);
+                        });
 
-                        }), // TODO: This may need .bind(this)
-                    row.related_rows('id', 'widget.widget_dependency_js', 'widget_id', true)
-                        .then(function(deps_js) {
+                    }).catch(function(err) { return; }),
+                row.related_rows('id', 'widget.widget_dependency_js', 'widget_id', true)
+                    .then(function(deps_js) {
 
-                            if (!deps_js) {
-                                return null;
-                            }
-                            return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id', true);
+                        return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id', true);
 
-                        }).then(function(deps) {
+                    }).then(function(deps) {
 
-                            if (!deps) {
-                                return [];
-                            }
+                        return Promise.all(
 
-                            return Promise.all(
+                            deps.map(function(dep) {
+                                return System.import(dep.field('content').to_url()).then(function(dep_module) {
+                                    //console.log('my module', dep_module);
+                                    return {
+                                        url: dep.field('content').to_url(),
+                                        name: dep.get('variable') || 'non_amd_module',
+                                        /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
+                                        value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
+                                    };
+                                });
+                            })
+                        );
 
-                                deps.map(function(dep) {
-                                    return System.import(dep.field('content').to_url()).then(function(dep_module) {
-                                        //console.log('my module', dep_module);
-                                        return {
-                                            url: dep.field('content').to_url(),
-                                            name: dep.get('variable') || 'non_amd_module',
-                                            /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
-                                            value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
-                                        };
-                                    });
-                                })
-                            );
-
-                        })
-                ]);
-
-            });
+                    }).catch(function() { return; })
+            ]);
+        }).catch(function(err) {
+            throw 'Widget does not exist, ' + namespace + ':' + name;
+        });
     };
 
 
@@ -272,7 +261,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                 }, context);
 
             // Process inputs
-            if (inputs != null) {
+            if (typeof inputs != 'undefined') {
 
                 inputs.forEach(function(input) {
                     var input_name = input.get('name');
@@ -307,7 +296,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             }
 
             // Load views into context
-            if (views != null) {
+            if (typeof views != 'undefined') {
                 views.forEach(function(view) {
                     context[view.schema.name + '_' + view.name] = view;
                 });
@@ -450,12 +439,13 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             delete widget_promises[id];
 
         }).catch(function(error) {
-	    console.error('Widget swap failed - ', error);
+            //console.error('Widget swap failed - ', error);
+            console.error(error);
             // Remove stub
             $element.remove();
             // Delete promise
             delete widget_promises[id];
-	});
+        });
     };
 
 
@@ -504,12 +494,11 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         }
 
         rowlist_promise.then(function(rowset) {
-            if (!rowset) {
-                return null;
-            }
             rowset.forEach(function(row) {
                 container.append(widget_maker(row));
             });
+        }).catch(function(error) {
+            console.error(error);
         });
 
     }

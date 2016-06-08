@@ -663,7 +663,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         constructor: AQ.Field,
         get: function()          { return this.row.get(this.name); },
         set: function(value)     { this.value = value; return this.row.set(this.name, value); },
-        update: function()       { return this.row.update(); }
+        update: function()       { return this.row.update(); } // TODO: This is wrong
     };
 
     /*--------------------------------- * Function * ---------------------------------*/
@@ -707,15 +707,20 @@ define(['/jQuery.min.js'], function($, undefined) {
         return this.schema.database.endpoint.get(this, args_obj, use_cache)
             .then(function(response) {
 
-                if(!response || !response.result.length) {
-                    return null;
+                if (!response) {
+                    throw 'Empty response';
+                }
+                else if (!response.result.length) {
+                    throw 'Result set empty';
                 }
                 if(response.result.length > 1) {
                     return new AQ.FunctionResultSet(this, response);
                 }
 	        return new AQ.FunctionResult(this, response);
 
-            }.bind(this));
+            }.bind(this)).catch(function(err) {
+                throw 'Function call request failed: ' + err;
+            });
     };
 
     /*--------------------------------- * Function Result * ---------------------------------*/
