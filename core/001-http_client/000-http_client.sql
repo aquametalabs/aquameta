@@ -103,6 +103,7 @@ $$ language plpgsql;
 
 
 create type http_client.http_response as (status_code integer, headers text, encoding text, response_text text);
+create type http_client.http_response_binary as (status_code integer, headers text, encoding text, response_binary bytea);
 
 
 /*******************************************************************************
@@ -117,6 +118,21 @@ import plpy
 plpy.info ('************ http_get('+url+')')
 r = requests.get(url)
 return [r.status_code, r.headers, r.encoding, r.text]
+
+$$ language plpythonu;
+
+/*******************************************************************************
+* http_get_binary
+*******************************************************************************/
+create or replace function http_client.http_get_binary (url text) returns http_client.http_response_binary
+as $$
+
+import requests
+import plpy
+
+plpy.info ('************ http_get('+url+')')
+r = requests.get(url)
+return [r.status_code, r.headers, r.encoding, r.content]
 
 $$ language plpythonu;
 

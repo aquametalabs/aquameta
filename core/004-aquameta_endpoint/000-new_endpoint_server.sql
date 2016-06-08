@@ -22,10 +22,42 @@ set search_path = endpoint;
 /******************************************************************************
  *
  *
+ * MIMETYPED RESOURCE TYPES
+ *
+ *
+ ******************************************************************************/
+
+create type endpoint.resource_bin as 
+(mimetype text, content bytea)
+
+create type endpoint.resource_txt as 
+(mimetype text, content text)
+
+create function endpoint.resource_bin(value json) returns endpoint.resource_bin as $$
+select row(value->>'mimetype', value->>'content')::endpoint.resource_bin
+$$ immutable language sql;
+
+create cast (json as endpoint.resource_bin)
+with function endpoint.resource_bin(json)
+as assignment;
+
+create function endpoint.resource_txt(value json) returns endpoint.resource_txt as $$
+select row(value->>'mimetype', value->>'content')::endpoint.resource_txt
+$$ immutable language sql;
+
+create cast (json as endpoint.resource_txt)
+with function endpoint.resource_txt(json)
+as assignment;
+
+
+/******************************************************************************
+ *
+ *
  * DATA MODEL
  *
  *
  ******************************************************************************/
+
 
 
 /******************************************************************************
@@ -775,16 +807,22 @@ create or replace function endpoint.field_select(
             and name = field_name
         into field_type;
 
-        -- Find mimetype for this field
-        select m.mimetype
-        from endpoint.column_mimetype cm
-            join endpoint.mimetype m on m.id = cm.mimetype_id
-        where cm.column_id = (field_id).column_id
-        into mimetype;
+        if field_type <> 'endpoint.resource_bin' then
+            -- Find mimetype for this field
+            select m.mimetype
+            from endpoint.column_mimetype cm
+                join endpoint.mimetype m on m.id = cm.mimetype_id
+            where cm.column_id = (field_id).column_id
+            into mimetype;
+        end if;
 
         -- Default mimetype
         mimetype := coalesce(mimetype, 'application/json');
-        if field_type = 'pg_catalog.bytea' then
+        if field_type = 'endpoint.resource_bin' then
+            execute 'select (' || quote_ident(field_name) || ').mimetype, encode((' || quote_ident(field_name) || ').content, ''escape'')'
+                || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
+                || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into mimetype, field;
+        elsif field_type = 'pg_catalog.bytea' then
             execute 'select encode(' || quote_ident(field_name) || ', ''escape'') from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
                 || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
         else
