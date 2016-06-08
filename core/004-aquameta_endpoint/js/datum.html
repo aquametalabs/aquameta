@@ -13,6 +13,14 @@
             var db = new AQ.Database('/endpoint/new', { evented: 'no' });
 // Rows
 /*
+            // Fail with does not exist
+            db.schema('beta').relation('melation').rows({
+                where: [{ name: 'name', op: 'like', value: '%res%' }]
+            }).then(function(r) {
+                console.log('where', r);
+            }, function(err) {
+                console.error(err);
+            });
             // Where
             db.schema('meta').relation('relation').rows({
                 where: [{ name: 'name', op: 'like', value: '%res%' }]
@@ -73,7 +81,8 @@
                 // doesn't return row. 400 is logged. 
                 console.log('breaking select', r);
             }, function(err) {
-                console.log('failing select: no row found', err);
+                console.error('failing select: no row found');
+                console.error(err);
             });
             
             // Fail with invalid uuid
@@ -82,7 +91,8 @@
                 // doesn't return row. 400 is logged. 
                 console.log('breaking select', r);
             }, function(err) {
-                console.log('failing select: invalid uuid', err);
+                console.error('failing select from invalid uuid');
+                console.error(err);
             });
             */
 
@@ -97,6 +107,8 @@
             db.schema('widget').table('widget').insert({ id: 'hello2z' })
             .then(function(row) {
                 console.log('failing insert: invalid uuid', row);
+            }, function(err) {
+                console.error(err);
             });
             */
 
@@ -120,10 +132,12 @@
                 var old_name = row.get('name');
                 var new_name = old_name + 1;
                 console.log('inserted', old_name, 'and updating to', new_name);
+                return row.set('id', 'lkjsdlfkjs').update();
 
-                row.set('name', new_name).update().then(function(r) {
-                    console.log('updated to', r.get('name'), r);
-                });
+            }).then(function(r) {
+                console.log('updated to', r.get('name'), r);
+            }).catch(function(err) {
+                console.error(err);
             });
             */
 
@@ -132,14 +146,20 @@
             db.schema('widget').table('widget').insert({ name: 'hello' + Math.floor(Math.random()*100 + 1) })
             .then(function(row) {
 
-                console.log('inserted', row, row.get('name'), 'and deleting');
-                row.delete()
-                .then(function(r) {
-                    console.log('deleted', r);
+                console.log('insert worked', row, row.get('name'), 'and deleting');
+
+                return row.delete().then(function(r) {
+                    console.log('delete worked', r);
+                }, function(r) {
+                    console.error('delete broke', r);
+                    throw r;
                 });
 
             }, function(err) {
-                console.log('it broke', err);
+                console.log('insert broke', err);
+                throw err;
+            }).catch(function(err) {
+                console.error('one of the above broke', err);
             });
             */
 

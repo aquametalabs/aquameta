@@ -189,11 +189,13 @@ define(['/jQuery.min.js'], function($, undefined) {
 
                     // Log error in collapsed group
                     console.groupCollapsed(method, error.status_code, error.title);
-                    console.error(error.message);
+                    if ('message' in error) {
+                        console.error(error.message);
+                    }
                     console.groupEnd();
-                    return null;
+                    throw error.title;
 
-                }.bind(this));
+                });
 
             // Check cache for GET/POST
             if (use_cache && (method == 'GET' || method == 'POST')) {
@@ -266,12 +268,17 @@ define(['/jQuery.min.js'], function($, undefined) {
         return this.schema.database.endpoint.get(this, options, use_cache)
             .then(function(rows) {
 
-                if (rows == null || rows.result.length < 1) {
-                    return null;
+                if (rows == null) {
+                    throw 'Empty response';
+                }
+                else if (rows.result.length < 1) {
+                    throw 'No rows returned';
                 }
                 return new AQ.Rowset(this, rows);
 
-            }.bind(this));
+            }.bind(this)).catch(function(err) {
+                throw 'Rows request failed: ' + err;
+            });
     };
     AQ.Relation.prototype.row = function() {
         var args = {};
@@ -318,12 +325,20 @@ define(['/jQuery.min.js'], function($, undefined) {
         return this.schema.database.endpoint.get(this, args, use_cache)
             .then(function(row) {
 
-                if (row == null || row.result.length != 1) {
-                    return null;
+                if (row == null) {
+                    throw 'Empty response';
+                }
+                else if (row.result.length == 0) {
+                    throw 'No row returned';
+                }
+                else if (row.result.length > 1) {
+                    throw 'Multiple rows returned';
                 }
                 return new AQ.Row(this, row);
 
-            }.bind(this));
+            }.bind(this)).catch(function(err) {
+                throw 'Row request failed: ' + err;
+            });
     };
 
     /*--------------------------------- * Table * ---------------------------------*/
@@ -342,14 +357,16 @@ define(['/jQuery.min.js'], function($, undefined) {
         return insert_promise.then(function(inserted_row) {
 
             if (inserted_row == null) {
-                return null;
+                throw 'Empty response';
             }
             if (typeof data.length != 'undefined' && data.length > 1) {
                 return new AQ.Rowset(this, inserted_row);
             }
             return new AQ.Row(this, inserted_row);
 
-        }.bind(this));
+        }.bind(this)).catch(function(err) {
+            throw 'Insert failed: ' + err;
+        });
 
     };
 
@@ -560,21 +577,24 @@ define(['/jQuery.min.js'], function($, undefined) {
             .then(function(response) {
 
                 if(response == null) {
-                    return null;
+                    throw 'Empty response';
                 }
                 return this;
 
-            }.bind(this));
+            }.bind(this)).catch(function(err) {
+                throw 'Update failed: ' + err;
+            });
     };
     AQ.Row.prototype.delete = function() { 
         return this.relation.schema.database.endpoint.delete(this)
             .then(function(response) {
 
                 if(response == null) {
-                    return null;
+                    throw 'Empty response';
                 }
-                return true;
 
+            }).catch(function(err) {
+                throw 'Delete failed: ' + err;
             });
     };
     AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
