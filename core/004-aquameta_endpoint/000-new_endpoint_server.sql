@@ -1414,7 +1414,7 @@ create or replace function endpoint.request2(
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         when path like '/relation%' then
@@ -1468,7 +1468,7 @@ create or replace function endpoint.request2(
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         when path like '/function%' then
@@ -1491,7 +1491,7 @@ create or replace function endpoint.request2(
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         when path like '/field%' then
@@ -1511,17 +1511,17 @@ create or replace function endpoint.request2(
 
             else
                 -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status": 405, "message": "Method not allowed"}')::text, 'application/json'::text;
+                return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
         else
             -- Resource not found: 404
-            return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found"}')::text, 'application/json'::text;
+            return query select 404, 'Bad Request'::text, ('{"status_code": 404, "title": "Not Found"}')::text, 'application/json'::text;
 
         end case;
 
         exception when undefined_table then
-        return query select 404, 'Bad Request'::text, ('{"status": 404, "message": "Not Found: '|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
+        return query select 404, 'Bad Request'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
 
     end;
 $$
