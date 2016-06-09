@@ -185,8 +185,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
         // Namespace not found
         if (!(namespace in namespaces)) {
-            console.error("Widget namespace has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace");
-            throw "Widget namespace has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace";
+            throw 'Widget namespace "'+namespace+'" has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace';
         }
 
         // Get the widget
@@ -498,7 +497,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                 container.append(widget_maker(row));
             });
         }).catch(function(error) {
-            console.error(error);
+            console.error('widget.sync failed: ', error);
         });
 
     }
