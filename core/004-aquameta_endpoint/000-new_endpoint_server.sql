@@ -1644,7 +1644,7 @@ $$ language sql;
  ******************************************************************************/
 
 create table endpoint.session (
-    id uuid default public.uuid_generate_v4() not null,
+    id uuid default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null,
     user_id uuid references endpoint.user(id)
 );
