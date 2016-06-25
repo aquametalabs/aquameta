@@ -28,10 +28,10 @@ set search_path = endpoint;
  ******************************************************************************/
 
 create type endpoint.resource_bin as 
-(mimetype text, content bytea)
+(mimetype text, content bytea);
 
 create type endpoint.resource_txt as 
-(mimetype text, content text)
+(mimetype text, content text);
 
 create function endpoint.resource_bin(value json) returns endpoint.resource_bin as $$
 select row(value->>'mimetype', value->>'content')::endpoint.resource_bin
