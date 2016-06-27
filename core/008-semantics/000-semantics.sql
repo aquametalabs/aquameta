@@ -11,81 +11,71 @@ begin;
 create schema semantics;
 set search_path=semantics;
 
-create table semantics.type (
-    id meta.type_id primary key,
-    /*
-    -- value_generator text default 'field.get("value")', -- for complex types
-    display boolean default true,
-    display_widget_id uuid references widget.widget(id),
-    edit_widget_id uuid references widget.widget(id),
-    new_widget_id uuid references widget.widget(id)
-    */
-    form_field_widget_id uuid references widget.widget(id),
-    form_field_label_widget_id uuid references widget.widget(id),
-    form_field_display_widget_id uuid references widget.widget(id),
-    form_field_edit_widget_id uuid references widget.widget(id),
-    grid_view_label_widget_id uuid references widget.widget(id),
-    grid_field_display_widget_id uuid references widget.widget(id),
-    grid_field_edit_widget_id uuid references widget.widget(id)
 
-);
-
-create table semantics.relation (
+create table semantics.semantic_relation (
     id meta.relation_id primary key,
-    /*
-    identifier_icon_widget_id uuid references widget.widget(id),
-    identifier_listitem_widget_id uuid references widget.widget(id),
-    display_widget_id uuid references widget.widget(id),
-    edit_widget_id uuid references widget.widget(id),
-    new_widget_id uuid references widget.widget(id)
-    */
-
-
-    overview_widget_id uuid references widget.widget(id),
-    grid_view_widget_id uuid references widget.widget(id),
-    list_view_widget_id uuid references widget.widget(id),
-    list_item_identifier_widget_id uuid references widget.widget(id),
-    row_detail_widget_id uuid references widget.widget(id),
-    grid_view_row_widget_id uuid references widget.widget(id),
-    new_row_widget_id uuid references widget.widget(id)
+    purpose_id uuid references semantics.semantic_relation_purpose(id),
+    widget_id uuid references widget.widget(id) not null,
+    priority integer not null default 0
 );
 
-/*
-create view semantics.relation_identifier_listitem_widget as 
-select sr.id, mr.schema_name, mr.name as relation_name, w.name as widget_name from semantics.relation sr 
-    join meta.relation mr on sr.id=mr.id
-    join widget.widget w on sr.identifier_listitem_widget_id = w.id
-    ;
+create table semantics.semantic_relation_purpose (
+    id uuid primary key default public.uuid_generate_v4(),
+    purpose text not null
+);
+
+insert into semantics.semantic_relation_purpose (purpose) values 
+    -- Old
+    ('list_item_identifier'),
+    ('grid_view_row'),
+
+    -- Keepers
+    ('overview'),
+    ('list_view'),
+    ('list_item'),
+    ('row_detail'),
+    ('new_row'),
+    ('grid_view'),
+    ('grid_row');
 
 
-*/
+create table semantics.semantic_type (
+    id meta.type_id primary key,
+    purpose_id uuid references semantics.semantic_column_purpose(id) not null,
+    widget_id uuid references widget.widget(id) not null,
+    priority integer not null default 0
+);
 
-
-
-
-
-
-
-
-create table semantics."column" (
+-- Breaking changes
+create table semantics.semantic_column (
     id meta.column_id primary key,
-    /*
-    human_name text,
-    display boolean,
-    -- previous_column references column(id), -- TODO: column order in table
-    display_widget_id uuid references widget.widget(id),
-    edit_widget_id uuid references widget.widget(id),
-    new_widget_id uuid references widget.widget(id)
-    */
-
-    form_field_widget_id uuid references widget.widget(id),
-    form_field_label_widget_id uuid references widget.widget(id),
-    form_field_display_widget_id uuid references widget.widget(id),
-    form_field_edit_widget_id uuid references widget.widget(id),
-    grid_view_label_widget_id uuid references widget.widget(id),
-    grid_field_display_widget_id uuid references widget.widget(id),
-    grid_field_edit_widget_id uuid references widget.widget(id)
+    purpose_id uuid references semantics.semantic_column_purpose(id) not null,
+    widget_id uuid references widget.widget(id) not null,
+    priority integer not null default 0
 );
+
+create table semantics.semantic_column_purpose (
+    id uuid primary key default public.uuid_generate_v4(),
+    purpose text not null
+);
+
+insert into semantics.semantic_column_purpose (purpose) values
+    -- Old
+    ('form_field_label'),
+    ('form_field_display'),
+    ('form_field_edit uuid'),
+    ('grid_view_label'),
+    ('grid_field_display'),
+    ('grid_field_edit'),
+
+    -- Keepers
+    ('form_field'),
+    ('form_label'),
+    ('form_display'),
+    ('form_edit'),
+    ('grid_label'),
+    ('grid_display'),
+    ('grid_edit');
 
 create table semantics.foreign_key (
     id meta.foreign_key_id primary key,
@@ -166,59 +156,138 @@ $$ language plpgsql;
 
 
 
-/*
- *
- * Semantics will eventually need to be populated with data on install
- *
- */
+create or replace function semantics.relation_widget (
+    relation_id meta.relation_id,
+    widget_purpose text,
+    bundle_names text[],
+    default_bundle text,
+    out bundle_name text,
+    out widget_name text
+) as
+$$
 
-------------------------------
---------- TEST DATA ----------
-------------------------------
+    declare
+        column_name text;
+        widget_id uuid;
+
+    begin
+        -- Find all the possible widgets referenced in semantics for this relation and purpose
+        with possible_widgets as (
+            select w.id, w.name, r.priority
+            from semantics.semantic_relation r
+                join semantics.semantic_relation_purpose rp on rp.id = r.purpose_id
+                join widget.widget w on w.id = r.widget_id
+            where r.id = relation_id
+                and rp.purpose = widget_purpose
+        )
+
+        -- Get the bundle its from
+        select r.bundle_name, r.widget_name
+        from (
+
+            -- Committed widgets
+            select b.name as bundle_name, pw.name as widget_name, pw.priority
+            from bundle.bundle b
+                join bundle.commit c on c.id = b.head_commit_id
+                join bundle.rowset r on r.commit_id = c.id
+                join bundle.rowset_row rr on rr.rowset_id = r.id
+                join possible_widgets pw on pw.id = (rr.row_id).pk_value::uuid
+            where b.name = any( bundle_names )
+                and rr.row_id::meta.relation_id = meta.relation_id('widget','widget')
+
+            union
+
+            -- Staged widgets
+            select b.name as bundle_name, pw.name as widget_name, pw.priority
+            from bundle.bundle b
+                join bundle.stage_row_added sra on sra.bundle_id = b.id
+                join possible_widgets pw on pw.id = (sra.row_id).pk_value::uuid
+            where b.name = any( bundle_names )
+                and sra.row_id::meta.relation_id = meta.relation_id('widget','widget')
+
+            union
+
+            -- Default widget
+            select default_bundle as bundle_name, widget_purpose as widget_name, 0 as priority
+        ) r
+        order by r.priority desc
+        limit 1
+        into bundle_name, widget_name;
+
+    end;
+$$ language plpgsql;
 
 
 
-------------------------------
---------- TYPES --------------
-------------------------------
+create or replace function semantics.column_widget (
+    column_id meta.column_id,
+    widget_purpose text,
+    bundle_names text[],
+    default_bundle text,
+    out bundle_name text,
+    out widget_name text
+) as
+$$
 
-/*
-TODO: maybe refactor this to match the new system
---all booleans fields displayed and editable
-insert into semantics.type (id, display, display_widget_id) values (meta.type_id('pg_catalog', 'bool'), true, (select id from widget.widget where name = 'dev_field_boolean_editable'));
---all text fields displayed and editable
-insert into semantics.type (id, display, display_widget_id) values (meta.type_id('pg_catalog', 'text'), true, (select id from widget.widget where name = 'dev_field_editable'));
-insert into semantics.type (id, display, display_widget_id) values (meta.type_id('pg_catalog', 'int4'), true, (select id from widget.widget where name = 'dev_field_editable'));
-insert into semantics.type (id, display, display_widget_id) values (meta.type_id('pg_catalog', 'float8'), true, (select id from widget.widget where name = 'dev_field_editable'));
-insert into semantics.type (id, display, display_widget_id) values (meta.type_id('pg_catalog', 'varchar'), true, (select id from widget.widget where name = 'dev_field_editable'));
-insert into semantics.type (id, display, display_widget_id) values (meta.type_id('pg_catalog', 'timestamptz'), true, (select id from widget.widget where name = 'dev_field_editable'));
-*/
+    declare
+        column_name text;
+        widget_id uuid;
 
-------------------------------
---------- COLUMNS ------------
-------------------------------
---all meta tables displayed but not editable
-/*
-TODO: maybe refactor this to match the new system
-insert into semantics."column" (id, human_name, display) select id, name, 'true' from meta."column" where schema_name='meta';
-insert into semantics."column" (id, human_name, display) select id, name, 'false' from meta."column" where schema_name='pg_catalog';
+    begin
+        -- Find all the possible widgets referenced in semantics for this column or type and purpose
+        with possible_widgets as (
+            select w.id, w.name, r.priority, 'column' as column_or_type
+            from semantics.semantic_column c
+                join semantics.semantic_column_purpose cp on cp.id = c.purpose_id
+                join widget.widget w on w.id = c.widget_id
+            where c.id = column_id
+                and cp.purpose = widget_purpose
 
+            union
 
+            select w.id, w.name, r.priority, 'type' as column_or_type
+            from semantics.semantic_type t
+                join semantics.semantic_column_purpose cp on cp.id = t.purpose_id
+                join widget.widget w on w.id = t.widget_id
+            where t.id = (select type_id from meta.column where id = column_id)
+                and cp.purpose = widget_purpose
+        )
 
-insert into relation (id, identifier_listitem_widget_id) values (meta.relation_id('www','resource'), (select id from widget.widget where name='semantics_www_resource_listitem_identifier'));
-insert into relation (id, identifier_listitem_widget_id) values (meta.relation_id('www','mimetype'), (select id from widget.widget where name='semantics_mimetype_listitem_identifier'));
-insert into relation (id, identifier_listitem_widget_id) values (meta.relation_id('widget','widget'), (select id from widget.widget where name='semantics_widget_widget_listitem_identifier'));
+        -- Get the bundle its from
+        select r.bundle_name, r.widget_name
+        from (
 
-------------------------------
---------- COLUMNS ------------
-------------------------------
+            -- Committed widgets
+            select b.name as bundle_name, pw.name as widget_name, pw.priority, pw.col_or_type
+            from bundle.bundle b
+                join bundle.commit c on c.id = b.head_commit_id
+                join bundle.rowset r on r.commit_id = c.id
+                join bundle.rowset_row rr on rr.rowset_id = r.id
+                join possible_widgets pw on pw.id = (rr.row_id).pk_value::uuid
+            where b.name = any( bundle_names )
+                and rr.row_id::meta.relation_id = meta.relation_id('widget','widget')
 
+            union
 
+            -- Staged widgets
+            select b.name as bundle_name, pw.name as widget_name, pw.priority, pw.col_or_type
+            from bundle.bundle b
+                join bundle.stage_row_added sra on sra.bundle_id = b.id
+                join possible_widgets pw on pw.id = (sra.row_id).pk_value::uuid
+            where b.name = any( bundle_names )
+                and sra.row_id::meta.relation_id = meta.relation_id('widget','widget')
 
---insert into semantics."column" (id, human_name, display) select id, name, 'true' from meta."column" where schema_name='meta';
---insert into semantics."column" (id, human_name, display) select id, name, 'false' from meta."column" where schema_name='pg_catalog';
-*/
+            union
 
+            -- Default widget
+            select default_bundle as bundle_name, widget_purpose as widget_name, 0 as priority, 'z' as col_or_type
+        ) r
+        order by col_or_type asc, r.priority desc
+        limit 1
+        into bundle_name, widget_name;
+
+    end;
+$$ language plpgsql;
 
 
 commit;
