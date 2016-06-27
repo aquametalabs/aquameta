@@ -1432,15 +1432,17 @@ $$ language plpgsql;
  * meta.policy
  *****************************************************************************/
 create view meta.policy as
-select meta.policy_id(polrelid::meta.relation_id, polname) as id,
-	polname as name,
-	polrelid::meta.relation_id as relation_id,
-	(polrelid::meta.relation_id).name as relation_name,
-	((polrelid::meta.relation_id).schema_id).name as schema_name,
-	polcmd::char::meta.siuda as command,
-	pg_get_expr(polqual, polrelid, True) as using,
-	pg_get_expr(polwithcheck, polrelid, True) as check
-from pg_policy;
+select meta.policy_id(p.polrelid::meta.relation_id, p.polname) as id,
+	p.polname as name,
+	meta.relation_id(n.nspname, c.relname) as relation_id,
+	c.relname as relation_name,
+	n.nspname as schema_name,
+	p.polcmd::char::meta.siuda as command,
+	pg_get_expr(p.polqual, p.polrelid, True) as using,
+	pg_get_expr(p.polwithcheck, p.polrelid, True) as check
+from pg_policy p
+    join pg_class c on c.oid = p.polrelid
+    join pg_namespace n on n.oid = c.relnamespace;
 
 
 create function meta.stmt_policy_create(schema_name text, relation_name text, policy_name text, command meta.siuda, "using" text, "check" text) returns text as $$
@@ -1547,10 +1549,12 @@ select
     (role_id).name as role_name
 from ( 
     select
-        polname as policy_name,
-        polrelid::meta.relation_id as relation_id,
-        unnest(polroles::regrole[]::text[]::meta.role_id[]) as role_id
-    from pg_policy
+        p.polname as policy_name,
+	meta.relation_id(n.nspname, c.relname) as relation_id,
+        unnest(p.polroles::regrole[]::text[]::meta.role_id[]) as role_id
+    from pg_policy p
+        join pg_class c on c.oid = p.polrelid
+        join pg_namespace n on n.oid = c.relnamespace
 ) a;
 
 

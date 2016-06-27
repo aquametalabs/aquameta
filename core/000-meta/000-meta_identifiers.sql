@@ -314,34 +314,6 @@ create cast (meta.relation_id as text)
 with function meta.text(meta.relation_id)
 as assignment;
 
-/*
-Use oid cast with GREAT	caution, and only for system tables
-
-http://www.postgresql.org/docs/9.4/static/datatype-oid.html
-
-The oid type is currently implemented as an unsigned four-byte integer. Therefore, it is not large enough to provide database-wide uniqueness in large databases, or even in large individual tables
-*/
-create function meta.relation_id(rel oid) returns meta.relation_id as $$
-begin
-
--- FIXME: commented this out because it breaks a bunch of stuff.  apparently
--- setting local search_path within a transaction sets the search_path for the
--- whole transaction, so this leaks.
---    set local search_path='';
---    raise warning 'setting local search_path=''''';
-    return id from meta.relation where 
-        schema_name = (select (string_to_array(rel::regclass::text, '.'))[1]) and
-        name = (select regexp_replace(((string_to_array(rel::regclass::text, '.'))[2]), '"', '', 'g'));
-        -- This sucks. For quoted tables (e.g. "user") we are doing a find/replace on the quote. Not great,
-        -- but it goes along with the rule that tables should never be created with quotes except for keywords.
-        -- Though those should be avoided too
-end;
-$$ language plpgsql;
-
-
-create cast (oid as meta.relation_id)
-with function meta.relation_id(oid)
-as assignment;
 
 
 /******************************************************************************
