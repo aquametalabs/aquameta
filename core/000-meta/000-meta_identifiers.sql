@@ -323,7 +323,12 @@ The oid type is currently implemented as an unsigned four-byte integer. Therefor
 */
 create function meta.relation_id(rel oid) returns meta.relation_id as $$
 begin
-    set local search_path='';
+
+-- FIXME: commented this out because it breaks a bunch of stuff.  apparently
+-- setting local search_path within a transaction sets the search_path for the
+-- whole transaction, so this leaks.
+--    set local search_path='';
+--    raise warning 'setting local search_path=''''';
     return id from meta.relation where 
         schema_name = (select (string_to_array(rel::regclass::text, '.'))[1]) and
         name = (select regexp_replace(((string_to_array(rel::regclass::text, '.'))[2]), '"', '', 'g'));
