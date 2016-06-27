@@ -16,6 +16,7 @@
 
 begin;
 
+delete from bundle.bundle where name='com.aquameta.bundle';
 insert into bundle.bundle (name) values ('com.aquameta.bundle');
 insert into bundle.ignored_row(bundle_id, row_id) values (
     (select id from bundle.bundle where name='com.aquameta.bundle'),
