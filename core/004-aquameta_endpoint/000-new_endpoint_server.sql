@@ -1073,7 +1073,7 @@ We also want to use column_mimetype if we are only sending one column back
 create function endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
-    out result json,
+    out result text,
     out mimetype text
 ) returns record as $$
 
@@ -1182,6 +1182,74 @@ create function endpoint.rows_select_function(
 
         -- Loop through function call results
         for _row in execute 'select ' || return_column || ' from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
+                            || '(' || function_args || ') ' || suffix
+        loop
+            rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
+        end loop;
+
+        -- Result JSON object
+        select '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
+
+
+        -- implicitly returning function result and mimetype
+
+    end;
+$$
+language plpgsql;
+
+
+create function endpoint.anonymous_rows_select_function(
+    _schema_name text,
+    _function_name text,
+    args json,
+    out result text,
+    out mimetype text
+) returns record as $$
+
+    declare
+        columns_json text;
+        function_args text;
+        suffix text;
+        _row record;
+        rows_json text[];
+        return_column text;
+
+    begin
+        -- TODO: mimetype based on return type id?
+        mimetype := 'application/json';
+
+        -- Build columns_json TODO ?
+        select '' into columns_json;
+
+        -- Suffix clause: where, order by, offest, limit
+        select endpoint.suffix_clause(args) into suffix;
+
+
+        select json_array_elements_text::json
+        from json_array_elements_text(args->'args') into args;
+
+        -- raise warning 'args = %', args::json;
+
+        -- Function Arguments
+        if  args->'vals' is not null then
+
+            -- Transpose JSON array to comma-separated string
+            select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
+
+        else
+
+            select '' into function_args;
+            -- TODO: what's necessary here?
+
+        end if;
+
+
+        -- Column
+        select coalesce(args->>'column', '*') into return_column;
+
+
+        -- Loop through function call results
+        for _row in execute 'select ' || return_column || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
                             || '(' || function_args || ') ' || suffix
         loop
             rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
