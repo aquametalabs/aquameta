@@ -1205,5 +1205,14 @@ create cast (field_id as column_id)
 
 */
 
+-- function to schema
+create function function_id_to_schema_id(in meta.function_id, out meta.schema_id) as $$
+       select ($1.schema_id)
+       $$
+       language sql;
+
+create cast (function_id as schema_id)
+       with function function_id_to_schema_id(function_id) as assignment;
+
 
 commit;
