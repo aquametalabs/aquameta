@@ -1333,6 +1333,7 @@ create or replace function endpoint.request2(
         function_id meta.function_id;
         field_id meta.field_id;
         relation_subscribable boolean;
+        path_parts integer;
 
     begin
         set local search_path = endpoint,meta,public;
@@ -1473,26 +1474,47 @@ create or replace function endpoint.request2(
 
         when path like '/function%' then
 
-            -- URL /endpoint/function/{function_id}
-            function_id := substring(path from 11)::meta.function_id;
+            -- If function is called without a parameter type list
+            if array_length((string_to_array(path, '/')), 1) = 4 then
 
-            if verb = 'GET' then
-                -- Get record from function call
-                return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, query_args) as rsf;
+                path := path || '/{}';
+                function_id := substring(path from 11)::meta.function_id;
 
-                -- I'm not sure this is possible in a clean way
-                -- Get single column from function call
-                -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
-                --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
+                if verb = 'GET' then
+                    -- Get record from function call
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, query_args) as rsf;
 
-            elsif verb = 'POST' then
-                -- Get record from function call
-                return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, post_data) as rsf;
+                elsif verb = 'POST' then
+                    -- Get record from function call
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, post_data) as rsf;
 
+                end if;
+
+            -- Calling a funciton with a specified parameter type list -- Exact funciton id known
             else
-                -- HTTP method not allowed for this resource: 405
-                return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
+
+                -- URL /endpoint/function/{function_id}
+                function_id := substring(path from 11)::meta.function_id;
+
+                if verb = 'GET' then
+                    -- Get record from function call
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, query_args) as rsf;
+
+                    -- I'm not sure this is possible in a clean way
+                    -- Get single column from function call
+                    -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
+                    --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
+
+                elsif verb = 'POST' then
+                    -- Get record from function call
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, post_data) as rsf;
+
+                end if;
+
             end if;
+
+            -- HTTP method not allowed for this resource: 405
+            return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
 
         when path like '/field%' then
 
