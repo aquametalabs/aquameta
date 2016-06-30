@@ -8,6 +8,112 @@
 define(['/jQuery.min.js'], function($, undefined) {
     'use strict';
     var AQ = AQ || {};
+
+
+
+    function query_options( options ) {
+
+        var keys = [];
+
+        if (typeof options != 'undefined') {
+
+            // Map the keys of the options object to an array of encoded url components
+            Object.keys(options).sort().map(function(key_name) {
+
+                var key = options[key_name];
+
+                switch(key_name) {
+
+                    case 'where':
+                        // where: { name: 'column_name', op: '=', value: 'value' }
+                        // where: [{ name: 'column_name', op: '=', value: 'value' }]
+                        if (typeof key.length == 'undefined') key = [key];
+
+                        return key.map(function(where) {
+                            return 'where=' + encodeURIComponent(JSON.stringify(where));
+                        }).join('&');
+
+                    case 'order_by':
+                        // So many possibilities...
+                        // order_by: '-?column_name'
+                        // order_by: ['-?column_name']
+                        // order_by: { 'column_name': 'asc|desc' }
+                        // order_by: [{ 'column_name': 'asc|desc' }]
+                        // order_by: { column: 'column_name', direction: 'asc|desc' }
+                        // order_by: [{ column: 'column_name', direction: 'asc|desc' }]
+                        if (typeof key.length == 'undefined') key = [key];
+
+                        return key_name + '=' + encodeURIComponent(key.map(function(o,i) {
+                            return ((typeof o.direction != 'undefined' && o.direction != 'asc') ? '-' : '') + o.column;
+                        }).join(','));
+
+                    case 'limit':
+                        // limit: number
+                    case 'offset':
+                        // offset: number
+                        var parsedNum = parseInt(key);
+                        if (!isNaN(parsedNum)) {
+                            return key_name + '=' + parsedNum;
+                        }
+                        return;
+
+                    case 'args':
+                    case 'exclude':
+                    case 'include':
+                        return key_name + '=' + encodeURIComponent(JSON.stringify(key));
+                }
+            }
+
+            // Remove all undefined elements of the array
+            ).forEach(function(e) {
+                if (typeof e != 'undefined') keys.push(e);
+            });
+        }
+
+        // Return the query string by joining the array with &'s
+        return keys.length ? '?' + keys.join('&') : '?';
+    }
+
+
+
+    function server_options( options ) {
+
+        // use_cache, evented, meta_data (columns and pk)
+        var keys = [];
+
+        if (typeof options != 'undefined') {
+
+            // Map the keys of the options object to an array of encoded url components
+            Object.keys(options).sort().map(function(key_name) {
+
+                var key = options[key_name];
+                switch(key_name) {
+
+                    case 'use_cache':
+                        // use_cache has no query string component
+                        return undefined;
+
+                    case 'evented':
+                        return key_name + '=' + encodeURIComponent(JSON.stringify(key));
+
+                    case 'meta_data':
+                        return key_name + '=' + encodeURIComponent(JSON.stringify(key));
+                }
+            }
+
+            // Remove all undefined elements of the array
+            ).forEach(function(e) {
+                if (typeof e != 'undefined') keys.push(e);
+            });
+        }
+
+        // Return a portion of the query string by joining the array with &'s
+        return keys.join('&');
+
+    }
+
+
+
     function Endpoint( url, evented ) {
 
         this.url = url;
@@ -20,74 +126,6 @@ define(['/jQuery.min.js'], function($, undefined) {
         }
 
         if(this.evented) {
-        }
-
-        function build_query_string( options ) {
-
-            if(typeof options == 'undefined') return '';
-
-            var return_url = '',
-                argsCount = 0;
-
-            if (typeof options.exclude != 'undefined') {
-                if (!argsCount) return_url += '?';
-                if (argsCount++) return_url += '&';
-                return_url += 'exclude=' + encodeURIComponent(JSON.stringify(options.exclude));
-            }
-
-            // where: { name: 'column_name', op: '=', value: 'value' }
-            // where: [{ name: 'column_name', op: '=', value: 'value' }]
-            if (typeof options.where != 'undefined') {
-                if (!argsCount) return_url += '?';
-                if (typeof options.where.length == 'undefined') options.where = [options.where];
-                for (var i = 0; i < options.where.length; i++) {
-                    var where = options.where[i];
-                    if (argsCount++) return_url += '&';
-                    return_url += 'where=' + encodeURIComponent(JSON.stringify(where));
-                }
-            }
-            // So many possibilities...
-            // order_by: '-?column_name'
-            // order_by: ['-?column_name']
-            // order_by: { 'column_name': 'asc|desc' }
-            // order_by: [{ 'column_name': 'asc|desc' }]
-            // order_by: { column: 'column_name', direction: 'asc|desc' }
-            // order_by: [{ column: 'column_name', direction: 'asc|desc' }]
-            if (typeof options.order_by != 'undefined') {
-                if (!argsCount) return_url += '?';
-                if (typeof options.order_by.length == 'undefined') options.order_by = [options.order_by];
-
-                var order_by_array = options.order_by.map(function(o) {
-                    return ((typeof o.direction != 'undefined' && o.direction != 'asc') ? '-' : '') + o.column;
-                });
-
-                if (order_by_array.length) {
-                    if (argsCount++) return_url += '&';
-                    return_url += 'order_by=' + encodeURIComponent(order_by_array.join(','));
-                }
-            }
-            if (typeof options.limit != 'undefined') { // limit: number
-                if (!argsCount) return_url += '?';
-                var parsedLimit = parseInt(options.limit);
-                if (!isNaN(parsedLimit)) {
-                    if (argsCount++) return_url += '&';
-                    return_url += 'limit=' + parsedLimit;
-                }
-            }
-            if (typeof options.offset != 'undefined') { // offset: number
-                if (!argsCount) return_url += '?';
-                var parsedOffset = parseInt(options.offset);
-                if (!isNaN(parsedOffset)) {
-                    if (argsCount++) return_url += '&';
-                    return_url += 'offset=' + parsedOffset;
-                }
-            }
-            if (typeof options.args != 'undefined') { // args: object
-                if (!argsCount) return_url += '?';
-                if (argsCount++) return_url += '&';
-                return_url += 'args=' + encodeURIComponent(JSON.stringify(options.args));
-            }
-            return return_url;
         }
 
         var create_session = function() {
@@ -127,7 +165,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // URLs
             var url_without_query = meta_id.to_url();
-            var url_with_query = url_without_query + build_query_string(args);
+            var url_with_query = url_without_query + query_options(args);
 
             // Check cache
             if (use_cache && url_with_query in this.cache) {
@@ -138,8 +176,10 @@ define(['/jQuery.min.js'], function($, undefined) {
             // If this connection is evented, get event session_id
             if (this.evented && typeof args['session_id'] == 'undefined') {
                 //args['session_id'] = document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-		// TODO: Some confusion here. This is the auth session cookie
+                // TODO: Some confusion here. This is the auth session cookie
             }
+
+            // url_with_query + server_options(args)
 
             // Send websocket method if this connection uses websocket
             if (socket_connected()) {
@@ -221,6 +261,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         // Not sure which name is better
         this.endpoint = this.connection = new Endpoint(url);
 
+        // this.settings.evented can be string or boolean
         if(this.settings.evented != 'no') {
 
             this.connection.create_session()
@@ -248,7 +289,68 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Schema.prototype.relation = function( name )         { return new AQ.Relation(this, name); };
     AQ.Schema.prototype.table = function( name )            { return new AQ.Table(this, name); };
     AQ.Schema.prototype.view = function( name )             { return new AQ.View(this, name); };
-    AQ.Schema.prototype.function = function( name, args )   { return new AQ.Function(this, name, args); };
+    AQ.Schema.prototype.function = function( identifier, args, options )   {
+
+        // Function identifier (name and parameter list)
+        if (typeof identifier == 'object') {
+            var name = identifier.name;
+            var parameter_type_list = identifier.parameters;
+        }
+        else {
+            // String -- TODO: This will not select a function server-side
+            // cast from text to meta.function_id fails
+            var name = identifier;
+        }
+
+        // Arguments
+        var args_obj = { args: {} };
+
+        // `args = undefined` will pass no arguments into the server-side function
+        if (typeof args != 'undefined') {
+
+            // some_function?args={ kwargs: {} } -- Key/value object
+            if (!(args instanceof Array) && args instanceof Object) {
+                args_obj.args.kwargs = args;
+            }
+
+            // some_function?args={ vals: [] } -- Array
+            else {
+                if (!(args instanceof Array)) {
+                    // Regular value is placed into array
+                    args = [ args ];
+                }
+                args_obj.args.vals = args;
+            }
+        }
+
+        var use_cache = false;
+        if (typeof options != 'undefined') {
+            if (typeof options.use_cache != 'undefined') {
+                use_cache = options.use_cache;
+            }
+            args_obj = Object.assign(options, args_obj);
+        }
+
+        var fn = new AQ.Function(this, name, parameter_type_list);
+
+        return this.database.endpoint.get(fn, args_obj, use_cache)
+            .then(function(response) {
+
+                if (!response) {
+                    throw 'Empty response';
+                }
+                else if (!response.result.length) {
+                    throw 'Result set empty';
+                }
+                if(response.result.length > 1) {
+                    return new AQ.FunctionResultSet(fn, response);
+                }
+                return new AQ.FunctionResult(fn, response);
+
+            }.bind(this)).catch(function(err) {
+                throw 'Function call request failed: ' + err;
+            });
+    };
 
     /*--------------------------------- * Relation * ---------------------------------*/
     AQ.Relation = function( schema, name ) {
@@ -259,12 +361,14 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Relation.prototype.constructor = AQ.Relation;
     AQ.Relation.prototype.to_url = function() { return this.schema.database.endpoint.url + '/relation/' + this.schema.name + '/' + this.name; };
     AQ.Relation.prototype.rows = function( options ) {
+        //return new AQ.Rowset(this, options);
         var use_cache = false;
         if (typeof options != 'undefined') {
             if (typeof options.use_cache != 'undefined') {
                 use_cache = options.use_cache || false;
             }
         }
+
         return this.schema.database.endpoint.get(this, options, use_cache)
             .then(function(rows) {
 
@@ -510,7 +614,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
-	});
+        });
 
         var options = {
             where: {
@@ -537,7 +641,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
-	});
+        });
 
         var options = {
             where: {
@@ -559,11 +663,22 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.schema = relation.schema;
         this.row_data = response.result[0].row;
         this.columns = response.columns;
-        this.pk_value = this.row_data.id; // TODO hardcoded
-        this.pk_column_name = 'id'; // TODO this too
-        //this.pk = function() { return; }; // ?
-        this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
-        this.to_url = function() { return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
+
+        // TODO: remove hardcoded pk stuff and place this in meta_data: true option
+        this.pk_column_name = 'id'; // null;
+        this.pk_value = this.get(this.pk_column_name); // null;
+        this.id = null;
+        this.to_url = function() {
+            // console.error('You must call a row with "meta_data: true" in order to use this function');
+            return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value;
+        };
+
+        if (typeof this.row_data.pk != 'undefined') {
+            this.pk_column_name = this.row_data.pk;
+            this.pk_value = this.get(this.pk_column_name);
+            this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
+            this.to_url = function() { return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
+        }
     };
     AQ.Row.prototype = {
         constructor: AQ.Row,
@@ -670,63 +785,28 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Function = function( schema, name, args ) {
         this.schema = schema;
         this.name = name;
+
         if(args instanceof Array) {
             this.args = '{' + args.join(',') + '}';
         }
         else {
             this.args = args;
         }
+
         this.id = { schema_id: this.schema.id, name: this.name, args: this.args };
-        this.to_url = function() { return this.schema.database.endpoint.url + '/function/' + this.schema.name + '/' + this.name + '/' + this.args; };
+        this.to_url = function() {
+           if (typeof this.args != 'undefined') {
+               return this.schema.database.endpoint.url + '/function/' + this.schema.name + '/' + this.name + '/' + this.args;
+           }
+           return this.schema.database.endpoint.url + '/function/' + this.schema.name + '/' + this.name;
+        };
     };
     AQ.Function.prototype.constructor = AQ.Function;
-    AQ.Function.prototype.call = function(fn_args, options) {
-        /*
-        some_function?args={ vals: [] } -- Array
-        some_function?args={ kwargs: {} } -- Key/value object
-        some_function?args={ kwargs: {} }&column=name
-        */
-        var args_obj = { args: {} };
-
-        if (fn_args instanceof Array) {
-            args_obj.args.vals = fn_args;
-        }
-
-        else if (typeof fn_args == 'object') {
-            args_obj.args.kwargs = fn_args;
-        }
-
-        var use_cache = false;
-        if (typeof options != 'undefined') {
-            if (typeof options.use_cache != 'undefined') {
-                use_cache = options.use_cache;
-            }
-            args_obj = Object.assign(options, args_obj);
-        }
-
-        return this.schema.database.endpoint.get(this, args_obj, use_cache)
-            .then(function(response) {
-
-                if (!response) {
-                    throw 'Empty response';
-                }
-                else if (!response.result.length) {
-                    throw 'Result set empty';
-                }
-                if(response.result.length > 1) {
-                    return new AQ.FunctionResultSet(this, response);
-                }
-	        return new AQ.FunctionResult(this, response);
-
-            }.bind(this)).catch(function(err) {
-                throw 'Function call request failed: ' + err;
-            });
-    };
 
     /*--------------------------------- * Function Result * ---------------------------------*/
     AQ.FunctionResult = function( fn, response ) {
-	this.function = fn;
-	this.schema = fn.schema;
+        this.function = fn;
+        this.schema = fn.schema;
         this.row_data = response.result[0].row;
         this.rows = response.result;
     };
@@ -737,12 +817,12 @@ define(['/jQuery.min.js'], function($, undefined) {
     };
     AQ.FunctionResult.prototype.map = function(fn) {
         return this.rows.map(function(row) {
-            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+            return new AQ.FunctionResult(this.function, { columns: this.columns, result: [ row ] });
         }.bind(this)).map(fn);
     };
     AQ.FunctionResult.prototype.forEach = function(fn) {
         return this.rows.map(function(row) {
-            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+            return new AQ.FunctionResult(this.function, { columns: this.columns, result: [ row ] });
         }.bind(this)).forEach(fn);
     };
     AQ.FunctionResult.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
@@ -786,20 +866,20 @@ define(['/jQuery.min.js'], function($, undefined) {
 
     /*--------------------------------- * Function Result Set * ---------------------------------*/
     AQ.FunctionResultSet = function( fn, response ) {
-	this.function = fn;
-	this.schema = fn.schema;
+        this.function = fn;
+        this.schema = fn.schema;
         this.columns = response.columns;
         this.rows = response.result;
     };
     AQ.FunctionResultSet.prototype.constructor = AQ.FunctionResultSet;
     AQ.FunctionResultSet.prototype.map = function(fn) {
         return this.rows.map(function(row) {
-            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+            return new AQ.FunctionResult(this.function, { columns: this.columns, result: [ row ] });
         }.bind(this)).map(fn);
     };
     AQ.FunctionResultSet.prototype.forEach = function(fn) {
         return this.rows.map(function(row) {
-            return new AQ.FunctionResult(this.relation, { columns: this.columns, result: [ row ] });
+            return new AQ.FunctionResult(this.function, { columns: this.columns, result: [ row ] });
         }.bind(this)).forEach(fn);
     };
     AQ.FunctionResultSet.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
@@ -815,7 +895,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
-	});
+        });
 
         var options = {
             where: {
@@ -842,7 +922,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
-	});
+        });
 
         var options = {
             where: {
