@@ -81,16 +81,21 @@ create table endpoint.mimetype_extension (
 );
 
 
--- pulled out: replaced by optional/DATA-endpoint.sql
--- insert into mimetype (mimetype) values ('text/html');
--- insert into mimetype (mimetype) values ('text/javascript');
--- insert into mimetype (mimetype) values ('text/css');
-
 create table endpoint.column_mimetype (
     id uuid default public.uuid_generate_v4() primary key,
     column_id meta.column_id not null,
     mimetype_id uuid not null references endpoint.mimetype(id)
 );
+
+
+create table endpoint.function_field_mimetype (
+    id uuid default public.uuid_generate_v4() primary key,
+    schema_name text,
+    function_name text,
+    field_name text,
+    mimetype_id uuid not null references endpoint.mimetype(id)
+);
+
 
 create table endpoint."resource_binary" (
     id uuid default public.uuid_generate_v4() primary key,
@@ -1246,6 +1251,18 @@ create function endpoint.anonymous_rows_select_function(
 
         -- Column
         select coalesce(args->>'column', '*') into return_column;
+
+        if return_column <> '*' then
+
+            select coalesce(m.mimetype, mimetype)
+            from endpoint.function_field_mimetype ffm
+                join endpoint.mimetype m on m.id = ffm.mimetype_id
+            where ffm.schema_name = _schema_name
+                and ffm.function_name = _function_name
+                and field_name = return_column
+            into mimetype;
+
+        end if;
 
 
         -- Loop through function call results
