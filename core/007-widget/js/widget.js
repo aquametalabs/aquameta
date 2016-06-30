@@ -167,17 +167,22 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             endpoint: endpoint,
             bundle_name: bundle_name
         };
-        /* Much faster way, but not right
-        namespaces[namespace] = endpoint.schema('widget').view('bundled_widget').rows({
-            where: {
-                name: 'bundle_name',
-                op: '=',
-                value: bundle_name
-            }
-        });
-        */
 
     };
+
+
+
+    AQ.Widget.bundles = function() {
+        return Object.keys(namespaces).map(function(key) {
+            return namespaces[key].bundle_name;
+        });
+    }
+
+
+
+    AQ.Widget.bundle = function( name ) {
+        return namespaces[name].bundle_name;
+    }
 
 
 
@@ -188,17 +193,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             throw 'Widget namespace "'+namespace+'" has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace';
         }
 
-        // Get the widget
-        /* Much faster way, but not right
-        return namespaces[namespace].then(function(rows) {
-              return rows.where('name', name, true, true);
-        })
-        .then(function(row) {
-        */
-        return namespaces[namespace].endpoint.schema('widget').function('bundled_widget','{text,text}').call({
-                bundle_name: namespaces[namespace].bundle_name,
-                widget_name: name
-        }, {
+        return namespaces[namespace].endpoint.schema('widget').function('bundled_widget', [ namespaces[namespace].bundle_name, name ], {
             use_cache: true
         }).then(function(row) {
 
@@ -467,32 +462,40 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
 
-    AQ.Widget.load.sync = function(rowlist_promise, container, widget_maker, handlers) {
+    AQ.Widget.load.sync = function(rowset_promise, container, widget_maker, handlers) {
 
         if(handlers === undefined) {
             handlers = {};
         }
 
         if (widget_maker === undefined) {
-            throw "widget.sync missing widget_maker argument";
+            throw 'widget.sync missing widget_maker argument';
         }
 
         if (container.length < 1) {
-          throw "widget.sync failed:  the specified container is empty or not found";
-          return;
+            throw 'widget.sync failed: The specified container is empty or not found';
+            return;
         }
 
         if (container.length > 1) {
-          throw "widget.sync failed:  the specified container contains multiple elements";
-          return;
+            throw 'widget.sync failed: The specified container contains multiple elements';
+            return;
         }
 
         if (!container instanceof jQuery) {
-          throw "widget.sync failed:  the specified container is not a jQuery object";
-          return;
+            throw 'widget.sync failed: The specified container is not a jQuery object';
+            return;
         }
 
-        rowlist_promise.then(function(rowset) {
+        if (typeof rowset_promise == 'undefined' ||
+            typeof rowset_promise.then == 'undefined') {
+            throw 'widget.sync failed: rowset_promise must be a "thenable" promise';
+        }
+
+        rowset_promise.then(function(rowset) {
+            if (typeof rowset == 'undefined' || typeof rowset.forEach == 'undefined') {
+                throw 'Rowset it not defined. First argument to widget.sync must return a Rowset.';
+            }
             rowset.forEach(function(row) {
                 container.append(widget_maker(row));
             });
