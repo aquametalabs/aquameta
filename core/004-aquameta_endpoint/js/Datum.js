@@ -57,6 +57,10 @@ define(['/jQuery.min.js'], function($, undefined) {
                         }
                         return;
 
+                    case 'evented':
+                        return 'session_id=' + encodeURIComponent(JSON.stringify(key));
+
+                    case 'meta_data':
                     case 'args':
                     case 'exclude':
                     case 'include':
@@ -76,57 +80,21 @@ define(['/jQuery.min.js'], function($, undefined) {
 
 
 
-    function server_options( options ) {
-
-        // use_cache, evented, meta_data (columns and pk)
-        var keys = [];
-
-        if (typeof options != 'undefined') {
-
-            // Map the keys of the options object to an array of encoded url components
-            Object.keys(options).sort().map(function(key_name) {
-
-                var key = options[key_name];
-                switch(key_name) {
-
-                    case 'use_cache':
-                        // use_cache has no query string component
-                        return undefined;
-
-                    case 'evented':
-                        return key_name + '=' + encodeURIComponent(JSON.stringify(key));
-
-                    case 'meta_data':
-                        return key_name + '=' + encodeURIComponent(JSON.stringify(key));
-                }
-            }
-
-            // Remove all undefined elements of the array
-            ).forEach(function(e) {
-                if (typeof e != 'undefined') keys.push(e);
-            });
-        }
-
-        // Return a portion of the query string by joining the array with &'s
-        return keys.join('&');
-
-    }
-
-
-
     function Endpoint( url, evented ) {
 
         this.url = url;
         this.evented = false;
+        this.event_session_id;
         this.cache = {};
-        this.session_id = get_session_cookie();
+
+        // Auth session
+        this.auth_session_id = get_session_cookie();
 
         function get_session_cookie() {
             return document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
         }
 
-        if(this.evented) {
-        }
+        if(this.evented) { }
 
         var create_session = function() {
 
@@ -136,6 +104,9 @@ define(['/jQuery.min.js'], function($, undefined) {
             })
             .then(function(socket) {
                 return socket.send_method('session_attach');
+            })
+            .then(function(socket) {
+                this.event_session_id = socket.whatever;
             })
             .catch(function(error) {
                 console.log(error);
@@ -152,15 +123,35 @@ define(['/jQuery.min.js'], function($, undefined) {
         // Grabs current connection and sends method
         var socket_send = function(message) { return; }; 
 
-        var resource = function( method, meta_id, args, data, use_cache ) {
+        var resource = function( method, meta_id, args, data ) {
+
+            args = args || {};
+
+            // Get use_cache from args or data
+            var use_cache = false;
+            if (typeof data == 'undefined') {
+                if (typeof args.use_cache != 'undefined') {
+                    use_cache = args.use_cache;
+                }
+            }
+            else {
+                if (typeof data.use_cache != 'undefined') {
+                    use_cache = data.use_cache;
+                }
+            }
 
             var current_session_cookie =  get_session_cookie();
-            if (this.session_id != current_session_cookie) {
+            if (this.auth_session_id != current_session_cookie) {
                 // session has changed
-                // update session_id
-                this.session_id = current_session_cookie;
+                // update auth_session_id
+                this.auth_session_id = current_session_cookie;
                 // dump cache
                 this.cache = {};
+            }
+
+            // If this connection is evented, get event_session_id
+            if (this.evented) {
+                args.session_id = this.event_session_id;
             }
 
             // URLs
@@ -169,17 +160,8 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // Check cache
             if (use_cache && url_with_query in this.cache) {
-                //console.log('using cache', url_with_query);
                 return this.cache[url_with_query];
             }
-
-            // If this connection is evented, get event session_id
-            if (this.evented && typeof args['session_id'] == 'undefined') {
-                //args['session_id'] = document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-                // TODO: Some confusion here. This is the auth session cookie
-            }
-
-            // url_with_query + server_options(args)
 
             // Send websocket method if this connection uses websocket
             if (socket_connected()) {
@@ -247,10 +229,10 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         return {
             url: this.url,
-            get: function( meta_id, args, use_cache )        { return resource.call(this, 'GET', meta_id, args, {}, use_cache); }.bind(this),
-            post: function( meta_id, data, use_cache )       { return resource.call(this, 'POST', meta_id, {}, data, use_cache); }.bind(this),
-            patch: function( meta_id, data )                 { return resource.call(this, 'PATCH', meta_id, {}, data); }.bind(this),
-            delete: function( meta_id, args )                { return resource.call(this, 'DELETE', meta_id, args); }.bind(this)
+            get: function( meta_id, args )        { return resource.call(this, 'GET', meta_id, args); }.bind(this),
+            post: function( meta_id, data )       { return resource.call(this, 'POST', meta_id, {}, data); }.bind(this),
+            patch: function( meta_id, data )      { return resource.call(this, 'PATCH', meta_id, {}, data); }.bind(this),
+            delete: function( meta_id, args )     { return resource.call(this, 'DELETE', meta_id, args); }.bind(this)
         };
     }
 
@@ -296,44 +278,36 @@ define(['/jQuery.min.js'], function($, undefined) {
             var name = identifier.name;
             var parameter_type_list = identifier.parameters;
         }
+        // Selecting a function without specifying the parameters
         else {
-            // String -- TODO: This will not select a function server-side
-            // cast from text to meta.function_id fails
             var name = identifier;
         }
 
+        options = options || {};
+
         // Arguments
-        var args_obj = { args: {} };
+        options.args = {};
 
         // `args = undefined` will pass no arguments into the server-side function
         if (typeof args != 'undefined') {
 
             // some_function?args={ kwargs: {} } -- Key/value object
             if (!(args instanceof Array) && args instanceof Object) {
-                args_obj.args.kwargs = args;
+                options.args.kwargs = args;
             }
-
             // some_function?args={ vals: [] } -- Array
             else {
                 if (!(args instanceof Array)) {
                     // Regular value is placed into array
                     args = [ args ];
                 }
-                args_obj.args.vals = args;
+                options.args.vals = args;
             }
-        }
-
-        var use_cache = false;
-        if (typeof options != 'undefined') {
-            if (typeof options.use_cache != 'undefined') {
-                use_cache = options.use_cache;
-            }
-            args_obj = Object.assign(options, args_obj);
         }
 
         var fn = new AQ.Function(this, name, parameter_type_list);
 
-        return this.database.endpoint.get(fn, args_obj, use_cache)
+        return this.database.endpoint.get(fn, options)
             .then(function(response) {
 
                 if (!response) {
@@ -361,15 +335,8 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Relation.prototype.constructor = AQ.Relation;
     AQ.Relation.prototype.to_url = function() { return this.schema.database.endpoint.url + '/relation/' + this.schema.name + '/' + this.name; };
     AQ.Relation.prototype.rows = function( options ) {
-        //return new AQ.Rowset(this, options);
-        var use_cache = false;
-        if (typeof options != 'undefined') {
-            if (typeof options.use_cache != 'undefined') {
-                use_cache = options.use_cache || false;
-            }
-        }
 
-        return this.schema.database.endpoint.get(this, options, use_cache)
+        return this.schema.database.endpoint.get(this, options)
             .then(function(rows) {
 
                 if (rows == null) {
@@ -385,48 +352,43 @@ define(['/jQuery.min.js'], function($, undefined) {
             });
     };
     AQ.Relation.prototype.row = function() {
-        var args = {};
-        var use_cache = false;
-
         // Multiple different ways to call 'row' function
 
-        if (arguments.length == 1) {
-            // Calling with Options object
+        // 1. Calling with Options object
+        if (typeof arguments[0] == 'object') {
 
             var obj = arguments[0];
+            var args = arguments[1] || {};
 
-            // AQ.Relation.row({ where: { 'column_name': 'value' } })
-            if (typeof obj['where'] != 'undefined') {
+            // AQ.Relation.row({ where: { column_name: 'column_name', op: '=', value: 'value' } })
+            // Maybe it should be this one: AQ.Relation.row({ where: { column_name: value } })
+            if (typeof obj.where != 'undefined') {
                 args.where = obj.where;
             }
-            // AQ.Relation.row({ 'column_name': 'value' })
+            // AQ.Relation.row({ column_name: 'column_name', op: '=', value: 'value' })
+            // Maybe it should be this one: AQ.Relation.row({ column_name: value })
             else {
                 args.where = obj;
             }
 
-            if (typeof obj.use_cache != 'undefined') {
-                use_cache = obj.use_cache || false;
-            }
-
         }
-        else if (arguments.length >= 2) {
-            // Calling with column_name and value
+        // 2. Calling with column_name and value
+        else if (typeof arguments[0] == 'string') {
 
-            // AQ.Relation.row('column_name', 'value' [, use_cache])
+            // AQ.Relation.row(column_name, value [, options_obj])
             var name = arguments[0];
             var value = arguments[1];
-            use_cache = arguments[2] || false;
+            var args = arguments[2] || {};
 
             args.where = { name: name, op: '=', value: value };
 
         }
+        // 3. Calling AQ.Relation.row() without arguments
         else {
-            // Calling AQ.Relation.row() without arguments
-            //throw 'Unsupported call to AQ.Relation.row()';
-            // Maybe this is supported
+            var args = {};
         }
 
-        return this.schema.database.endpoint.get(this, args, use_cache)
+        return this.schema.database.endpoint.get(this, args)
             .then(function(row) {
 
                 if (row == null) {
@@ -455,22 +417,21 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Table.prototype.constructor = AQ.Table;
     AQ.Table.prototype.insert = function( data ) {
 
-        var insert_promise = this.schema.database.endpoint.patch(this, data);
-
         // Return inserted row promise
-        return insert_promise.then(function(inserted_row) {
+        return this.schema.database.endpoint.patch(this, data)
+            .then(function(inserted_row) {
 
-            if (inserted_row == null) {
-                throw 'Empty response';
-            }
-            if (typeof data.length != 'undefined' && data.length > 1) {
-                return new AQ.Rowset(this, inserted_row);
-            }
-            return new AQ.Row(this, inserted_row);
+                if (inserted_row == null) {
+                    throw 'Empty response';
+                }
+                if (typeof data.length != 'undefined' && data.length > 1) {
+                    return new AQ.Rowset(this, inserted_row);
+                }
+                return new AQ.Row(this, inserted_row);
 
-        }.bind(this)).catch(function(err) {
-            throw 'Insert failed: ' + err;
-        });
+            }.bind(this)).catch(function(err) {
+                throw 'Insert failed: ' + err;
+            });
 
     };
 
@@ -601,7 +562,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         }
         return new AQ.Rowset(this.relation, { columns: this.columns, result: this.rows.slice(0, lim) });
     };
-    AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+    AQ.Rowset.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, options ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -611,24 +572,22 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
+        var db = this.relation.schema.database;
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
         });
 
-        var options = {
-            where: {
-                name: related_column_name,
-                op: 'in',
-                value: values
-            },
-            use_cache: use_cache || false
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: 'in',
+            value: values
         };
 
-        var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
-    AQ.Rowset.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+    AQ.Rowset.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, options ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -638,21 +597,19 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
+        var db = this.relation.schema.database;
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
         });
 
-        var options = {
-            where: {
-                name: related_column_name,
-                op: 'in',
-                value: values
-            },
-            use_cache: use_cache || false
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: 'in',
+            value: values
         };
 
-        var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).row(options);
 
     };
@@ -712,7 +669,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                 throw 'Delete failed: ' + err;
             });
     };
-    AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
+    AQ.Row.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, options )  {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -722,20 +679,18 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
+        var db = this.relation.schema.database;
 
-        var options = {
-            where: {
-                name: related_column_name,
-                op: '=',
-                value: this.get(self_column_name)
-            },
-            use_cache: use_cache || false
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: '=',
+            value: this.get(self_column_name)
         };
 
-        var db = this.relation.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
-    AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+    AQ.Row.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, options ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -746,14 +701,14 @@ define(['/jQuery.min.js'], function($, undefined) {
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
         var db = this.relation.schema.database;
-        var options = {
-            where: {
-                name: related_column_name,
-                op: '=',
-                value: this.get(self_column_name)
-            },
-            use_cache: use_cache || false
+
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: '=',
+            value: this.get(self_column_name)
         };
+
         return db.schema(schema_name).relation(relation_name).row(options);
     };
 
@@ -825,42 +780,44 @@ define(['/jQuery.min.js'], function($, undefined) {
             return new AQ.FunctionResult(this.function, { columns: this.columns, result: [ row ] });
         }.bind(this)).forEach(fn);
     };
-    AQ.FunctionResult.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache )  {
+    AQ.FunctionResult.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, options )  {
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
             console.error("Related relation name must be schema qualified (schema_name.relation_name)");
             // throw "Related relation name must be schema qualified (schema_name.relation_name)";
         }
+
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
-        var options = {
-            where: {
-                name: related_column_name,
-                op: '=',
-                value: this.get(self_column_name)
-            },
-            use_cache: use_cache || false
-        };
         var db = this.function.schema.database;
+
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: '=',
+            value: this.get(self_column_name)
+        };
+
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
-    AQ.FunctionResult.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+    AQ.FunctionResult.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, options ) {
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
             console.error("Related relation name must be schema qualified (schema_name.relation_name)");
             // throw "Related relation name must be schema qualified (schema_name.relation_name)";
         }
+
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
         var db = this.function.schema.database;
-        var options = {
-            where: {
-                name: related_column_name,
-                op: '=',
-                value: this.get(self_column_name)
-            },
-            use_cache: use_cache || false
+
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: '=',
+            value: this.get(self_column_name)
         };
+
         return db.schema(schema_name).relation(relation_name).row(options);
     };
 
@@ -882,7 +839,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             return new AQ.FunctionResult(this.function, { columns: this.columns, result: [ row ] });
         }.bind(this)).forEach(fn);
     };
-    AQ.FunctionResultSet.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+    AQ.FunctionResultSet.prototype.related_rows = function( self_column_name, related_relation_name, related_column_name, options ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -892,24 +849,22 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
+        var db = this.function.schema.database;
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
         });
 
-        var options = {
-            where: {
-                name: related_column_name,
-                op: 'in',
-                value: values
-            },
-            use_cache: use_cache || false
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: 'in',
+            value: values
         };
 
-        var db = this.function.schema.database;
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
-    AQ.FunctionResultSet.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, use_cache ) {
+    AQ.FunctionResultSet.prototype.related_row = function( self_column_name, related_relation_name, related_column_name, options ) {
 
         var relation_parts = related_relation_name.split('.');
         if (relation_parts.length < 2) {
@@ -919,21 +874,19 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         var schema_name = relation_parts[0];
         var relation_name = relation_parts[1];
+        var db = this.function.schema.database;
 
         var values = this.map(function(row) {
             return row.get(self_column_name);
         });
 
-        var options = {
-            where: {
-                name: related_column_name,
-                op: 'in',
-                value: values
-            },
-            use_cache: use_cache || false
+        options = options || {};
+        options.where = {
+            name: related_column_name,
+            op: 'in',
+            value: values
         };
 
-        var db = this.function.schema.database;
         return db.schema(schema_name).relation(relation_name).row(options);
 
     };
