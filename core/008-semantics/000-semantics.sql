@@ -11,17 +11,16 @@ begin;
 create schema semantics;
 set search_path=semantics;
 
+create table semantics.semantic_relation_purpose (
+    id uuid primary key default public.uuid_generate_v4(),
+    purpose text not null
+);
 
 create table semantics.semantic_relation (
     id meta.relation_id primary key,
     purpose_id uuid references semantics.semantic_relation_purpose(id),
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
-);
-
-create table semantics.semantic_relation_purpose (
-    id uuid primary key default public.uuid_generate_v4(),
-    purpose text not null
 );
 
 insert into semantics.semantic_relation_purpose (purpose) values 
@@ -39,6 +38,11 @@ insert into semantics.semantic_relation_purpose (purpose) values
     ('grid_row');
 
 
+create table semantics.semantic_column_purpose (
+    id uuid primary key default public.uuid_generate_v4(),
+    purpose text not null
+);
+
 create table semantics.semantic_type (
     id meta.type_id primary key,
     purpose_id uuid references semantics.semantic_column_purpose(id) not null,
@@ -54,10 +58,6 @@ create table semantics.semantic_column (
     priority integer not null default 0
 );
 
-create table semantics.semantic_column_purpose (
-    id uuid primary key default public.uuid_generate_v4(),
-    purpose text not null
-);
 
 insert into semantics.semantic_column_purpose (purpose) values
     -- Old
@@ -154,7 +154,19 @@ end
 $$ language plpgsql;
 
 
+create or replace function semantics.relation_widget (
+    relation_id meta.relation_id,
+    widget_purpose text,
+    out widget widget.widget
+) as
+$
 
+
+
+
+
+
+$;
 
 create or replace function semantics.relation_widget (
     relation_id meta.relation_id,
