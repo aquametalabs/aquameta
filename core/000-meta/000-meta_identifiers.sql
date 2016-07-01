@@ -463,14 +463,15 @@ create or replace function row_exists(in row_id meta.row_id, out answer boolean)
     declare
         stmt text;
     begin
-        execute 'select (count(*) = 1) from ' || quote_ident((row_id).relation_id.schema_id.name) || '.' || quote_ident((row_id).relation_id.name) ||
-                ' where ' || quote_ident((row_id.pk_column_id).name) || '::text = ' || quote_literal(row_id.pk_value)
+        execute 'select (count(*) = 1) from ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id::relation_id).name) ||
+                ' where ' || quote_ident((row_id.pk_column_id).name) || ' = ' || quote_literal(row_id.pk_value)
             into answer;
     exception
         when others then answer := false;
 
     end;
 $$ language plpgsql;
+
 
 create function meta.eq(
     leftarg meta.row_id,
