@@ -154,19 +154,6 @@ end
 $$ language plpgsql;
 
 
-create or replace function semantics.relation_widget (
-    relation_id meta.relation_id,
-    widget_purpose text,
-    out widget widget.widget
-) as
-$
-
-
-
-
-
-
-$;
 
 create or replace function semantics.relation_widget (
     relation_id meta.relation_id,
