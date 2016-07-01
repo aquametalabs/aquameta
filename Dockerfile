@@ -75,7 +75,7 @@ RUN pip install . --upgrade && \
 
 
 # Install pgtap
-	psql -c "create extension pgtap" aquameta
+RUN psql -c "create extension pgtap" aquameta
 
 #################### docker container ###############################
 # finally, setup our container
