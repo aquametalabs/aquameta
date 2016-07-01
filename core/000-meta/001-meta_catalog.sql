@@ -1432,7 +1432,7 @@ $$ language plpgsql;
  * meta.policy
  *****************************************************************************/
 create view meta.policy as
-select meta.policy_id(p.polrelid::meta.relation_id, p.polname) as id,
+select meta.policy_id(meta.relation_id(n.nspname, c.relname), p.polname) as id,
 	p.polname as name,
 	meta.relation_id(n.nspname, c.relname) as relation_id,
 	c.relname as relation_name,
