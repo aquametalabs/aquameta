@@ -289,4 +289,56 @@ $$
 $$ language plpgsql;
 
 
+
+
+
+
+
+---------------------------------------------------------------------------------
+-- Legacy
+
+create table semantics."column" (
+    id meta.column_id primary key,
+    form_field_widget_id uuid references widget.widget(id),
+    form_field_label_widget_id uuid references widget.widget(id),
+    form_field_display_widget_id uuid references widget.widget(id),
+    form_field_edit_widget_id uuid references widget.widget(id),
+    grid_view_label_widget_id uuid references widget.widget(id),
+    grid_field_display_widget_id uuid references widget.widget(id),
+    grid_field_edit_widget_id uuid references widget.widget(id)
+);
+
+create table semantics.foreign_key (
+    id meta.foreign_key_id primary key,
+    inline boolean default false
+);
+
+create table semantics.relation (
+    id meta.relation_id primary key,
+    overview_widget_id uuid references widget.widget(id),
+    grid_view_widget_id uuid references widget.widget(id),
+    list_view_widget_id uuid references widget.widget(id),
+    list_item_identifier_widget_id uuid references widget.widget(id),
+    row_detail_widget_id uuid references widget.widget(id),
+    grid_view_row_widget_id uuid references widget.widget(id),
+    new_row_widget_id uuid references widget.widget(id)
+);
+
+create table semantics.type (
+    id meta.type_id primary key,
+    form_field_widget_id uuid references widget.widget(id),
+    form_field_label_widget_id uuid references widget.widget(id),
+    form_field_display_widget_id uuid references widget.widget(id),
+    form_field_edit_widget_id uuid references widget.widget(id),
+    grid_view_label_widget_id uuid references widget.widget(id),
+    grid_field_display_widget_id uuid references widget.widget(id),
+    grid_field_edit_widget_id uuid references widget.widget(id)
+
+);
+
+
+
+
+
 commit;
+
