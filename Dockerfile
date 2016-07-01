@@ -67,7 +67,7 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.con
 	psql -c "alter role postgres password 'postgres'" aquameta
 
 # Install pgtap
-RUN psql -c "create extension pgtap" aquameta
+# RUN psql -c "create extension pgtap" aquameta
 
 # Install FS FDW
 USER root
