@@ -1152,10 +1152,10 @@ create view meta.role as
    from pg_roles pgr
    inner join pg_authid pga
            on pgr.oid = pga.oid
-	union
+    union
    select '0'::oid::regrole::text::meta.role_id as id,
-	'PUBLIC' as name,
-	null, null, null, null, null, null, null, null, null;
+    'PUBLIC' as name,
+    null, null, null, null, null, null, null, null, null;
 
 
 create function meta.stmt_role_create(role_name text, superuser boolean, inherit boolean, create_role boolean, create_db boolean, can_login boolean, replication boolean, connection_limit integer, password text, valid_until timestamp with time zone) returns text as $$
@@ -1344,40 +1344,40 @@ $$ language plpgsql;
  *****************************************************************************/
 create view meta.table_privilege as
 select meta.table_privilege_id(schema_name, relation_name, (role_id).name, type) as id,
-	meta.relation_id(schema_name, relation_name) as relation_id,
-	schema_name,
-	relation_name,
-	role_id,
-	(role_id).name as role_name,
-	type,
-	is_grantable,
-	with_hierarchy
+    meta.relation_id(schema_name, relation_name) as relation_id,
+    schema_name,
+    relation_name,
+    role_id,
+    (role_id).name as role_name,
+    type,
+    is_grantable,
+    with_hierarchy
 from (
-	select
-		case grantee
-			when 'PUBLIC' then
-				'-'::text::meta.role_id
-			else
-				grantee::text::meta.role_id
-		end as role_id,
-		table_schema as schema_name,
-		table_name as relation_name,
-		privilege_type as type,
-		is_grantable,
-		with_hierarchy
-	from information_schema.role_table_grants
-	where table_catalog = current_database()
+    select
+        case grantee
+            when 'PUBLIC' then
+                '-'::text::meta.role_id
+            else
+                grantee::text::meta.role_id
+        end as role_id,
+        table_schema as schema_name,
+        table_name as relation_name,
+        privilege_type as type,
+        is_grantable,
+        with_hierarchy
+    from information_schema.role_table_grants
+    where table_catalog = current_database()
 ) a;
 
 
 create function meta.stmt_table_privilege_create(schema_name text, relation_name text, role_name text, type text) returns text as $$
-	-- TODO: create privilege_type so that "type" can be escaped here
+    -- TODO: create privilege_type so that "type" can be escaped here
     select 'grant ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || quote_ident(role_name);
 $$ language sql;
 
 
 create function meta.stmt_table_privilege_drop(schema_name text, relation_name text, role_name text, type text) returns text as $$
-	-- TODO: create privilege_type so that "type" can be escaped here
+    -- TODO: create privilege_type so that "type" can be escaped here
     select 'revoke ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' from ' || quote_ident(role_name);
 $$ language sql;
 
@@ -1390,10 +1390,10 @@ create function meta.table_privilege_insert() returns trigger as $$
         perform meta.require_all(public.hstore(NEW), array['type']);
 
         execute meta.stmt_table_privilege_create(
-		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
-		coalesce(NEW.relation_name, (NEW.relation_id).name),
-		coalesce(NEW.role_name, (NEW.role_id).name),
-		NEW.type);
+        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
+        coalesce(NEW.relation_name, (NEW.relation_id).name),
+        coalesce(NEW.role_name, (NEW.role_id).name),
+        NEW.type);
 
         return NEW;
     end;
@@ -1410,10 +1410,10 @@ create function meta.table_privilege_update() returns trigger as $$
         execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.relation_name, OLD.role_name, OLD.type);
 
         execute meta.stmt_table_privilege_create(
-		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
-		coalesce(NEW.relation_name, (NEW.relation_id).name),
-		coalesce(NEW.role_name, (NEW.role_id).name),
-		NEW.type);
+        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
+        coalesce(NEW.relation_name, (NEW.relation_id).name),
+        coalesce(NEW.role_name, (NEW.role_id).name),
+        NEW.type);
 
         return NEW;
     end;
@@ -1433,13 +1433,13 @@ $$ language plpgsql;
  *****************************************************************************/
 create view meta.policy as
 select meta.policy_id(meta.relation_id(n.nspname, c.relname), p.polname) as id,
-	p.polname as name,
-	meta.relation_id(n.nspname, c.relname) as relation_id,
-	c.relname as relation_name,
-	n.nspname as schema_name,
-	p.polcmd::char::meta.siuda as command,
-	pg_get_expr(p.polqual, p.polrelid, True) as using,
-	pg_get_expr(p.polwithcheck, p.polrelid, True) as check
+    p.polname as name,
+    meta.relation_id(n.nspname, c.relname) as relation_id,
+    c.relname as relation_name,
+    n.nspname as schema_name,
+    p.polcmd::char::meta.siuda as command,
+    pg_get_expr(p.polqual, p.polrelid, True) as using,
+    pg_get_expr(p.polwithcheck, p.polrelid, True) as check
 from pg_policy p
     join pg_class c on c.oid = p.polrelid
     join pg_namespace n on n.oid = c.relnamespace;
@@ -1448,13 +1448,13 @@ from pg_policy p
 create function meta.stmt_policy_create(schema_name text, relation_name text, policy_name text, command meta.siuda, "using" text, "check" text) returns text as $$
     select  'create policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
             case when command is not null then ' for ' || command::text
-					  else ''
+                      else ''
             end ||
             case when "using" is not null then ' using (' || "using" || ')'
-					else ''
+                    else ''
             end ||
             case when "check" is not null then ' with check (' || "check" || ')'
-					else ''
+                    else ''
             end;
 $$ language sql;
 
@@ -1467,10 +1467,10 @@ $$ language sql;
 create function meta.stmt_policy_alter(schema_name text, relation_name text, policy_name text, "using" text, "check" text) returns text as $$
     select  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
             case when "using" is not null then ' using (' || "using" || ')'
-					else ''
+                    else ''
             end ||
             case when "check" is not null then ' with check (' || "check" || ')'
-				        else ''
+                        else ''
             end;
 $$ language sql;
 
@@ -1495,12 +1495,12 @@ $$ language plpgsql;
 
 create function meta.policy_update() returns trigger as $$
     declare
-	schema_name text;
-	relation_name text;
+    schema_name text;
+    relation_name text;
     begin
         perform meta.require_all(public.hstore(NEW), array['name']);
 
-	-- could support moving policy to new relation, but is that useful?
+    -- could support moving policy to new relation, but is that useful?
         if NEW.relation_id is not null and OLD.relation_id != NEW.relation_id or
            NEW.schema_name is not null and OLD.schema_name != NEW.schema_name or
            NEW.relation_name is not null and OLD.relation_name != NEW.relation_name then
@@ -1550,7 +1550,7 @@ select
 from ( 
     select
         p.polname as policy_name,
-	meta.relation_id(n.nspname, c.relname) as relation_id,
+        meta.relation_id(n.nspname, c.relname) as relation_id,
         unnest(p.polroles::regrole[]::text[]::meta.role_id[]) as role_id
     from pg_policy p
         join pg_class c on c.oid = p.polrelid
@@ -1560,18 +1560,21 @@ from (
 
 create function meta.stmt_policy_role_create(schema_name text, relation_name text, policy_name text, role_name text) returns text as $$
     select  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) ||
-	    ' to ' ||
-	    ( select array_to_string(
-			array_append(
-				array_remove(
-					array(
-						select distinct(unnest(polroles::regrole[]::text[]))
-						from pg_policy
-						where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
-					),
-				'-'), -- Remove public from list of roles
-			quote_ident(role_name)),
-		 ', '));
+        ' to ' ||
+        ( select array_to_string(
+            array_append(
+                array_remove(
+                    array(
+                        select distinct(unnest(polroles::regrole[]::text[]))
+                                                from pg_policy p
+                                                    join pg_class c on c.oid = p.polrelid
+                                                    join pg_namespace n on n.oid = c.relnamespace
+                        where polname = policy_name
+                                                    and meta.relation_id(n.nspname, c.relname) = meta.relation_id(schema_name, relation_name)
+                    ),
+                '-'), -- Remove public from list of roles
+            quote_ident(role_name)),
+         ', '));
 $$ language sql;
 
 
@@ -1580,21 +1583,24 @@ declare
     roles text;
 begin
     select array_to_string(
-		array_remove(
-			array_remove(
-				array(
-					select distinct(unnest(polroles::regrole[]::text[]))
-					from pg_policy
-					where polname = policy_name and polrelid::meta.relation_id = meta.relation_id(schema_name, relation_name)
-				),
-			'-'), -- Remove public from list of roles
-		role_name),
-	 ', ') into roles;
+        array_remove(
+            array_remove(
+                array(
+                    select distinct(unnest(polroles::regrole[]::text[]))
+                                        from pg_policy p
+                                            join pg_class c on c.oid = p.polrelid
+                                            join pg_namespace n on n.oid = c.relnamespace
+                    where polname = policy_name
+                                            and meta.relation_id(n.nspname, c.relname) = meta.relation_id(schema_name, relation_name)
+                ),
+            '-'), -- Remove public from list of roles
+        role_name),
+     ', ') into roles;
 
     if roles = '' then
-	    return  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to public';
+        return  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to public';
     else
-	    return  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || roles;
+        return  'alter policy ' || quote_ident(policy_name) || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || roles;
     end if;
 end;
 $$ language plpgsql;
@@ -1609,10 +1615,10 @@ create function meta.policy_role_insert() returns trigger as $$
         perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'schema_name']);
 
         execute meta.stmt_policy_role_create(
-		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
-		coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
-		coalesce(NEW.policy_name, (NEW.policy_id).name), 
-		coalesce(NEW.role_name, (NEW.role_id).name));
+        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
+        coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
+        coalesce(NEW.policy_name, (NEW.policy_id).name), 
+        coalesce(NEW.role_name, (NEW.role_id).name));
 
         return NEW;
     end;
@@ -1621,23 +1627,23 @@ $$ language plpgsql;
 
 create function meta.policy_role_update() returns trigger as $$
     declare
-	schema_name text;
-	relation_name text;
+        schema_name text;
+        relation_name text;
     begin
         perform meta.require_one(public.hstore(NEW), array['policy_name', 'policy_id']);
         perform meta.require_one(public.hstore(NEW), array['role_name', 'role_id']);
         perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'relation_name']);
         perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'schema_name']);
 
-	-- delete old policy_role
+    -- delete old policy_role
         execute meta.stmt_policy_role_drop((((OLD.policy_id).relation_id).schema_id).name, ((OLD.policy_id).relation_id).name, (OLD.policy_id).name, (OLD.role_id).name);
 
-	-- create new policy_role
+    -- create new policy_role
         execute meta.stmt_policy_role_create(
-		coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
-		coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
-		coalesce(NEW.policy_name, (NEW.policy_id).name), 
-		coalesce(NEW.role_name, (NEW.role_id).name));
+        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
+        coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
+        coalesce(NEW.policy_name, (NEW.policy_id).name), 
+        coalesce(NEW.role_name, (NEW.role_id).name));
 
         return NEW;
 
