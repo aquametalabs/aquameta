@@ -55,6 +55,7 @@ ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ## Docker
 RUN mkdir /mnt/aquameta
 
+
 #################### build aquameta ###############################
 USER postgres
 WORKDIR /s/aquameta
@@ -65,6 +66,9 @@ RUN echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.con
 	./build.sh && \
 	psql -c "alter role postgres password 'postgres'" aquameta
 
+# Install pgtap
+RUN psql -c "create extension pgtap" aquameta
+
 # Install FS FDW
 USER root
 WORKDIR /s/aquameta/core/002-filesystem/fs_fdw
@@ -73,9 +77,6 @@ RUN pip install . --upgrade && \
 	cat fs_fdw.sql | psql -a -U postgres aquameta 2>&1 && \
 	/etc/init.d/postgresql stop
 
-
-# Install pgtap
-RUN psql -c "create extension pgtap" aquameta
 
 #################### docker container ###############################
 # finally, setup our container
