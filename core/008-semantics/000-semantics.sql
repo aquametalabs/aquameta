@@ -308,11 +308,6 @@ create table semantics."column" (
     grid_field_edit_widget_id uuid references widget.widget(id)
 );
 
-create table semantics.foreign_key (
-    id meta.foreign_key_id primary key,
-    inline boolean default false
-);
-
 create table semantics.relation (
     id meta.relation_id primary key,
     overview_widget_id uuid references widget.widget(id),
