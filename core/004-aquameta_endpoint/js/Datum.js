@@ -448,19 +448,20 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Rowset = function( relation, response ) {
         this.relation = relation;
         this.schema = relation.schema;
-        this.columns = response.columns;
+        this.columns = response.columns || null;
+        this.pk_column_name = response.pk || null;
         this.rows = response.result;
         this.length = response.result.length;
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
     AQ.Rowset.prototype.map = function(fn) {
         return this.rows.map(function(row) {
-            return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
+            return new AQ.Row(this.relation, { columns: this.columns, pk: this.pk_column_name, result: [ row ] });
         }.bind(this)).map(fn);
     };
     AQ.Rowset.prototype.forEach = function(fn) {
         return this.rows.map(function(row) {
-            return new AQ.Row(this.relation, { columns: this.columns, result: [ row ] });
+            return new AQ.Row(this.relation, { columns: this.columns, pk: this.pk_column_name, result: [ row ] });
         }.bind(this)).forEach(fn);
     };
 
@@ -604,13 +605,13 @@ define(['/jQuery.min.js'], function($, undefined) {
         });
 
         options = options || {};
-        options.where = {
+        var where = {
             name: related_column_name,
             op: 'in',
             value: values
         };
 
-        return db.schema(schema_name).relation(relation_name).row(options);
+        return db.schema(schema_name).relation(relation_name).row(where, options);
 
     };
 
@@ -619,19 +620,18 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.relation = relation;
         this.schema = relation.schema;
         this.row_data = response.result[0].row;
-        this.columns = response.columns;
 
-        // TODO: remove hardcoded pk stuff and place this in meta_data: true option
-        this.pk_column_name = 'id'; // null;
-        this.pk_value = this.get(this.pk_column_name); // null;
+        this.columns = response.columns || null;
+        this.pk_column_name = null;
+        this.pk_value = null;
         this.id = null;
         this.to_url = function() {
-            // console.error('You must call a row with "meta_data: true" in order to use this function');
-            return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value;
+            console.error('You must call a row with "meta_data: true" in order to use the to_url function');
+            throw 'Datum.js: Programming Error';
         };
 
-        if (typeof this.row_data.pk != 'undefined') {
-            this.pk_column_name = this.row_data.pk;
+        if (typeof response.pk != 'undefined') {
+            this.pk_column_name = response.pk;
             this.pk_value = this.get(this.pk_column_name);
             this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
             this.to_url = function() { return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
@@ -703,13 +703,13 @@ define(['/jQuery.min.js'], function($, undefined) {
         var db = this.relation.schema.database;
 
         options = options || {};
-        options.where = {
+        var where = {
             name: related_column_name,
             op: '=',
             value: this.get(self_column_name)
         };
 
-        return db.schema(schema_name).relation(relation_name).row(options);
+        return db.schema(schema_name).relation(relation_name).row(where, options);
     };
 
     /*--------------------------------- * Column * ---------------------------------*/
@@ -727,7 +727,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.name = name;
         this.value = row.get(name);
         this.id = { row_id: this.row.id, column_id: this.column.id };
-        this.to_url = function() { return this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
+        this.to_url = function() {
+            if (this.row.pk_value == null) {
+                console.error('You must call a row with "meta_data: true" in order to use the to_url function');
+                throw 'Datum.js: Programming Error';
+            }
+            return this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
     };
     AQ.Field.prototype = {
         constructor: AQ.Field,
@@ -764,6 +769,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.schema = fn.schema;
         this.row_data = response.result[0].row;
         this.rows = response.result;
+        this.columns = response.columns;
     };
     AQ.FunctionResult.prototype = {
         constructor: AQ.FunctionResult,
@@ -812,13 +818,13 @@ define(['/jQuery.min.js'], function($, undefined) {
         var db = this.function.schema.database;
 
         options = options || {};
-        options.where = {
+        var where = {
             name: related_column_name,
             op: '=',
             value: this.get(self_column_name)
         };
 
-        return db.schema(schema_name).relation(relation_name).row(options);
+        return db.schema(schema_name).relation(relation_name).row(where, options);
     };
 
     /*--------------------------------- * Function Result Set * ---------------------------------*/
@@ -881,13 +887,13 @@ define(['/jQuery.min.js'], function($, undefined) {
         });
 
         options = options || {};
-        options.where = {
+        var where = {
             name: related_column_name,
             op: 'in',
             value: values
         };
 
-        return db.schema(schema_name).relation(relation_name).row(options);
+        return db.schema(schema_name).relation(relation_name).row(where, options);
 
     };
 

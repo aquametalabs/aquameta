@@ -200,8 +200,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             // Get all related widget data
             return Promise.all([
                 row,
-                row.related_rows('id', 'widget.input', 'widget_id', { use_cache: true }).catch(function(){ return; }),
-                row.related_rows('id', 'widget.widget_view', 'widget_id', { use_cache: true })
+                row.related_rows('id', 'widget.input', 'widget_id', { use_cache: true, meta_data: true }).catch(function(){ return; }),
+                row.related_rows('id', 'widget.widget_view', 'widget_id', { use_cache: true, meta_data: true })
                     .then(function(widget_views) {
 
                         var db = row.schema.database;
@@ -211,10 +211,10 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                         });
 
                     }).catch(function(err) { return; }),
-                row.related_rows('id', 'widget.widget_dependency_js', 'widget_id', { use_cache: true })
+                row.related_rows('id', 'widget.widget_dependency_js', 'widget_id', { use_cache: true, meta_data: true })
                     .then(function(deps_js) {
 
-                        return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id', { use_cache: true });
+                        return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id', { use_cache: true, meta_data: true });
 
                     }).then(function(deps) {
 

@@ -469,9 +469,9 @@ create or replace function endpoint.multiple_row_insert(
             ) t
         into r;
 
-        q := 'select (''{
-                "columns":'' || endpoint.columns_json($1, $2) || '',
-                "result":'' || ($3) || ''
+        q := 'select (''{' ||
+                --"columns":'' || endpoint.columns_json($1, $2) || '',
+                '"result":'' || ($3) || ''
             }'')::json';
 
         return query execute q
@@ -578,9 +578,10 @@ create or replace function endpoint.row_insert(
                 ) || ')
                 returning *
             )
-            select (''{
-                "columns":'' || endpoint.columns_json($1, $2) || '',
-                "result": [{ "row": '' || row_to_json(inserted_row.*) || '' }]
+            select (''{'
+                -- Why should columns be returned here? No need for meta data at all...
+                --"columns":'' || endpoint.columns_json($1, $2) || '',
+                '"result": [{ "row": '' || row_to_json(inserted_row.*) || '' }]
             }'')::json
             from inserted_row
         '; 
@@ -717,7 +718,8 @@ language plpgsql;
  ****************************************************************************************************/
 
 create function endpoint.row_select(
-    row_id meta.row_id
+    row_id meta.row_id,
+    args json
 ) returns json as $$
 
     declare
@@ -763,7 +765,14 @@ create function endpoint.row_select(
 */
         execute row_query into row_json;
 
-        return '{"columns":' || columns_json(_schema_name, _relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
+        --return '{"columns":' || columns_json(_schema_name, _relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
+        return '{' ||
+               case when args->>'meta_data' = '["true"]' then
+                   '"columns":' || endpoint.columns_json(_schema_name, _relation_name) || ',' ||
+                   '"pk":"' || endpoint.pk_name(_schema_name, _relation_name) || '",'
+               else ''
+               end ||
+               '"result":' || coalesce(row_json::text, '[]') || '}';
     end;
 $$
 language plpgsql;
@@ -1054,8 +1063,13 @@ create function endpoint.rows_select(
 
         execute row_query into rows_json;
 
-        return '{"columns":' || endpoint.columns_json(schema_name, relation_name) || ','
-               || '"result":' || coalesce(rows_json, '[]') || '}';
+        return '{' ||
+               case when args->>'meta_data' = '["true"]' then
+                   '"columns":' || endpoint.columns_json(schema_name, relation_name) || ',' ||
+                   '"pk":"' || endpoint.pk_name(schema_name, relation_name) || '",'
+               else ''
+               end ||
+               '"result":' || coalesce(rows_json, '[]') || '}';
     end;
 $$
 language plpgsql;
@@ -1092,6 +1106,7 @@ create function endpoint.rows_select_function(
         rows_json text[];
         suffix text;
         return_column text;
+        meta_data text;
 
     begin
         -- TODO: mimetype based on return type id?
@@ -1104,39 +1119,44 @@ create function endpoint.rows_select_function(
         into function_row;
 
 
-        -- Find is return type is composite
-        select t.composite
-        from meta.function f
-            join meta.type t on t.id = f.return_type_id
-        where f.id = _function_id
-        into row_is_composite;
+        meta_data := args->>'meta_data';
+
+        if meta_data = '["true"]' then
+
+            -- Find is return type is composite
+            select t.composite
+            from meta.function f
+                join meta.type t on t.id = f.return_type_id
+            where f.id = _function_id
+            into row_is_composite;
 
 
-        -- Build columns_json
-        if row_is_composite then
+            -- Build columns_json
+            if row_is_composite then
 
-          select string_agg(row_to_json(q.*)::text, ',')
-          from (
-                select pga.attname as name,
-                    pgt2.typname as "type"
-                from pg_catalog.pg_type pgt
-                    inner join pg_class pgc
-                        on pgc.oid = pgt.typrelid
-                    inner join pg_attribute pga
-                        on pga.attrelid = pgc.oid
-                    inner join pg_type pgt2
-                        on pgt2.oid = pga.atttypid
-                where pgt.oid = function_row.return_type::regtype
-                    and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
-          ) q
-          into columns_json;
+              select string_agg(row_to_json(q.*)::text, ',')
+              from (
+                    select pga.attname as name,
+                        pgt2.typname as "type"
+                    from pg_catalog.pg_type pgt
+                        inner join pg_class pgc
+                            on pgc.oid = pgt.typrelid
+                        inner join pg_attribute pga
+                            on pga.attrelid = pgc.oid
+                        inner join pg_type pgt2
+                            on pgt2.oid = pga.atttypid
+                    where pgt.oid = function_row.return_type::regtype
+                        and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
+              ) q
+              into columns_json;
 
-        else
+            else
 
-            select row_to_json(q.*)
-            from (select (_function_id).name as name, function_row.return_type as "type") q
-            into columns_json;
+                select row_to_json(q.*)
+                from (select (_function_id).name as name, function_row.return_type as "type") q
+                into columns_json;
 
+            end if;
         end if;
 
 
@@ -1193,7 +1213,13 @@ create function endpoint.rows_select_function(
         end loop;
 
         -- Result JSON object
-        select '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
+        select '{' ||
+            case when meta_data = '["true"]' then
+                '"columns":[' || columns_json || '],'
+            else ''
+            end ||
+            '"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}'
+         into result;
 
 
         -- implicitly returning function result and mimetype
@@ -1224,10 +1250,10 @@ create function endpoint.anonymous_rows_select_function(
         mimetype := 'application/json';
 
         -- Build columns_json TODO ?
-        select '' into columns_json;
+        columns_json := '';
 
         -- Suffix clause: where, order by, offest, limit
-        select endpoint.suffix_clause(args) into suffix;
+        suffix := endpoint.suffix_clause(args);
 
 
         select json_array_elements_text::json
@@ -1243,7 +1269,7 @@ create function endpoint.anonymous_rows_select_function(
 
         else
 
-            select '' into function_args;
+            function_args := '';
             -- TODO: what's necessary here?
 
         end if;
@@ -1273,7 +1299,7 @@ create function endpoint.anonymous_rows_select_function(
         end loop;
 
         -- Result JSON object
-        select '{"columns":[' || columns_json || '],"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
+        select '{"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
 
 
         -- implicitly returning function result and mimetype
@@ -1478,7 +1504,7 @@ create or replace function endpoint.request2(
             -- URL /endpoint/row/{row_id}
             row_id := substring(path from 6)::meta.row_id;
 
-            if verb = 'GET' or verb = 'POST' then
+            if verb = 'GET' then
 
                 -- Subscribe to row
                 if session_id is not null then
@@ -1486,7 +1512,17 @@ create or replace function endpoint.request2(
                 end if;
 
                 -- Get single row
-                return query select 200, 'OK'::text, (select endpoint.row_select(row_id))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select endpoint.row_select(row_id, query_args))::text, 'application/json'::text;
+
+            elsif verb = 'POST' then
+
+                -- Subscribe to row
+                if session_id is not null then
+                    perform event.subscribe_row(session_id, row_id);
+                end if;
+
+                -- Get single row
+                return query select 200, 'OK'::text, (select endpoint.row_select(row_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'PATCH' then
 
