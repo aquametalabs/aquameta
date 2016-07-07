@@ -1107,20 +1107,17 @@ create function endpoint.rows_select_function(
         suffix text;
         return_column text;
         meta_data text;
+        result_type text;
 
     begin
-        -- TODO: mimetype based on return type id?
-        mimetype := 'application/json';
-
         -- Get function row
         select *
         from meta.function f
         where f.id = _function_id
         into function_row;
 
-
+        -- Meta data
         meta_data := args->>'meta_data';
-
         if meta_data = '["true"]' then
 
             -- Find is return type is composite
@@ -1159,20 +1156,18 @@ create function endpoint.rows_select_function(
             end if;
         end if;
 
-
         -- Suffix clause: where, order by, offest, limit
-        select endpoint.suffix_clause(args) into suffix;
+        suffix := endpoint.suffix_clause(args);
 
+        -- Return column
+        return_column := json_array_elements_text(args->'column');
 
+        -- Args
         select json_array_elements_text::json
         from json_array_elements_text(args->'args') into args;
 
-        -- raise warning 'args = %', args::json;
-
         -- Function Arguments
         if args->'kwargs' is not null then
-
-            -- raise warning 'kwargs = %', args->'kwargs';
 
             -- Build function arguments string
             -- Cast to type_name found in meta.function_parameter
@@ -1187,39 +1182,67 @@ create function endpoint.rows_select_function(
             into function_args;
 
         elsif args->'vals' is not null then
-
-            -- raise warning 'vals = %', args->'vals';
-
             -- Transpose JSON array to comma-separated string
             select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
-
         else
-
+            -- No arguments
             select '' into function_args;
-            -- TODO: what's necessary here?
-
         end if;
 
 
-        -- Column
-        select coalesce(args->>'column', '*') into return_column;
+        if return_column is null then
 
+            -- Default mimetype
+            mimetype := 'application/json';
 
-        -- Loop through function call results
-        for _row in execute 'select ' || return_column || ' from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
-                            || '(' || function_args || ') ' || suffix
-        loop
-            rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
-        end loop;
+            -- Loop through function call results
+            for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
+                                || '(' || function_args || ') ' || suffix
+            loop
+                rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
+            end loop;
 
-        -- Result JSON object
-        select '{' ||
-            case when meta_data = '["true"]' then
-                '"columns":[' || columns_json || '],'
-            else ''
-            end ||
-            '"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}'
-         into result;
+            -- Result JSON object
+            select '{' ||
+                case when meta_data = '["true"]' then
+                    '"columns":[' || columns_json || '],'
+                else ''
+                end ||
+                '"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}'
+             into result;
+
+        else
+
+            execute 'select ' || return_column || ', pg_typeof(' || return_column || ') from ' ||
+                quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name) ||
+                '(' || function_args || ') ' || suffix into result, result_type;
+
+            if result_type <> 'endpoint.resource_bin' then
+
+                -- Get mimetype
+                select m.mimetype
+                from endpoint.function_field_mimetype ffm
+                    join endpoint.mimetype m on m.id = ffm.mimetype_id
+                where ffm.schema_name = (_function_id).schema_id.name
+                    and ffm.function_name = (_function_id).name
+                    and field_name = return_column
+                into mimetype;
+
+                -- Default mimetype
+                mimetype := coalesce(mimetype, 'application/json');
+
+                if result_type = 'bytea' or result_type = 'pg_catalog.bytea' then
+                    result := encode(result::bytea, 'escape');
+                end if;
+
+            else
+
+                mimetype := (result::endpoint.resource_bin).mimetype;
+                result := encode((result::endpoint.resource_bin).content, 'escape');
+
+            end if;
+
+        end if;
 
 
         -- implicitly returning function result and mimetype
@@ -1238,72 +1261,86 @@ create function endpoint.anonymous_rows_select_function(
 ) returns record as $$
 
     declare
+        _mimetype alias for mimetype;
         columns_json text;
         function_args text;
         suffix text;
         _row record;
         rows_json text[];
         return_column text;
+        result_type text;
 
     begin
-        -- TODO: mimetype based on return type id?
-        mimetype := 'application/json';
-
         -- Build columns_json TODO ?
         columns_json := '';
+
+        -- Return column
+        return_column := json_array_elements_text(args->'column');
 
         -- Suffix clause: where, order by, offest, limit
         suffix := endpoint.suffix_clause(args);
 
-
+        -- Args
         select json_array_elements_text::json
         from json_array_elements_text(args->'args') into args;
 
-        -- raise warning 'args = %', args::json;
-
         -- Function Arguments
         if  args->'vals' is not null then
-
             -- Transpose JSON array to comma-separated string
             select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
+        else
+            -- No arguments
+            function_args := '';
+        end if;
+
+        if return_column is null then
+
+            -- Default mimetype
+            mimetype := 'application/json';
+
+            -- Loop through function call results
+            for _row in execute 'select * from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
+                                || '(' || function_args || ') ' || suffix
+            loop
+                rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
+            end loop;
+
+            -- Result JSON object
+            select '{"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
 
         else
 
-            function_args := '';
-            -- TODO: what's necessary here?
+            execute 'select ' || return_column || ', pg_typeof(' || return_column || ') from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
+                                || '(' || function_args || ') ' || suffix into result, result_type;
+
+            if result_type <> 'endpoint.resource_bin' then
+
+                -- Get mimetype
+                select m.mimetype
+                from endpoint.function_field_mimetype ffm
+                    join endpoint.mimetype m on m.id = ffm.mimetype_id
+                where ffm.schema_name = _schema_name
+                    and ffm.function_name = _function_name
+                    and field_name = return_column
+                into mimetype;
+
+                -- Default mimetype
+                mimetype := coalesce(mimetype, 'application/json');
+
+                if result_type = 'bytea' or result_type = 'pg_catalog.bytea' then
+                    result := encode(result::bytea, 'escape');
+                end if;
+
+            else
+
+                mimetype := (result::endpoint.resource_bin).mimetype;
+                result := encode((result::endpoint.resource_bin).content, 'escape');
+
+            end if;
 
         end if;
-
-
-        -- Column
-        select coalesce(args->>'column', '*') into return_column;
-
-        if return_column <> '*' then
-
-            select coalesce(m.mimetype, mimetype)
-            from endpoint.function_field_mimetype ffm
-                join endpoint.mimetype m on m.id = ffm.mimetype_id
-            where ffm.schema_name = _schema_name
-                and ffm.function_name = _function_name
-                and field_name = return_column
-            into mimetype;
-
-        end if;
-
-
-        -- Loop through function call results
-        for _row in execute 'select ' || return_column || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
-                            || '(' || function_args || ') ' || suffix
-        loop
-            rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
-        end loop;
-
-        -- Result JSON object
-        select '{"result":' || coalesce('[' || array_to_string(rows_json,',') || ']', '[]') || '}' into result;
-
 
         -- implicitly returning function result and mimetype
-
     end;
 $$
 language plpgsql;
