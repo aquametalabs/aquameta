@@ -30,11 +30,13 @@ create table widget (
 create function widget.bundled_widget (
 	bundle_name text,
 	widget_name text
-) returns setof widget.widget as $$
+) returns widget.widget as $$
+
+    declare
+        widget widget.widget;
 
     begin
-        return query
-        select * from (
+        select * into widget from (
             select w.*
             from bundle.head_rows(bundle_name) hr
                 join widget.widget w on w.id = hr.pk_value::uuid
@@ -53,6 +55,8 @@ create function widget.bundled_widget (
                 and w.name=widget_name
         ) r
         limit 1;
+
+        return widget;
     end;
 
 $$ language plpgsql;
