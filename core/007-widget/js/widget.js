@@ -100,6 +100,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
     doT.templateSettings.strip = false;
 
     var widget_promises = {};
+    var containers = {};
     var namespaces = {};
 
 
@@ -113,7 +114,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         }
 
         var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
-        context.id = uuid();
+        context.id = AQ.uuid();
 
         var default_namespace = '';
         if (typeof this != 'undefined' && typeof this.namespace != 'undefined') {
@@ -451,17 +452,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
 
-    function uuid() {
-        var d = new Date().getTime();
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = (d + Math.random()*16)%16 | 0;
-            d = Math.floor(d/16);
-            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
-        });
-    }
-
-
-
     AQ.Widget.load.sync = function(rowset_promise, container, widget_maker, handlers) {
 
         if(handlers === undefined) {
@@ -496,9 +486,20 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             if (typeof rowset == 'undefined' || typeof rowset.forEach == 'undefined') {
                 throw 'Rowset it not defined. First argument to widget.sync must return a Rowset.';
             }
+
+            var container_id = AQ.uuid();
+
+            container.attr('data-container_id', container_id)
+            containers[container_id] = {
+                container: container,
+                widget_maker: widget_maker,
+                handlers: handlers
+            };
+
             rowset.forEach(function(row) {
                 container.append(widget_maker(row));
             });
+
         }).catch(function(error) {
             console.error('widget.sync failed: ', error);
         });

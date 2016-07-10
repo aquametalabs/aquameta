@@ -11,6 +11,17 @@ define(['/jQuery.min.js'], function($, undefined) {
 
 
 
+    AQ.uuid = function() {
+        var d = new Date().getTime();
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+        });
+    }
+
+
+
     function query_options( options ) {
 
         var keys = [];
@@ -83,9 +94,10 @@ define(['/jQuery.min.js'], function($, undefined) {
     function Endpoint( url, evented ) {
 
         this.url = url;
-        this.evented = false;
-        this.event_session_id;
+        this.evented = evented;
         this.cache = {};
+
+        var event_session_id;
 
         // Auth session
         this.auth_session_id = get_session_cookie();
@@ -94,34 +106,155 @@ define(['/jQuery.min.js'], function($, undefined) {
             return document.cookie.replace(/(?:(?:^|.*;\s*)SESSION\s*\=\s*([^;]*).*$)|^.*$/, "$1");
         }
 
-        if(this.evented) { }
+        var socket;
+        var socket_requests = {};
+        var open_functions = [];
+        var retries = 0;
+        var MAX_NUMBER_RETRIES = 20;
 
-        var create_session = function() {
+        // this.settings.evented can be string or boolean
+        if(this.evented != 'no') {
 
-            connect_socket()
-            .then(function(socket) {
-                return socket.send_method('request')
-            })
-            .then(function(socket) {
-                return socket.send_method('session_attach');
-            })
-            .then(function(socket) {
-                this.event_session_id = socket.whatever;
-            })
-            .catch(function(error) {
-                console.log(error);
-            });
+            try {
+                //open_functions.push(connect_session);
+                connect_socket(this.evented == 'yes');
+            }
+            catch(err) {
 
-        };
+                if(this.evented == 'yes') {
+                    console.error('Websocket connection refused:', err);
+                    throw 'Websocket connection refused';
+                }
 
-        // Sends thenable socket, whether it had to be created or not
-        var connect_socket = function() { return new WebSocket(); };
+                // if this.settings.evented == 'try', fail silently
+           
+            }
+        }
+
+        function connect_socket(fail_loudly) {
+
+            if (socket_connected()) {
+                return socket;
+            }
+
+            socket = new WebSocket('ws://' + location.host + '/endpoint/event');
+            
+            socket.onopen = function (event) {
+                console.log('socket opened', this.readyState);
+                open_functions.forEach(function(e) { e.call(this); });
+            };
+            
+            socket.onerror = function(event) {
+                if (fail_loudly) {
+                    // TODO?
+                    console.error('really mad', event);
+                }
+                console.log('socket error', event);
+            };
+
+            socket.onclose = function(event) {
+                console.log('socket closed', event.code);
+                if (event.code == 1006) {
+                    retries++;
+                    if (retries < MAX_NUMBER_RETRIES) {
+                        // Try to reconnect
+                        connect_socket();
+                    }
+                }
+            };
+            
+            socket.onmessage = function (event) {
+                var response = JSON.parse(event.data);
+                console.log('message received', response);
+
+                switch (response.method) {
+                    case 'response':
+                        if (typeof response.request_id == 'undefined') {
+                            throw 'Websocket response is unidentifiable';
+                        }
+
+                        if (typeof socket_requests[response.request_id] == 'undefined') {
+                            console.error('Websocket request not found');
+                        }
+                        else {
+                            console.log('resolving promise', response.request_id, socket_requests[response.request_id].tries);
+
+                            // Clear timeout
+                            clearTimeout(socket_requests[response.request_id].timeout_id);
+
+                            // Resolve promise
+                            socket_requests[response.request_id].resolve(response.data);
+
+                            // Delete promise from storage
+                            delete socket_requests[response.request_id];
+
+                            console.log('socket requests left to fulful', socket_requests);
+                        }
+                        break;
+                    case 'session_attach':
+                        this.event_session_id = response.session_id;
+                        break;
+                }
+            };
+
+        }
+
+        function connect_session(session_id) {
+
+           if (typeof session_id != 'undefined') {
+               event_session_id = session_id;
+           }
+
+           if (socket_connected() && typeof event_session_id != 'undefined') {
+               socket_send({
+                   method: 'attach',
+                   session_id: event_session_id
+               });
+           }
+
+           else {
+               open_functions.push(connect_session);
+           }
+
+        }
 
         // Boolean, whether socket is connected or not
-        var socket_connected = function() { return false; };
+        function socket_connected() {
+
+            if (typeof socket != 'undefined' && typeof socket.readyState != 'undefined') {
+                return socket.readyState == 1;
+            }
+            return false;
+
+        }
 
         // Grabs current connection and sends method
-        var socket_send = function(message) { return; }; 
+        function socket_send( data ) {
+            return new Promise(function(resolve, reject) {
+
+                console.log('socket_send', data);
+                data.request_id = data.request_id || AQ.uuid();
+
+                var tries = 0;
+                if (typeof socket_requests[data.request_id] != 'undefined') {
+                    tries = socket_requests[data.request_id].tries + 1;
+                    clearTimeout(socket_requests[data.request_id].timeout_id);
+                }
+
+                socket_requests[data.request_id] = {
+                    resolve: function(response) { resolve(response); },
+                    reject: function(reason) { reject(reason); },
+                    timeout_id: setTimeout(function(data) {
+                            socket_send(data).then(
+                                function(r) { resolve(r); },
+                                function(e) { reject(e); }
+                            );
+                        }.bind(this, data), 300),
+                    tries: tries
+                };
+                socket.send(JSON.stringify(data)); 
+            });
+        }
 
         var resource = function( method, meta_id, args, data ) {
 
@@ -155,7 +288,8 @@ define(['/jQuery.min.js'], function($, undefined) {
             }
 
             // URLs
-            var url_without_query = meta_id.to_url();
+            var id_url = meta_id.to_url();
+            var url_without_query = this.url + id_url;
             var url_with_query = url_without_query + query_options(args);
 
             // Check cache
@@ -165,59 +299,84 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // Send websocket method if this connection uses websocket
             if (socket_connected()) {
-                return socket_send({
-                        verb: method,
-                        uri: url_without_query,
-                        query: args,
-                        data: data
+                function values_to_string( obj ) {
+                    if (typeof obj == 'undefined' || obj == null) {
+                        return null;
+                    }
+                    var o = {};
+                    Object.keys(obj).forEach(function(key) {
+                        o[key] = JSON.stringify(obj[key]);
                     });
-            }
+                    return JSON.stringify(o);
+                }
 
-            // If query string is too long, upgrade GET method to POST
-            if(method == 'GET' && (location.host + url_with_query).length > 1000) {
-                method = 'POST';
-            }
-
-            // This makes the uWSGI server send back json errors
-            var headers = new Headers();
-            headers.append('Content-Type', 'application/json');
-
-            // Settings object to send with 'fetch' method
-            var init_obj = {
-                method: method,
-                headers: headers,
-                credentials: 'same-origin'
-            };
-
-            // Don't add data on GET requests
-            if (method != 'GET') {
-                init_obj.body = JSON.stringify(data);
-            }
-
-            var request = fetch(method == 'GET' ? url_with_query : url_without_query, init_obj)
-                .then(function(response) {
-
-                    // Read json stream
-                    var json = response.json();
-
-                    if (response.status >= 200 && response.status < 300) {
-                        return json;
-                    }
-
-                    // If bad request (code 300 or higher), reject promise
-                    return json.then(Promise.reject.bind(Promise));
-
-                }).catch(function(error) {
-
-                    // Log error in collapsed group
-                    console.groupCollapsed(method, error.status_code, error.title);
-                    if ('message' in error) {
-                        console.error(error.message);
-                    }
-                    console.groupEnd();
-                    throw error.title;
-
+                var request = socket_send({
+                    method: 'request',
+                    verb: method,
+                    uri: id_url,
+                    query: values_to_string(args),
+                    data: values_to_string(data)
                 });
+
+            }
+            else {
+
+                // If query string is too long, upgrade GET method to POST
+                if(method == 'GET' && (location.host + url_with_query).length > 1000) {
+                    method = 'POST';
+                }
+
+                // This makes the uWSGI server send back json errors
+                var headers = new Headers();
+                headers.append('Content-Type', 'application/json');
+
+                // Settings object to send with 'fetch' method
+                var init_obj = {
+                    method: method,
+                    headers: headers,
+                    credentials: 'same-origin'
+                };
+
+                // Don't add data on GET requests
+                if (method != 'GET') {
+                    init_obj.body = JSON.stringify(data);
+                }
+
+                var request = fetch(method == 'GET' ? url_with_query : url_without_query, init_obj);
+            }
+
+            request = request.then(function(response) {
+
+                // JSON was returned from WebSocket
+                if (typeof response.json == 'undefined') {
+                    // TODO: ? Unfortunately this has no HTTP status like the result of fetch
+                    //console.log('i am the response', response);
+                    return response;
+                }
+
+                // Request object was returned from fetch
+
+                // Read json stream
+                var json = response.json();
+
+                if (response.status >= 200 && response.status < 300) {
+                    return json;
+                }
+
+                // If bad request (code 300 or higher), reject promise
+                return json.then(Promise.reject.bind(Promise));
+
+            }).catch(function(error) {
+
+                // Log error in collapsed group
+                console.groupCollapsed(method, error.status_code, error.title);
+                if ('message' in error) {
+                    console.error(error.message);
+                }
+                console.groupEnd();
+                throw error.title;
+
+            });
 
             // Check cache for GET/POST
             if (use_cache && (method == 'GET' || method == 'POST')) {
@@ -229,6 +388,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         return {
             url: this.url,
+            connect_session: connect_session,
             get: function( meta_id, args )        { return resource.call(this, 'GET', meta_id, args); }.bind(this),
             post: function( meta_id, data )       { return resource.call(this, 'POST', meta_id, {}, data); }.bind(this),
             patch: function( meta_id, data )      { return resource.call(this, 'PATCH', meta_id, {}, data); }.bind(this),
@@ -241,20 +401,10 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.settings = settings;
 
         // Not sure which name is better
-        this.endpoint = this.connection = new Endpoint(url);
-
-        // this.settings.evented can be string or boolean
-        if(this.settings.evented != 'no') {
-
-            this.connection.create_session()
-            .catch(function(conn) {
-
-                if(this.settings.evented == 'yes') {
-                    throw 'Websocket connection refused';
-                }
-
-                // if this.settings.evented == 'try', fail silently
-
+        this.endpoint = this.connection = new Endpoint(url, this.settings.evented);
+        if (this.settings.evented != 'no') {
+            this.schema('event').function('session_create').then(function(result) {
+                this.endpoint.connect_session(result.get('session_create'));
             }.bind(this));
         }
     };
@@ -333,7 +483,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.id = { schema_id: this.schema.id, name: this.name };
     };
     AQ.Relation.prototype.constructor = AQ.Relation;
-    AQ.Relation.prototype.to_url = function() { return this.schema.database.endpoint.url + '/relation/' + this.schema.name + '/' + this.name; };
+    AQ.Relation.prototype.to_url = function() { return '/relation/' + this.schema.name + '/' + this.name; };
     AQ.Relation.prototype.rows = function( options ) {
 
         return this.schema.database.endpoint.get(this, options)
@@ -634,7 +784,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             this.pk_column_name = response.pk;
             this.pk_value = this.get(this.pk_column_name);
             this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
-            this.to_url = function() { return this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
+            this.to_url = function() { return '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
         }
     };
     AQ.Row.prototype = {
@@ -732,7 +882,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                 console.error('You must call a row with "meta_data: true" in order to use the to_url function');
                 throw 'Datum.js: Programming Error';
             }
-            return this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
+            return '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
     };
     AQ.Field.prototype = {
         constructor: AQ.Field,
@@ -756,9 +906,9 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.id = { schema_id: this.schema.id, name: this.name, args: this.args };
         this.to_url = function() {
            if (typeof this.args != 'undefined') {
-               return this.schema.database.endpoint.url + '/function/' + this.schema.name + '/' + this.name + '/' + this.args;
+               return '/function/' + this.schema.name + '/' + this.name + '/' + this.args;
            }
-           return this.schema.database.endpoint.url + '/function/' + this.schema.name + '/' + this.name;
+           return '/function/' + this.schema.name + '/' + this.name;
         };
     };
     AQ.Function.prototype.constructor = AQ.Function;

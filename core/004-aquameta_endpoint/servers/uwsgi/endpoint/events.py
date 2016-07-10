@@ -7,6 +7,8 @@ from os import urandom
 import json, logging, uwsgi, sys
 from uuid import UUID
 
+from werkzeug.datastructures import ImmutableMultiDict
+
 logger = logging.getLogger('events')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -62,14 +64,14 @@ def application(env, start_response):
                                         logging.info('websocket endpoint request: %s, %s, %s, %s' % (
                                             cmd['verb'],                # HTTP method               - GET, POST, PATCH, DELETE
                                             cmd['uri'],                 # selector                  - '/relation/widget/dependency_js'
-                                            json.dumps(cmd['query']),   # query string arguments    - including event.session id
+                                            ImmutableMultiDict(json.loads(cmd['query'])),   # query string arguments    - including event.session id
                                             json.dumps(cmd['data'])     # post data
                                         ))
 
                                         cursor.execute('select status, message, response, mimetype from endpoint.request2(%s, %s, %s::json, %s::json);', (
                                             cmd['verb'],                # HTTP method               - GET, POST, PATCH, DELETE
                                             cmd['uri'],                 # selector                  - '/relation/widget/dependency_js'
-                                            json.dumps(cmd['query']),   # query string arguments    - including event.session id
+                                            json.dumps(ImmutableMultiDict(json.loads(cmd['query'])).to_dict(flat=False)),   # query string arguments    - including event.session id
                                             json.dumps(cmd['data'])     # post data
                                         ))
 
@@ -77,8 +79,9 @@ def application(env, start_response):
 
                                         uwsgi.websocket_send('''{
                                             "method": "response",
+                                            "request_id": "%s",
                                             "data": %s
-                                        }''' % (result.response,))
+                                        }''' % (cmd['request_id'], result.response))
 
 
                                     elif cmd['method'] == 'attach':
@@ -88,11 +91,29 @@ def application(env, start_response):
                                             logging.info('session attached: %s (role: %s)' % (session_id, env['DB_USER']))
                                             handle_db_notifications(db_connection)
 
+                                            uwsgi.websocket_send('''{
+                                                "method": "response",
+                                                "request_id": "%s",
+                                                "data": "true"
+                                            }''' % (cmd['request_id'],))
+
                                     elif cmd['method'] == 'detach':
                                         session_id = cmd['session_id']
                                         if session_id is not None:
                                             cursor.execute('select event.session_detach(%s);', (session_id,))
                                             logging.info('session detached: %s (role: %s)' % (session_id, env['DB_USER']))
+
+                                            uwsgi.websocket_send('''{
+                                                "method": "response",
+                                                "request_id": "%s",
+                                                "data": "true"
+                                            }''' % (cmd['request_id'],))
+
+                                    #uwsgi.websocket_send('''{
+                                    #    "method": "response",
+                                    #    "request_id": "%s",
+                                    #    "data": %s
+                                    #}''' % (cmd['request_id'], result.response))
 
 
                                 except Warning as err:
