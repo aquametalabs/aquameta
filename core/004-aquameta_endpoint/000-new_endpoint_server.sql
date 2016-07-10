@@ -1217,7 +1217,7 @@ create function endpoint.rows_select_function(
                 quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name) ||
                 '(' || function_args || ') ' || suffix into result, result_type;
 
-            if result_type <> 'endpoint.resource_bin' then
+            if result_type <> 'resource_bin' and result_type <> 'endpoint.resource_bin' then
 
                 -- Get mimetype
                 select m.mimetype
@@ -1313,7 +1313,7 @@ create function endpoint.anonymous_rows_select_function(
             execute 'select ' || return_column || ', pg_typeof(' || return_column || ') from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
                                 || '(' || function_args || ') ' || suffix into result, result_type;
 
-            if result_type <> 'endpoint.resource_bin' then
+            if result_type <> 'resource_bin' and result_type <> 'endpoint.resource_bin' then
 
                 -- Get mimetype
                 select m.mimetype
