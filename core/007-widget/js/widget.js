@@ -250,10 +250,18 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             //console.log('retrieve_promise resolved', widget_data);
             var [ widget_row, inputs, views, deps_js ] = widget_data;
 
+            var xinput = context;
             context = Object.assign({
                     db: widget_row.schema.database,
-                    endpoint: widget_row.schema.database
+                    endpoint: widget_row.schema.database,
+                    input: {},
+                    xinput: xinput
                 }, context);
+
+            delete context.xinput.id;
+            delete context.xinput.name;
+            delete context.xinput.namespace;
+            delete context.xinput.widget;
 
             // Process inputs
             if (typeof inputs != 'undefined') {
@@ -287,6 +295,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                             error('Missing required input ' + input_name, context.name, 'Inputs');
                         }
                     }
+                    context.input[input_name] = context[input_name];
+                    delete context.xinput[input_name];
                 });
             }
 
