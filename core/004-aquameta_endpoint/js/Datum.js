@@ -288,7 +288,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             }
 
             // URLs
-            var id_url = meta_id.to_url();
+            var id_url = meta_id.to_url(true); // ID part of the URL only
             var url_without_query = this.url + id_url;
             var url_with_query = url_without_query + query_options(args);
 
@@ -483,7 +483,10 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.id = { schema_id: this.schema.id, name: this.name };
     };
     AQ.Relation.prototype.constructor = AQ.Relation;
-    AQ.Relation.prototype.to_url = function() { return '/relation/' + this.schema.name + '/' + this.name; };
+    AQ.Relation.prototype.to_url = function( id_only ) {
+        return id_only ? '/relation/' + this.schema.name + '/' + this.name :
+              this.schema.database.endpoint.url + '/relation/' + this.schema.name + '/' + this.name;
+    };
     AQ.Relation.prototype.rows = function( options ) {
 
         return this.schema.database.endpoint.get(this, options)
@@ -784,7 +787,10 @@ define(['/jQuery.min.js'], function($, undefined) {
             this.pk_column_name = response.pk;
             this.pk_value = this.get(this.pk_column_name);
             this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
-            this.to_url = function() { return '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value; };
+            this.to_url = function( id_only ) {
+                return id_only ? '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value :
+                    this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value;
+           };
         }
     };
     AQ.Row.prototype = {
@@ -877,12 +883,14 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.name = name;
         this.value = row.get(name);
         this.id = { row_id: this.row.id, column_id: this.column.id };
-        this.to_url = function() {
+        this.to_url = function( id_only ) {
             if (this.row.pk_value == null) {
                 console.error('You must call a row with "meta_data: true" in order to use the to_url function');
                 throw 'Datum.js: Programming Error';
             }
-            return '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name; };
+            return id_only ? '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name :
+                this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name;
+            };
     };
     AQ.Field.prototype = {
         constructor: AQ.Field,
@@ -904,11 +912,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         }
 
         this.id = { schema_id: this.schema.id, name: this.name, args: this.args };
-        this.to_url = function() {
+        this.to_url = function( id_only ) {
+           var base_url = id_only ? '' : this.schema.database.endpoint.url;
            if (typeof this.args != 'undefined') {
-               return '/function/' + this.schema.name + '/' + this.name + '/' + this.args;
+               return base_url + '/function/' + this.schema.name + '/' + this.name + '/' + this.args;
            }
-           return '/function/' + this.schema.name + '/' + this.name;
+           return base_url + '/function/' + this.schema.name + '/' + this.name;
         };
     };
     AQ.Function.prototype.constructor = AQ.Function;
