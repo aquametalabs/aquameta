@@ -1098,7 +1098,7 @@ create function endpoint.rows_select_function(
 
     declare
         _function_id alias for function_id;
-        function_row record;
+        function_return_type text;
         row_is_composite boolean;
         columns_json text;
         function_args text;
@@ -1111,10 +1111,12 @@ create function endpoint.rows_select_function(
 
     begin
         -- Get function row
-        select *
+        select return_type
         from meta.function f
-        where f.id = _function_id
-        into function_row;
+        where f.schema_name = (_function_id).schema_id.name
+            and f.name = (_function_id).name
+            and f.parameters = (_function_id).parameters
+        into function_return_type;
 
         -- Meta data
         meta_data := args->>'meta_data';
@@ -1142,7 +1144,7 @@ create function endpoint.rows_select_function(
                             on pga.attrelid = pgc.oid
                         inner join pg_type pgt2
                             on pgt2.oid = pga.atttypid
-                    where pgt.oid = function_row.return_type::regtype
+                    where pgt.oid = function_return_type::regtype
                         and pga.attname not in ('tableoid','cmax','xmax','cmin','xmin','ctid')
               ) q
               into columns_json;
@@ -1150,7 +1152,7 @@ create function endpoint.rows_select_function(
             else
 
                 select row_to_json(q.*)
-                from (select (_function_id).name as name, function_row.return_type as "type") q
+                from (select (_function_id).name as name, function_return_type as "type") q
                 into columns_json;
 
             end if;
