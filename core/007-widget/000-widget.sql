@@ -30,36 +30,28 @@ create table widget (
 create function widget.bundled_widget (
 	bundle_name text,
 	widget_name text
-) returns widget.widget as $$
-
-    declare
-        widget widget.widget;
-
-    begin
-        select * into widget from (
-            select w.*
-            from bundle.head_rows(bundle_name) hr
-                join widget.widget w on w.id = hr.pk_value::uuid
-            where hr.schema_name='widget'
-                and hr.relation_name='widget'
-                and w.name=widget_name
-
-            union
-
-            select w.*
-            from bundle.bundle b
-                join bundle.stage_row_added sra on b.id = sra.bundle_id
-                join widget.widget w on w.id = (sra.row_id).pk_value::uuid
-            where ((sra.row_id)::meta.schema_id).name='widget'
-                and ((sra.row_id)::meta.relation_id).name='widget'
-                and w.name=widget_name
-        ) r
-        limit 1;
-
-        return widget;
-    end;
-
-$$ language plpgsql;
+) returns setof widget.widget as $$
+    select * from (
+        select w.*
+        from bundle.head_rows(bundle_name) hr
+            join widget.widget w on w.id = hr.pk_value::uuid
+        where hr.schema_name='widget'
+            and hr.relation_name='widget'
+            and w.name=widget_name
+    
+        union
+    
+        select w.*
+        from bundle.bundle b
+            join bundle.stage_row_added sra on b.id = sra.bundle_id
+            join widget.widget w on w.id = (sra.row_id).pk_value::uuid
+        where ((sra.row_id)::meta.schema_id).name='widget'
+            and ((sra.row_id)::meta.relation_id).name='widget'
+            and w.name=widget_name
+            and b.name=bundle_name
+    ) r
+    limit 1;
+$$ language sql;
 
 
 
