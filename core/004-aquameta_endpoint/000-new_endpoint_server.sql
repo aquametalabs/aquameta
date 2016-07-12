@@ -1175,17 +1175,21 @@ create function endpoint.rows_select_function(
             -- Cast to type_name found in meta.function_parameter
             -- Using coalesce(function_args, '') so we can call function without arguments
             select coalesce(
-                string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) || '::' || fp.type_name, ','),
+                string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) ||
+                case when pg_typeof(r.value) = 'json'::regtype and json_typeof(r.value) = 'object' then '::json::' else '::' end ||
+                fp.type_name, ','),
             '')
-            from json_each_text(args->'kwargs') r
+            from json_each(args->'kwargs') r
                 join meta.function_parameter fp on
+                    fp.schema_name = (_function_id).schema_id.name and -- Trick to speed up query
                     fp.function_id = _function_id and
                     fp.name = r.key
             into function_args;
 
         elsif args->'vals' is not null then
             -- Transpose JSON array to comma-separated string
-            select string_agg(quote_literal(value), ',') from json_array_elements_text(args->'vals') into function_args;
+            select string_agg(quote_literal(value), ',')
+            from json_array_elements_text(args->'vals') into function_args;
         else
             -- No arguments
             select '' into function_args;
