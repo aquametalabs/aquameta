@@ -110,7 +110,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
     AQ.Widget.load = function ( selector, input, callback ) {
 
         if (!selector || typeof selector != 'string') {
-            throw "in call to widget, selector argument is invalid or missing";
+            throw "Widget - Selector argument is invalid or missing";
         }
 
         var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
@@ -123,9 +123,48 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         }
 
 
-        // However we define this
-        if (typeof is_dsl_lookup != 'undefined' && is_dsl_lookup == true) {
-            // Whatever the DSL lookup is
+        var is_semantic_dsl_lookup = selector.indexOf('/') != -1;
+
+        if (is_semantic_dsl_lookup) {
+
+            var semantics = selector.split('/');
+            var endpoint = callback;
+
+            if (input instanceof AQ.Relation) {
+                var fn = 'relation_widget';
+                var id = input.id;
+                var type = 'meta.relation_id';
+            }
+            else if (input instanceof AQ.Row || input instanceof AQ.Rowset) {
+                var fn = 'relation_widget';
+                var id = input.relation.id;
+                var type = 'meta.relation_id';
+            }
+            else if (input instanceof AQ.Column) {
+                var fn = 'column_widget';
+                var id = input.id;
+                var type = 'meta.column_id';
+            }
+            else if (input instanceof AQ.Field) {
+                var fn = 'column_widget';
+                var id = input.column.id;
+                var type = 'meta.column_id';
+            }
+
+            var widget_getter = endpoint.schema('semantics').function({
+                name: fn,
+                parameters: [type,'text','text']
+            }, {
+                relation_id: id,
+                widget_purpose: semantics[1],
+                default_bundle: semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide'
+            }, { use_cache: true });
+
+            // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
+            var widget_retrieve_promise = retrieve(widget_getter, {
+                semantic_selector: selector
+            });
+
         }
         else {
 
@@ -142,8 +181,22 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                 context.name = name_parts[1];
             }
 
+            // Namespace not found
+            if (!(context.namespace in namespaces)) {
+                throw 'Widget namespace "'+context.namespace+'" has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace';
+            }
+    
+            var widget_getter = namespaces[context.namespace].endpoint.schema('widget').function('bundled_widget',
+                [ namespaces[context.namespace].bundle_name, context.name ], {
+                    use_cache: true
+                });
+
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
-            var widget_retrieve_promise = retrieve(context.namespace, context.name);
+            var widget_retrieve_promise = retrieve(widget_getter, {
+                namespace: context.namespace,
+                name: context.name
+            });
+
         }
 
         // Setup default namespace for child widget
@@ -187,16 +240,13 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
 
-    function retrieve( namespace, name ) {
+    function retrieve( widget_getter, selector ) {
 
-        // Namespace not found
-        if (!(namespace in namespaces)) {
-            throw 'Widget namespace "'+namespace+'" has not been imported - Call AQ.Widget.import( bundle_name, namespace, endpoint ) to import bundled widgets to a namespace';
+        if ('semantic_selector' in selector) {
+            var semantic_lookup = true;
         }
 
-        return namespaces[namespace].endpoint.schema('widget').function('bundled_widget', [ namespaces[namespace].bundle_name, name ], {
-            use_cache: true
-        }).then(function(row) {
+        return widget_getter.then(function(row) {
 
             // Get all related widget data
             return Promise.all([
@@ -237,7 +287,12 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                     }).catch(function() { return; })
             ]);
         }).catch(function(err) {
-            throw 'Widget does not exist, ' + namespace + ':' + name;
+            if (semantic_lookup) {
+                throw 'Widget not found from semantic lookup with ' + selector.semantic_selector;
+            }
+            else {
+                throw 'Widget does not exist, ' + selector.namespace + ':' + selector.name;
+            }
         });
     };
 
@@ -249,6 +304,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
             //console.log('retrieve_promise resolved', widget_data);
             var [ widget_row, inputs, views, deps_js ] = widget_data;
+
+            context.name = widget_row.get('name');
 
             var xinput = context;
             context = Object.assign({
