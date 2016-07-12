@@ -17,7 +17,7 @@ create table semantics.semantic_relation_purpose (
 );
 
 create table semantics.semantic_relation (
-    id meta.relation_id primary key,
+    id meta.relation_id,
     purpose_id uuid references semantics.semantic_relation_purpose(id),
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
@@ -44,7 +44,7 @@ create table semantics.semantic_column_purpose (
 );
 
 create table semantics.semantic_type (
-    id meta.type_id primary key,
+    id meta.type_id,
     purpose_id uuid references semantics.semantic_column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
@@ -52,7 +52,7 @@ create table semantics.semantic_type (
 
 -- Breaking changes
 create table semantics.semantic_column (
-    id meta.column_id primary key,
+    id meta.column_id,
     purpose_id uuid references semantics.semantic_column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
@@ -158,71 +158,34 @@ $$ language plpgsql;
 create or replace function semantics.relation_widget (
     relation_id meta.relation_id,
     widget_purpose text,
-    bundle_names text[],
-    default_bundle text,
-    out bundle_name text,
-    out widget_name text
-) as
+    default_bundle text
+) returns setof widget.widget as
 $$
-
-    declare
-        column_name text;
-        widget_id uuid;
-
-    begin
-        -- Find all the possible widgets referenced in semantics for this relation and purpose
-        with possible_widgets as (
-            select w.id, w.name, r.priority
+    -- Find all the possible widgets referenced in semantics for this relation and purpose
+    select * from (
+        select * from (
+            select w.*
             from semantics.semantic_relation r
                 join semantics.semantic_relation_purpose rp on rp.id = r.purpose_id
                 join widget.widget w on w.id = r.widget_id
             where r.id = relation_id
                 and rp.purpose = widget_purpose
-        )
-
-        -- Get the bundle its from
-        select r.bundle_name, r.widget_name
-        from (
-
-            -- Committed widgets
-            select b.name as bundle_name, pw.name as widget_name, pw.priority
-            from bundle.bundle b
-                join bundle.commit c on c.id = b.head_commit_id
-                join bundle.rowset r on r.commit_id = c.id
-                join bundle.rowset_row rr on rr.rowset_id = r.id
-                join possible_widgets pw on pw.id = (rr.row_id).pk_value::uuid
-            where b.name = any( bundle_names )
-                and rr.row_id::meta.relation_id = meta.relation_id('widget','widget')
-
-            union
-
-            -- Staged widgets
-            select b.name as bundle_name, pw.name as widget_name, pw.priority
-            from bundle.bundle b
-                join bundle.stage_row_added sra on sra.bundle_id = b.id
-                join possible_widgets pw on pw.id = (sra.row_id).pk_value::uuid
-            where b.name = any( bundle_names )
-                and sra.row_id::meta.relation_id = meta.relation_id('widget','widget')
-
-            union
-
-            -- Default widget
-            select default_bundle as bundle_name, widget_purpose as widget_name, 0 as priority
-        ) r
-        order by r.priority desc
-        limit 1
-        into bundle_name, widget_name;
-
-    end;
-$$ language plpgsql;
+            order by r.priority desc
+            limit 1
+        ) a
+        union
+        select * from widget.bundled_widget(default_bundle, widget_purpose)
+    ) b
+    limit 1;
+$$ language sql;
 
 
 
 create or replace function semantics.column_widget (
     column_id meta.column_id,
     widget_purpose text,
-    bundle_names text[],
-    default_bundle text,
+--    bundle_names text[],
+--    default_bundle text,
     out bundle_name text,
     out widget_name text
 ) as
