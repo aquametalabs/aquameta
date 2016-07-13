@@ -127,28 +127,41 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
         if (is_semantic_dsl_lookup) {
 
+            // TODO Cleanup the entire semantic widget pipeline
+
             var semantics = selector.split('/');
             var endpoint = callback;
+            context.datum = input;
 
             if (input instanceof AQ.Relation) {
                 var fn = 'relation_widget';
                 var id = input.id;
                 var type = 'meta.relation_id';
+                context.relation = input;
             }
-            else if (input instanceof AQ.Row || input instanceof AQ.Rowset) {
+            else if (input instanceof AQ.Row) {
                 var fn = 'relation_widget';
                 var id = input.relation.id;
                 var type = 'meta.relation_id';
+                context.row = input;
+            }
+            else if (input instanceof AQ.Rowset) {
+                var fn = 'relation_widget';
+                var id = input.relation.id;
+                var type = 'meta.relation_id';
+                context.relation = input;
             }
             else if (input instanceof AQ.Column) {
                 var fn = 'column_widget';
                 var id = input.id;
                 var type = 'meta.column_id';
+                context.column = input;
             }
             else if (input instanceof AQ.Field) {
                 var fn = 'column_widget';
                 var id = input.column.id;
                 var type = 'meta.column_id';
+                context.column = input;
             }
 
             var widget_getter = endpoint.schema('semantics').function({
