@@ -1175,8 +1175,13 @@ create function endpoint.rows_select_function(
             -- Cast to type_name found in meta.function_parameter
             -- Using coalesce(function_args, '') so we can call function without arguments
             select coalesce(
-                string_agg(quote_ident(r.key) || ':=' || quote_literal(r.value) ||
-                case when pg_typeof(r.value) = 'json'::regtype and json_typeof(r.value) = 'object' then '::json::' else '::' end ||
+                string_agg(quote_ident(r.key) || ':=' ||
+                case when -- pg_typeof(r.value) = 'json'::regtype and
+                    json_typeof(r.value) = 'object' then 
+                    quote_literal(r.value) || '::json::'
+                else
+                    quote_literal(btrim(r.value::text, '"')) || '::'
+                end ||
                 fp.type_name, ','),
             '')
             from json_each(args->'kwargs') r
@@ -1652,6 +1657,10 @@ create or replace function endpoint.request2(
                     -- Get record from function call
                     return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, post_data) as rsf;
 
+                else
+                    -- HTTP method not allowed for this resource: 405
+                    return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
+
                 end if;
 
             -- Calling a funciton with a specified parameter type list -- Exact funciton id known
@@ -1673,12 +1682,13 @@ create or replace function endpoint.request2(
                     -- Get record from function call
                     return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, post_data) as rsf;
 
+                else
+                    -- HTTP method not allowed for this resource: 405
+                    return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
+
                 end if;
 
             end if;
-
-            -- HTTP method not allowed for this resource: 405
-            return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
 
         when path like '/field%' then
 
