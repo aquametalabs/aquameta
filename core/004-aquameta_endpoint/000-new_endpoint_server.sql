@@ -766,7 +766,7 @@ create function endpoint.row_select(
         if exclude is not null or include is not null then
             select endpoint.column_list(_schema_name, _relation_name, '', exclude, include) into column_list;
         else
-            select 'r.*' into column_list;
+            select '*' into column_list;
         end if;
 
 
