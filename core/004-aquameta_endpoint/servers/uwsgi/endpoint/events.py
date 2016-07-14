@@ -17,8 +17,11 @@ def handle_db_notifications(conn):
     conn.poll()
     while conn.notifies:
         notify = conn.notifies.pop(0)
-        uwsgi.websocket_send(json.dumps(notify.payload))
-        logging.info('sent json notification')
+        uwsgi.websocket_send('''{
+            "method": "event",
+            "data": %s
+        }''' % (json.dumps(notify.payload),))
+        # logging.info('sent json notification')
 
 
 def application(env, start_response):

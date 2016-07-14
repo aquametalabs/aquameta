@@ -174,7 +174,8 @@ define(['/jQuery.min.js'], function($, undefined) {
                         }
 
                         if (typeof socket_requests[response.request_id] == 'undefined') {
-                            console.error('Websocket request not found');
+                            // This will get hit if we sent the same request multiple times and more than one responsded
+                            // console.error('Websocket request not found', response);
                         }
                         else {
                             console.log('resolving promise', response.request_id, socket_requests[response.request_id].tries);
@@ -194,9 +195,35 @@ define(['/jQuery.min.js'], function($, undefined) {
                     case 'session_attach':
                         this.event_session_id = response.session_id;
                         break;
+
+                    case 'event':
+                        handle_event(JSON.parse(response.data));
+                        break;
                 }
             };
 
+        }
+
+        function handle_event(event_data) {
+            // Route event
+            switch(event_data.subscription_type) {
+                case 'table':
+                    console.log(event_data.subscription_type + ':' + event_data.operation);
+                    break;
+                case 'column':
+                    console.log(event_data.subscription_type + ':' + event_data.operation);
+                    break;
+                case 'row':
+                    console.log(event_data.subscription_type + ':' + event_data.operation);
+                    break;
+                case 'field':
+                    console.log(event_data.subscription_type + ':' + event_data.operation);
+                    break;
+                default:
+                    break;
+            }
+            // Delete event
+            // endpoint...
         }
 
         function connect_session(session_id) {
@@ -284,7 +311,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // If this connection is evented, get event_session_id
             if (this.evented) {
-                args.session_id = this.event_session_id;
+                args.session_id = event_session_id;
             }
 
             // URLs

@@ -1550,12 +1550,16 @@ create or replace function endpoint.request2(
         if verb = 'GET' then
 
             -- Look for session_id in query string
-            select (query_args->>'session_id')::uuid into session_id;
+            select btrim(json_array_elements_text, '"')::uuid
+            from json_array_elements_text(query_args->'session_id')
+            into session_id;
 
         elsif verb = 'POST' then
 
             -- Look for session_id in post data
-            select (post_data->>'session_id')::uuid into session_id;
+            select btrim(json_array_elements_text, '"')::uuid
+            from json_array_elements_text(post_data->'session_id')
+            into session_id;
 
         end if;
 
