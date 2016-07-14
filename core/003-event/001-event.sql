@@ -419,7 +419,7 @@ create or replace function event.subscribe_table(
             values(session_id, relation_id);
 
     end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 
 /************************************************************************
@@ -452,7 +452,7 @@ create or replace function event.subscribe_column(
             values(session_id, column_id);
 
     end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 
 /************************************************************************
@@ -485,7 +485,7 @@ create or replace function event.subscribe_row(
             values(session_id, row_id);
 
     end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 
 /************************************************************************
@@ -518,7 +518,7 @@ create or replace function event.subscribe_field(
             values(session_id, field_id);
 
     end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 
 commit;
