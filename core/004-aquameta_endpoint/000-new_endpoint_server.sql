@@ -732,6 +732,10 @@ create function endpoint.row_select(
         row_json text;
         columns_json text;
 
+        exclude text[];
+        include text[];
+        column_list text;
+
     begin
         -- raise notice 'ROW SELECT ARGS: %, %, %, %', schema_name, table_name, queryable_type, pk;
         set local search_path = endpoint;
@@ -741,8 +745,33 @@ create function endpoint.row_select(
         select (row_id).pk_column_id.name into pk_column_name;
         select row_id.pk_value into pk;
 
+
+        -- Column list
+        -- Exclude
+        select array_agg(val)
+        from ((
+            select json_array_elements_text(value::json) as val
+            from json_array_elements_text(args->'exclude')
+        )) q
+        into exclude;
+
+        -- Include
+        select array_agg(val)
+        from ((
+            select json_array_elements_text(value::json) as val
+            from json_array_elements_text(args->'include')
+        )) q
+        into include;
+
+        if exclude is not null or include is not null then
+            select endpoint.column_list(_schema_name, _relation_name, '', exclude, include) into column_list;
+        else
+            select 'r.*' into column_list;
+        end if;
+
+
         row_query := 'select ''[{"row": '' || row_to_json(t.*) || ''}]'' from ' ||
-                        '(select * from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || 
+                        '(select ' || column_list || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || 
                         ' where ' || quote_ident(pk_column_name) || '=' || quote_literal(pk) ||
                             (
                                 select '::' || c.type_name
@@ -1001,18 +1030,27 @@ create function endpoint.column_list(
     _relation_name text,
     table_alias text,
     exclude text[],
+    include text[],
     out column_list text
 ) as $$
     begin
         if table_alias = '' then
-            table_alias := schema_name || '.' || relation_name;
+            table_alias := _schema_name || '.' || _relation_name;
         end if;
 
-        select string_agg(table_alias || '.' || name, ', ')
-        from meta.column
-        where schema_name = _schema_name and
-            relation_name = _relation_name and
-            not name = any(exclude) into column_list;
+        execute
+            'select string_agg(' || quote_literal(table_alias) || ' || ''.'' || name, '', '')
+            from meta.column
+            where schema_name = ' || quote_literal(_schema_name) || ' and
+                relation_name = ' || quote_literal(_relation_name) ||
+                case when include is not null then
+                    ' and name = any(' || quote_literal(include) || ')'
+                else '' end ||
+                case when exclude is not null then
+                    ' and not name = any(' || quote_literal(exclude) || ')'
+                else '' end
+            into column_list;
+
     end;
 $$ language plpgsql;
 
@@ -1032,6 +1070,7 @@ create function endpoint.rows_select(
         rows_json text;
         suffix text;
         exclude text[];
+        include text[];
         column_list text;
 
     begin
@@ -1042,6 +1081,7 @@ create function endpoint.rows_select(
         select endpoint.suffix_clause(args) into suffix;
 
         -- Column list
+        -- Exclude
         select array_agg(val)
         from ((
             select json_array_elements_text(value::json) as val
@@ -1049,8 +1089,16 @@ create function endpoint.rows_select(
         )) q
         into exclude;
 
-        if exclude is not null then
-            select endpoint.column_list(schema_name, relation_name, 'r'::text, exclude) into column_list;
+        -- Include
+        select array_agg(val)
+        from ((
+            select json_array_elements_text(value::json) as val
+            from json_array_elements_text(args->'include')
+        )) q
+        into include;
+
+        if exclude is not null or include is not null then
+            select endpoint.column_list(schema_name, relation_name, 'r'::text, exclude, include) into column_list;
         else
             select 'r.*' into column_list;
         end if;
