@@ -130,48 +130,61 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             // TODO Cleanup the entire semantic widget pipeline
 
             var semantics = selector.split('/');
-            var endpoint = callback;
             context.datum = input;
 
-            if (input instanceof AQ.Relation) {
+            if (input instanceof AQ.Relation || input instanceof AQ.Table || input instanceof AQ.View) {
+                var endpoint = input.schema.database;
                 var fn = 'relation_widget';
-                var id = input.id;
                 var type = 'meta.relation_id';
+                var args_object = {
+                    relation_id: input.id
+                };
                 context.relation = input;
             }
             else if (input instanceof AQ.Row) {
+                var endpoint = input.relation.schema.database;
                 var fn = 'relation_widget';
-                var id = input.relation.id;
                 var type = 'meta.relation_id';
+                var args_object = {
+                    relation_id: input.relation.id
+                };
                 context.row = input;
             }
             else if (input instanceof AQ.Rowset) {
+                var endpoint = input.relation.schema.database;
                 var fn = 'relation_widget';
-                var id = input.relation.id;
                 var type = 'meta.relation_id';
+                var args_object = {
+                    relation_id: input.relation.id
+                };
                 context.relation = input;
             }
             else if (input instanceof AQ.Column) {
+                var endpoint = input.relation.schema.database;
                 var fn = 'column_widget';
-                var id = input.id;
                 var type = 'meta.column_id';
+                var args_object = {
+                    column_id: input.id
+                };
                 context.column = input;
             }
             else if (input instanceof AQ.Field) {
+                var endpoint = input.row.relation.schema.database;
                 var fn = 'column_widget';
-                var id = input.column.id;
                 var type = 'meta.column_id';
-                context.column = input;
+                var args_object = {
+                    column_id: input.column.id
+                };
+                context.field = input;
             }
+
+            args_object.widget_purpose = semantics[1];
+            args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
 
             var widget_getter = endpoint.schema('semantics').function({
                 name: fn,
                 parameters: [type,'text','text']
-            }, {
-                relation_id: id,
-                widget_purpose: semantics[1],
-                default_bundle: semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide'
-            }, { use_cache: true });
+            }, args_object, { use_cache: true, meta_data: false });
 
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
             var widget_retrieve_promise = retrieve(widget_getter, {
@@ -201,7 +214,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
     
             var widget_getter = namespaces[context.namespace].endpoint.schema('widget').function('bundled_widget',
                 [ namespaces[context.namespace].bundle_name, context.name ], {
-                    use_cache: true
+                    use_cache: true,
+                    meta_data: false
                 });
 
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
@@ -558,13 +572,13 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         }
 
         if (typeof rowset_promise == 'undefined' ||
-            typeof rowset_promise.then == 'undefined') {
-            throw 'widget.sync failed: rowset_promise must be a "thenable" promise';
+            (!(rowset_promise instanceof Promise) && !(rowset_promise instanceof AQ.Rowset))) {
+            throw 'widget.sync failed: rowset_promise must be a "thenable" promise or a resolved AQ.Rowset';
         }
 
-        rowset_promise.then(function(rowset) {
+        Promise.resolve(rowset_promise).then(function(rowset) {
             if (typeof rowset == 'undefined' || typeof rowset.forEach == 'undefined') {
-                throw 'Rowset it not defined. First argument to widget.sync must return a Rowset.';
+                throw 'Rowset it not defined. First argument to widget.sync must return a Rowset';
             }
 
             var container_id = AQ.uuid();
