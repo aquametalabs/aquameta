@@ -28,6 +28,11 @@ define(['/jQuery.min.js'], function($, undefined) {
 
         if (typeof options != 'undefined') {
 
+            // Meta data defaults to true;
+            if (typeof options.meta_data == 'undefined') {
+                options.meta_data = true;
+            }
+
             // Map the keys of the options object to an array of encoded url components
             Object.keys(options).sort().map(function(key_name) {
 
@@ -397,6 +402,7 @@ define(['/jQuery.min.js'], function($, undefined) {
 
                 // Log error in collapsed group
                 console.groupCollapsed(method, error.status_code, error.title);
+                // console.error(url_without_query);
                 if ('message' in error) {
                     console.error(error.message);
                 }
