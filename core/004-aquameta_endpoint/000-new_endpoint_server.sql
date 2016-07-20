@@ -225,14 +225,26 @@ create type column_type as (
 create function endpoint.columns_json(
     _schema_name text,
     _relation_name text,
+    exclude text[],
+    include text[],
     out json json
 ) returns json as $$
-    select ('[' || string_agg(row_to_json(row(c.name, c.type_name)::endpoint.column_type)::text, ',') || ']')::json
-    from meta.column c
-    where c.schema_name = _schema_name and
-          c.relation_name = _relation_name
+    begin
+        execute
+            'select (''['' || string_agg(row_to_json(row(c.name, c.type_name)::endpoint.column_type)::text, '','') || '']'')::json
+            from meta.column c
+            where c.schema_name = ' || quote_literal(_schema_name) || ' and
+                c.relation_name = ' || quote_literal(_relation_name) ||
+                case when include is not null then
+                    ' and c.name = any(' || quote_literal(include) || ')'
+                else '' end ||
+                case when exclude is not null then
+                    ' and not c.name = any(' || quote_literal(exclude) || ')'
+                else '' end
+            into json;
+    end;
 $$
-language sql;
+language plpgsql;
 
 
 /****************************************************************************************************
@@ -797,7 +809,7 @@ create function endpoint.row_select(
         --return '{"columns":' || columns_json(_schema_name, _relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
         return '{' ||
                case when args->>'meta_data' = '["true"]' then
-                   '"columns":' || endpoint.columns_json(_schema_name, _relation_name) || ',' ||
+                   '"columns":' || endpoint.columns_json(_schema_name, _relation_name, exclude, include) || ',' ||
                    '"pk":"' || endpoint.pk_name(_schema_name, _relation_name) || '",'
                else ''
                end ||
@@ -1113,8 +1125,8 @@ create function endpoint.rows_select(
 
         return '{' ||
                case when args->>'meta_data' = '["true"]' then
-                   '"columns":' || endpoint.columns_json(schema_name, relation_name) || ',' ||
-                   '"pk":"' || endpoint.pk_name(schema_name, relation_name) || '",'
+                   '"columns":' || endpoint.columns_json(schema_name, relation_name, exclude, include) || ',' ||
+                   '"pk":"' || coalesce(endpoint.pk_name(schema_name, relation_name), 'null') || '",'
                else ''
                end ||
                '"result":' || coalesce(rows_json, '[]') || '}';
