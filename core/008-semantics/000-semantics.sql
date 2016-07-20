@@ -184,72 +184,36 @@ $$ language sql;
 create or replace function semantics.column_widget (
     column_id meta.column_id,
     widget_purpose text,
---    bundle_names text[],
---    default_bundle text,
-    out bundle_name text,
-    out widget_name text
-) as
+    default_bundle text
+) returns setof widget.widget as
 $$
-
-    declare
-        column_name text;
-        widget_id uuid;
-
-    begin
-        -- Find all the possible widgets referenced in semantics for this column or type and purpose
-        with possible_widgets as (
-            select w.id, w.name, r.priority, 'column' as column_or_type
+    -- Find all the possible widgets referenced in semantics for this column or type and purpose
+    select * from (
+        select * from (
+            (select w.*
             from semantics.semantic_column c
                 join semantics.semantic_column_purpose cp on cp.id = c.purpose_id
                 join widget.widget w on w.id = c.widget_id
             where c.id = column_id
                 and cp.purpose = widget_purpose
+            order by c.priority desc)
 
             union
 
-            select w.id, w.name, r.priority, 'type' as column_or_type
+            (select w.*
             from semantics.semantic_type t
                 join semantics.semantic_column_purpose cp on cp.id = t.purpose_id
                 join widget.widget w on w.id = t.widget_id
-            where t.id = (select type_id from meta.column where id = column_id)
+                join meta.column mc on mc.type_id = t.id
+            where mc.id = column_id
                 and cp.purpose = widget_purpose
-        )
-
-        -- Get the bundle its from
-        select r.bundle_name, r.widget_name
-        from (
-
-            -- Committed widgets
-            select b.name as bundle_name, pw.name as widget_name, pw.priority, pw.col_or_type
-            from bundle.bundle b
-                join bundle.commit c on c.id = b.head_commit_id
-                join bundle.rowset r on r.commit_id = c.id
-                join bundle.rowset_row rr on rr.rowset_id = r.id
-                join possible_widgets pw on pw.id = (rr.row_id).pk_value::uuid
-            where b.name = any( bundle_names )
-                and rr.row_id::meta.relation_id = meta.relation_id('widget','widget')
-
-            union
-
-            -- Staged widgets
-            select b.name as bundle_name, pw.name as widget_name, pw.priority, pw.col_or_type
-            from bundle.bundle b
-                join bundle.stage_row_added sra on sra.bundle_id = b.id
-                join possible_widgets pw on pw.id = (sra.row_id).pk_value::uuid
-            where b.name = any( bundle_names )
-                and sra.row_id::meta.relation_id = meta.relation_id('widget','widget')
-
-            union
-
-            -- Default widget
-            select default_bundle as bundle_name, widget_purpose as widget_name, 0 as priority, 'z' as col_or_type
-        ) r
-        order by col_or_type asc, r.priority desc
-        limit 1
-        into bundle_name, widget_name;
-
-    end;
-$$ language plpgsql;
+            order by t.priority desc)
+        ) a
+        union
+        select * from widget.bundled_widget(default_bundle, widget_purpose)
+    ) b
+    limit 1;
+$$ language sql;
 
 
 
