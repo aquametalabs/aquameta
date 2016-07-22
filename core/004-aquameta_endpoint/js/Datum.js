@@ -603,6 +603,12 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Table.prototype.constructor = AQ.Table;
     AQ.Table.prototype.insert = function( data ) {
 
+        if (typeof data == 'undefined') {
+            // table.insert({}) is equivalent to table.insert()
+            // both will insert default values
+            data = {};
+        }
+
         // Return inserted row promise
         return this.schema.database.endpoint.patch(this, data)
             .then(function(inserted_row) {
@@ -807,6 +813,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.schema = relation.schema;
         this.row_data = response.result[0].row;
 
+        this.fields = {};
         this.columns = response.columns || null;
         this.pk_column_name = null;
         this.pk_value = null;
@@ -831,7 +838,13 @@ define(['/jQuery.min.js'], function($, undefined) {
         get: function( name )           { return this.row_data[name]; },
         set: function( name, value )    { this.row_data[name] = value; return this; },
         to_string: function()           { return JSON.stringify(this.row_data); },
-        field: function( name )         { return new AQ.Field(this, name); }
+        clone: function()               { return new AQ.Row(this.relation, { columns: this.columns, pk: this.pk_column_name, result: [{ row: this.row_data }]}); },
+        field: function( name ) {
+            if (typeof this.fields[name] == 'undefined') {
+                this.fields[name] = new AQ.Field(this, name);
+            }
+            return this.fields[name];
+        }
     };
     AQ.Row.prototype.update = function() {
         return this.relation.schema.database.endpoint.patch(this, this.row_data)
