@@ -558,42 +558,47 @@ create or replace function endpoint.row_insert(
        q text;
 
     begin
-        select (relation_id).schema_id.name into _schema_name;
-        select (relation_id).name into _relation_name;
+        _schema_name := (relation_id::meta.schema_id).name;
+        _relation_name := (relation_id).name;
 
         q := '
             with inserted_row as (
-                insert into ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || ' (' || (
-                    select string_agg(quote_ident(json_object_keys), ',' order by json_object_keys)
-                    from json_object_keys(args)
+                insert into ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) ||
+                case when args::text = '{}'::text then
+                    ' default values '
+                else
+                    ' (' || (
+                        select string_agg(quote_ident(json_object_keys), ',' order by json_object_keys)
+                        from json_object_keys(args)
 
-                ) || ') values (' || (
-                       select string_agg('
-                               case when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''array'' then ((
-                                        select ''{'' || string_agg(value::text, '', '') || ''}''
-                                        from json_array_elements(($3->>' || quote_literal(json_object_keys) || ')::json)
-                                    ))
-                                    when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''object'' then
-                                        ($3->' || quote_literal(json_object_keys) || ')::text
-                                    else ($3->>' || quote_literal(json_object_keys) || ')::text
-                               end::' || case when json_typeof((args->json_object_keys)) = 'object' then 'json::'
-                                              else ''
-                                         end || c.type_name, ',
-                               '
-                               order by json_object_keys
-                       ) from json_object_keys(args)
-                       inner join meta.column c
-                               on c.schema_name = _schema_name and
-                                  c.relation_name = _relation_name and
-                                  c.name = json_object_keys
-                       left join meta.type t on c.type_id = t.id
-                ) || ')
-                returning *
+                    ) || ') values (' || (
+                           select string_agg('
+                                   case when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''array'' then ((
+                                            select ''{'' || string_agg(value::text, '', '') || ''}''
+                                            from json_array_elements(($3->>' || quote_literal(json_object_keys) || ')::json)
+                                        ))
+                                        when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''object'' then
+                                            ($3->' || quote_literal(json_object_keys) || ')::text
+                                        else ($3->>' || quote_literal(json_object_keys) || ')::text
+                                   end::' || case when json_typeof((args->json_object_keys)) = 'object' then 'json::'
+                                                  else ''
+                                             end || c.type_name, ',
+                                   '
+                                   order by json_object_keys
+                           ) from json_object_keys(args)
+                           inner join meta.column c
+                                   on c.schema_name = _schema_name and
+                                      c.relation_name = _relation_name and
+                                      c.name = json_object_keys
+                           left join meta.type t on c.type_id = t.id
+                    ) || ') '
+                end ||
+                'returning *
             )
-            select (''{'
-                -- Why should columns be returned here? No need for meta data at all...
-                --"columns":'' || endpoint.columns_json($1, $2) || '',
-                '"result": [{ "row": '' || row_to_json(inserted_row.*) || '' }]
+            select (''{
+                "columns": ' || endpoint.columns_json(_schema_name, _relation_name, null::text[], null::text[]) || ',
+                "pk":"' || coalesce(endpoint.pk_name(_schema_name, _relation_name), 'null') || '",
+                "result": [{ "row": '' || row_to_json(inserted_row.*) || '' }]
             }'')::json
             from inserted_row
         '; 
