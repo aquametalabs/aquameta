@@ -113,9 +113,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             throw "Widget - Selector argument is invalid or missing";
         }
 
-        var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
-        context.id = AQ.uuid();
-
         var default_namespace = '';
         if (typeof this != 'undefined' && typeof this.namespace != 'undefined') {
             // Same namespace as calling widget, instead of global '' namespace
@@ -127,64 +124,83 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
         if (is_semantic_dsl_lookup) {
 
-            // TODO Cleanup the entire semantic widget pipeline
+            var context = {};
 
             var semantics = selector.split('/');
-            context.datum = input;
+            var args_object = {};
 
-            if (input instanceof AQ.Relation || input instanceof AQ.Table || input instanceof AQ.View) {
-                var endpoint = input.schema.database;
-                var fn = 'relation_widget';
-                var type = 'meta.relation_id';
-                var args_object = {
-                    relation_id: input.id
-                };
-                context.relation = input;
-            }
-            else if (input instanceof AQ.Row) {
-                var endpoint = input.relation.schema.database;
-                var fn = 'relation_widget';
-                var type = 'meta.relation_id';
-                var args_object = {
-                    relation_id: input.relation.id
-                };
-                context.row = input;
-            }
-            else if (input instanceof AQ.Rowset) {
-                var endpoint = input.relation.schema.database;
-                var fn = 'relation_widget';
-                var type = 'meta.relation_id';
-                var args_object = {
-                    relation_id: input.relation.id
-                };
-                context.relation = input;
-            }
-            else if (input instanceof AQ.Column) {
-                var endpoint = input.relation.schema.database;
-                var fn = 'column_widget';
-                var type = 'meta.column_id';
-                var args_object = {
-                    column_id: input.id
-                };
-                context.column = input;
-            }
-            else if (input instanceof AQ.Field) {
-                var endpoint = input.row.relation.schema.database;
-                var fn = 'column_widget';
-                var type = 'meta.column_id';
-                var args_object = {
-                    column_id: input.column.id
-                };
-                context.field = input;
-            }
+            if (input instanceof Promise) {
 
-            args_object.widget_purpose = semantics[1];
-            args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
+                var widget_getter = input.then(function(input) {
 
-            var widget_getter = endpoint.schema('semantics').function({
-                name: fn,
-                parameters: [type,'text','text']
-            }, args_object, { use_cache: true, meta_data: false });
+                    context.datum = input;
+
+                    if (input instanceof AQ.Rowset) {
+                        var endpoint = input.relation.schema.database;
+                        var fn = 'relation_widget';
+                        var type = 'meta.relation_id';
+                        args_object.relation_id = input.relation.id;
+                        context.rows = input;
+                    }
+                    args_object.widget_purpose = semantics[1];
+                    args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
+                    
+                    return endpoint.schema('semantics').function({
+                        name: fn,
+                        parameters: [type,'text','text']
+                    }, args_object, { use_cache: true, meta_data: false });
+
+                });
+
+            }
+            else {
+
+                context.datum = input;
+
+                if (input instanceof AQ.Relation || input instanceof AQ.Table || input instanceof AQ.View) {
+                    var endpoint = input.schema.database;
+                    var fn = 'relation_widget';
+                    var type = 'meta.relation_id';
+                    args_object.relation_id = input.id;
+                    context.relation = input;
+                }
+                else if (input instanceof AQ.Row) {
+                    var endpoint = input.relation.schema.database;
+                    var fn = 'relation_widget';
+                    var type = 'meta.relation_id';
+                    args_object.relation_id = input.relation.id;
+                    context.row = input;
+                }
+                else if (input instanceof AQ.Rowset) {
+                    var endpoint = input.relation.schema.database;
+                    var fn = 'relation_widget';
+                    var type = 'meta.relation_id';
+                    args_object.relation_id = input.relation.id;
+                    context.rows = input;
+                }
+                else if (input instanceof AQ.Column) {
+                    var endpoint = input.relation.schema.database;
+                    var fn = 'column_widget';
+                    var type = 'meta.column_id';
+                    args_object.column_id = input.id;
+                    context.column = input;
+                }
+                else if (input instanceof AQ.Field) {
+                    var endpoint = input.row.relation.schema.database;
+                    var fn = 'column_widget';
+                    var type = 'meta.column_id';
+                    args_object.column_id = input.column.id;
+                    context.field = input;
+                }
+                
+                args_object.widget_purpose = semantics[1];
+                args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
+                
+                var widget_getter = endpoint.schema('semantics').function({
+                    name: fn,
+                    parameters: [type,'text','text']
+                }, args_object, { use_cache: true, meta_data: false });
+            }
 
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
             var widget_retrieve_promise = retrieve(widget_getter, {
@@ -193,6 +209,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
         }
         else {
+
+            var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
 
             var name_parts = selector.split(':');
 
@@ -225,6 +243,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             });
 
         }
+
+        context.id = AQ.uuid();
 
         // Setup default namespace for child widget
         context.widget = AQ.Widget.load.bind({ namespace: context.namespace });
@@ -301,11 +321,13 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                             deps.map(function(dep) {
                                 return System.import(dep.field('content').to_url()).then(function(dep_module) {
                                     //console.log('my module', dep_module);
+                                    
                                     return {
                                         url: dep.field('content').to_url(),
                                         name: dep.get('variable') || 'non_amd_module',
                                         /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
-                                        value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
+                                        //value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
+                                        value: dep_module
                                     };
                                 });
                             })
@@ -541,6 +563,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
     function error( err, widget_name, step_name ) {
         console.error("widget('" + widget_name + "', ...) " + step_name + " failed!");
+        //window.setTimeout(function() { throw err; }, 100);
         throw err;
     }
 
@@ -576,9 +599,14 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
             throw 'widget.sync failed: rowset_promise must be a "thenable" promise or a resolved AQ.Rowset';
         }
 
-        Promise.resolve(rowset_promise).then(function(rowset) {
+        if (!(rowset_promise instanceof Promise)) {
+            rowset_promise = Promise.resolve(rowset_promise);
+        }
+
+        rowset_promise.then(function(rowset) {
+
             if (typeof rowset == 'undefined' || typeof rowset.forEach == 'undefined') {
-                throw 'Rowset it not defined. First argument to widget.sync must return a Rowset';
+                throw 'Rowset is not defined. First argument to widget.sync must return a Rowset';
             }
 
             var container_id = AQ.uuid();
