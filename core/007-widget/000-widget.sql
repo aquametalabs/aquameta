@@ -16,7 +16,7 @@ set search_path=widget;
 
 create table widget (
     id uuid not null default public.uuid_generate_v4() primary key,
-    name varchar(255) not null unique,
+    name varchar(255) not null,
     pre_js text default 'return {};'::text not null,
     css text default '.{{= name }} {
 }'::text not null,
