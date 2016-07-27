@@ -1122,9 +1122,8 @@ create function endpoint.rows_select(
 
         row_query := 'select ''['' || string_agg(q.js, '','') || '']'' from (
                           select ''{ "row":'' || row_to_json(t.*) || '' }'' js
-                          from ((select ' || column_list || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' r)) as t '
-                          || suffix ||
-                     ') q';
+                          from ((select ' || column_list || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' r ' || suffix || ')) as t
+                     ) q';
 
         execute row_query into rows_json;
 
