@@ -107,7 +107,14 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
     AQ.Widget = {};
 
 
-    AQ.Widget.load = function ( selector, input, callback ) {
+/*
+widget('core:list_view', {})
+widget('semantics/list_view', row)
+widget('semantics/list_item', row)
+widget('semantics/list_item/com.aquameta.extra.ide', row)
+*/
+    AQ.Widget.widget = function ( selector, input, callback ) {
+    /* AQ.Widget.load = function ( selector, db_obj ) { for semantics */
 
         if (!selector || typeof selector != 'string') {
             throw "Widget - Selector argument is invalid or missing";
@@ -247,8 +254,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
         context.id = AQ.uuid();
 
         // Setup default namespace for child widget
-        context.widget = AQ.Widget.load.bind({ namespace: context.namespace });
-        context.widget.sync = AQ.Widget.load.sync;
+        context.widget = AQ.Widget.widget.bind({ namespace: context.namespace });
+        context.widget.sync = AQ.Widget.widget.sync;
 
         // Prepare and render the widget - each prepare_promise is unique because inputs are different - they are cached by the unique uuid created for the context
         widget_promises[context.id] = prepare(widget_retrieve_promise, context, callback);
@@ -262,6 +269,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
 
+    /* Import a bundle name to a local namespace */
     AQ.Widget.import = function( bundle_name, namespace, endpoint ) {
 
         namespaces[namespace] = {
@@ -272,18 +280,28 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
     };
 
 
-
+    /* Return an array bundle of imported bundle names */
     AQ.Widget.bundles = function() {
         return Object.keys(namespaces).map(function(key) {
             return namespaces[key].bundle_name;
         });
-    }
+    };
 
 
 
-    AQ.Widget.bundle = function( name ) {
-        return namespaces[name].bundle_name;
-    }
+    /* Find the bundle that was imported to this namespace */
+    AQ.Widget.bundle = function( namespace ) {
+        return namespaces[namespace].bundle_name;
+    };
+
+
+
+    /* Find the namespace that uses this bundle */
+    AQ.Widget.namespace = function( bundle_name ) {
+        return Object.keys(namespaces).find(function(namespace) {
+            return namespaces[namespace].bundle_name == bundle_name;
+        });
+    };
 
 
 
@@ -326,8 +344,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
                                         url: dep.field('content').to_url(),
                                         name: dep.get('variable') || 'non_amd_module',
                                         /* TODO: This value thing is a hack. For some reason, jwerty doesn't load properly here */
-                                        //value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
-                                        value: dep_module
+                                        value: typeof dep_module == 'object' ? dep_module[Object.keys(dep_module)[0]] : dep_module
+                                        //value: dep_module
                                     };
                                 });
                             })
@@ -569,7 +587,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
 
 
-    AQ.Widget.load.sync = function(rowset_promise, container, widget_maker, handlers) {
+    AQ.Widget.sync = function(rowset_promise, container, widget_maker, handlers) {
 
         if(handlers === undefined) {
             handlers = {};
@@ -628,7 +646,10 @@ define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undef
 
     }
 
-    return AQ.Widget.load;
+    // duplicate name for backwards compatibility
+    AQ.Widget.widget.sync = AQ.Widget.sync;
+
+    return AQ.Widget.widget;
 
 });
 
