@@ -18,7 +18,7 @@ create table semantics.relation_purpose (
 
 create table semantics.relation (
     id meta.relation_id,
-    purpose_id uuid references semantics.semantic_relation_purpose(id),
+    purpose_id uuid references semantics.relation_purpose(id),
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
 );
@@ -40,14 +40,14 @@ create table semantics.column_purpose (
 
 create table semantics."type" (
     id meta.type_id,
-    purpose_id uuid references semantics.semantic_column_purpose(id) not null,
+    purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
 );
 
 create table semantics."column" (
     id meta.column_id,
-    purpose_id uuid references semantics.semantic_column_purpose(id) not null,
+    purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
 );
@@ -83,8 +83,8 @@ begin
             and relation_name='widget' ) ||
     ' from (
         select w.*, r.priority
-        from semantics.semantic_relation r
-            join semantics.semantic_relation_purpose rp on rp.id = r.purpose_id
+        from semantics.relation r
+            join semantics.relation_purpose rp on rp.id = r.purpose_id
             join widget.widget w on w.id = r.widget_id
         where r.id = meta.relation_id(' || quote_literal((relation_id::meta.schema_id).name) || ', ' || quote_literal((relation_id).name) || ')
             and rp.purpose = ' || quote_literal(widget_purpose) ||
@@ -111,8 +111,8 @@ begin
             and relation_name='widget' ) ||
     ' from (
         select w.*, c.priority, ''c'' as type
-        from semantics.semantic_column c
-            join semantics.semantic_column_purpose cp on cp.id = c.purpose_id
+        from semantics.column c
+            join semantics.column_purpose cp on cp.id = c.purpose_id
             join widget.widget w on w.id = c.widget_id
         where c.id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
                                          quote_literal((column_id::meta.relation_id).name) || ', ' ||
@@ -120,8 +120,8 @@ begin
             and cp.purpose = ' || quote_literal(widget_purpose) ||
         ' union
         select w.*, t.priority, ''t'' as type
-        from semantics.semantic_type t
-            join semantics.semantic_column_purpose cp on cp.id = t.purpose_id
+        from semantics.type t
+            join semantics.column_purpose cp on cp.id = t.purpose_id
             join widget.widget w on w.id = t.widget_id
             join meta.column mc on mc.type_id = t.id
         where mc.id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
