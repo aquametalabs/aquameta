@@ -11,6 +11,8 @@ import logging, sys
 logger = logging.getLogger('events')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+import re
+from binascii import a2b_base64
 
 @responder
 def application(env, start_response):
@@ -18,27 +20,36 @@ def application(env, start_response):
 
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
-            logging.info('this version of the data url scheme has been deprecated. use /endpoint/new instead')
-                # will be
-                # select status, message, response as json
+
+            # We want to maintain escaped urls as string data
+            path = re.split('\?', env['REQUEST_URI'].replace('/endpoint/new', ''))[0]
+            logging.info('attempting endpoint2 %s, %s, query %s, post %s' % (request.method, path, request.args, request.data))
+
             cursor.execute('''
-                select status, message, data2 as json
-                from endpoint.request(%s, %s, %s::json, %s::json)
+                select status, message, response, mimetype
+                from endpoint.request2(%s, %s, %s::json, %s::json)
             ''', (
-                request.method, # verb - GET | POST | PATCH | PUT | DELETE ...
-                request.path, # path - the full path including leading slash but without query string
-                json.dumps(request.args.to_dict(flat=True)), # args - "url parameters", aka parsed out query string, converted to a json string
-                request.data.decode('utf8') if request.data else 'null'
+                request.method,                                         # verb - GET | POST | PATCH | PUT | DELETE ...
+                path,                                                   # path - the relative path including leading slash but without query string
+                json.dumps(request.args.to_dict(flat=False)),            # args - "url parameters", aka parsed out query string, converted to a json string
+                request.get_data() if request.data else 'null'
             ))
 
             row = cursor.fetchone()
-            # return Response('Hello World!')
+
+            if row.mimetype.startswith('image'): # There is a better way here.
+                return Response(
+                    response=a2b_base64(row.response),
+                    content_type=row.mimetype,
+                    status=row.status
+                )
 
             # TODO?
             # How come status and message are not used here?
             return Response(
-                row.json,
-                content_type="application/json"
+                response=row.response,
+                content_type=row.mimetype,
+                status=row.status
             )
 
     except HTTPException as e:
