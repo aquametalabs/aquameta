@@ -23,11 +23,11 @@ def application(env, start_response):
 
             # We want to maintain escaped urls as string data
             full_path = re.split('\?', env['REQUEST_URI'])[0]       # get rid of query params
-            path_with_version = full_path.replace('/endpoint/', '') # get rid of endpoint path
+            path_with_version = full_path.replace('/endpoint/', '', 1) # get rid of endpoint path
             version, path = path_with_version.split('/', 1)
-            path = '/' + path
 
-            logging.info('attempting endpoint %s, %s, %s, query %s, post %s' % (version, request.method, path, request.args, request.data))
+            logging.info('handling request for: %s' % env['REQUEST_URI'])
+            logging.debug('attempting endpoint %s, %s, %s, query %s, post %s' % (version, request.method, path, request.args, request.data))
 
             cursor.execute('''
                 select status, message, response, mimetype

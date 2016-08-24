@@ -1535,10 +1535,11 @@ language plpgsql;
 
 
 /****************************************************************************************************
- * FUNCTION request  NEW VERSION!!!!
+ * FUNCTION request
  ****************************************************************************************************/
 
-create or replace function endpoint.request2(
+create or replace function endpoint.request(
+    version text,
     verb text,
     path text,
     query_args json,
@@ -1556,7 +1557,8 @@ create or replace function endpoint.request2(
         function_id meta.function_id;
         field_id meta.field_id;
         relation_subscribable boolean;
-        path_parts integer;
+        op text;
+        op_params text;
 
     begin
         set local search_path = endpoint,meta,public;
@@ -1579,46 +1581,19 @@ create or replace function endpoint.request2(
 
         end if;
 
-    /*
-     URL					            VERB(s)			            RESPONSE TYPE
-     ----------------------------------------------------------------------------------------------------
-     /endpoint/row/{row_id}          	GET/POST, PATCH, DELETE	    row
-     /endpoint/relation/{relation_id}	GET/POST, PATCH		        rows
-     /endpoint/function/{function_id}	GET/POST			        variable????
-     /endpoint/field/{field_id}		    GET/POST			        value????
+        op := substring(path from '([^/]+)(/{1})'); -- row, relation, function, etc.
+        op_params := substring(path from char_length(op) + 2); -- everything after {op}/
 
-        questions: 
-        does a single row format exist?
-        do we include meta-data for the data
-                - columns / types / primary key ?   --- YES
-                - row_ids ?  (aka selectors)        --- NO
-
-   */
-/*
- All 9 subroutines
-
-- How should this url work?
-1. rows_select_function(function_id, query_args, path_parts[6])
-
--done- 2. rows_select_function(function_id, query_args)
--done- 3. row_select(row_id)
--done- 4. row_update(row_id, post_data)
--done- 5. row_delete(row_id)
--done- 6. rows_select(relation_id, query_args)
--done- 7. row_insert(relation_id, post_data)
--done- 8. rows_insert(post_data)
--done- 9. field_select(field_id)
-*/
-
-        raise notice '###### endpoint.request % %', verb, path;
+        raise notice '##### endpoint.request % % %', version, verb, path;
+        raise notice '##### op and params: % %', op, op_params;
         raise notice '##### query string args: %', query_args::text;
         raise notice '##### POST data: %', post_data::text;
 
-        case
-        when path like '/row/%' then
+        case op
+        when 'row' then
 
             -- URL /endpoint/row/{row_id}
-            row_id := substring(path from 6)::meta.row_id;
+            row_id := op_params::meta.row_id;
 
             if verb = 'GET' then
 
@@ -1655,10 +1630,10 @@ create or replace function endpoint.request2(
                 return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
-        when path like '/relation%' then
+        when 'relation' then
 
             -- URL /endpoint/relation/{relation_id}
-            relation_id := substring(path from 11)::meta.relation_id;
+            relation_id := op_params::meta.relation_id;
 
             if verb = 'GET' then
 
@@ -1709,13 +1684,13 @@ create or replace function endpoint.request2(
                 return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
-        when path like '/function%' then
+        when 'function' then
 
             -- If function is called without a parameter type list
-            if array_length((string_to_array(path, '/')), 1) = 4 then
+            if array_length((string_to_array(op_params, '/')), 1) = 2 then
 
-                path := path || '/{}';
-                function_id := substring(path from 11)::meta.function_id;
+                op_params := op_params || '/{}';
+                function_id := op_params::meta.function_id;
 
                 if verb = 'GET' then
                     -- Get record from function call
@@ -1735,16 +1710,11 @@ create or replace function endpoint.request2(
             else
 
                 -- URL /endpoint/function/{function_id}
-                function_id := substring(path from 11)::meta.function_id;
+                function_id := op_params::meta.function_id;
 
                 if verb = 'GET' then
                     -- Get record from function call
                     return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, query_args) as rsf;
-
-                    -- I'm not sure this is possible in a clean way
-                    -- Get single column from function call
-                    -- old - return query select 200, 'OK'::text, (select endpoint.rows_select_function(path_parts[2], path_parts[4], args, path_parts[6]))::text;
-                    --return query select 200, 'OK'::text, (select endpoint.rows_select_function(function_id, query_args, /*??*/path_parts[6]))::text;
 
                 elsif verb = 'POST' then
                     -- Get record from function call
@@ -1758,10 +1728,10 @@ create or replace function endpoint.request2(
 
             end if;
 
-        when path like '/field%' then
+        when 'field' then
 
             -- URL /endpoint/field/{field_id}
-            field_id := substring(path from 8)::meta.field_id;
+            field_id := op_params::meta.field_id;
 
             if verb = 'GET' or verb = 'POST' then
 
