@@ -52,7 +52,7 @@ RUN pip install .
 
 ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-## Docker
+## pgfs
 RUN mkdir /mnt/aquameta
 
 
