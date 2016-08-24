@@ -22,16 +22,21 @@ def application(env, start_response):
         with map_errors_to_http(), cursor_for_request(request) as cursor:
 
             # We want to maintain escaped urls as string data
-            path = re.split('\?', env['REQUEST_URI'].replace('/endpoint/new', ''))[0]
-            logging.info('attempting endpoint2 %s, %s, query %s, post %s' % (request.method, path, request.args, request.data))
+            full_path = re.split('\?', env['REQUEST_URI'])[0]       # get rid of query params
+            path_with_version = full_path.replace('/endpoint/', '') # get rid of endpoint path
+            version, path = path_with_version.split('/', 1)
+            path = '/' + path
+
+            logging.info('attempting endpoint %s, %s, %s, query %s, post %s' % (version, request.method, path, request.args, request.data))
 
             cursor.execute('''
                 select status, message, response, mimetype
-                from endpoint.request2(%s, %s, %s::json, %s::json)
+                from endpoint.request(%s, %s, %s, %s::json, %s::json)
             ''', (
+                version,                                                # version - 0.1, 0.2, etc...
                 request.method,                                         # verb - GET | POST | PATCH | PUT | DELETE ...
                 path,                                                   # path - the relative path including leading slash but without query string
-                json.dumps(request.args.to_dict(flat=False)),            # args - "url parameters", aka parsed out query string, converted to a json string
+                json.dumps(request.args.to_dict(flat=False)),           # args - "url parameters", aka parsed out query string, converted to a json string
                 request.get_data() if request.data else 'null'
             ))
 
