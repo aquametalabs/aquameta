@@ -54,6 +54,26 @@ create function widget.bundled_widget (
 $$ language sql;
 
 
+create view widget.bundled_widget as
+    select b.name as bundle_name, w.*
+    from bundle.bundle b
+        join bundle.commit c on c.id = b.head_commit_id
+        join bundle.rowset r on r.id = c.rowset_id
+        join bundle.rowset_row rr on rr.rowset_id = r.id
+        join widget.widget w on w.id = (rr.row_id).pk_value::uuid
+    where ((rr.row_id)::meta.schema_id).name = 'widget'
+        and ((rr.row_id)::meta.relation_id).name = 'widget'
+    
+    union
+    
+    select b.name as bundle_name, w.*
+    from bundle.bundle b
+        join bundle.stage_row_added sra on sra.bundle_id = b.id
+        join widget.widget w on w.id = (sra.row_id).pk_value::uuid
+    where ((sra.row_id)::meta.schema_id).name = 'widget'
+        and ((sra.row_id)::meta.relation_id).name = 'widget';
+
+
 
 /*******************************************************************************
 * TABLE dependency_css
