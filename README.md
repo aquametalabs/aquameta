@@ -17,7 +17,7 @@ Features
 - Meta - Writable system catalog for PostgreSQL
 - File System - A bi-directional file system integration system
 - Events - Pub/sub data change events API
-- Web server - Hosts arbitrary resources and a REST/JSON API for database operations
+- [Web Server](core/004-aquameta_endpoint/README.md) - Hosts arbitrary resources and a REST/JSON API for database operations
 - Bundles - A version control system similar to git but for database rows intead of files
 - Widgets - Modular web components that can be reused
 - P2P - Peer-to-peer communication between Aquameta nodes
