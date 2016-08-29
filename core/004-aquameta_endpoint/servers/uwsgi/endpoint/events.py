@@ -1,17 +1,15 @@
 from endpoint.db import cursor_for_request
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from psycopg2 import InternalError, Warning
-from werkzeug.contrib.wrappers import JSONRequestMixin
+from psycopg2 import Warning
 from werkzeug.wrappers import Request
-from os import urandom
 import json, logging, uwsgi, sys
-from uuid import UUID
 
 from werkzeug.datastructures import ImmutableMultiDict
 
 logger = logging.getLogger('events')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
 
 def handle_db_notifications(conn):
     conn.poll()
@@ -22,6 +20,62 @@ def handle_db_notifications(conn):
             "data": %s
         }''' % (json.dumps(notify.payload),))
         # logging.info('sent json notification')
+
+
+def request_method(cmd, cursor):
+    query_data = ImmutableMultiDict(json.loads(cmd['query']))
+    post_data = json.dumps(cmd['data'])
+
+    logging.info('websocket endpoint request: %s, %s, %s, %s, %s' % (
+        cmd['version'], # API version               - 0.1, 0.2, etc.
+        cmd['verb'],    # HTTP method               - GET, POST, PATCH, DELETE
+        cmd['uri'],     # selector                  - '/relation/widget/dependency_js'
+        query_data,     # query string arguments    - including event.session id
+        post_data))     # post data
+
+    cursor.execute(
+        """select status, message, response, mimetype
+             from endpoint.request({version}, {verb}, {path}, {query}, {data});""".format(
+                 version = cmd['version'],
+                 verb = cmd['verb'],
+                 path = cmd['uri'],
+                 query = json.dumps(query_data).to_dict(flat=False),
+                 data = post_data))
+
+    result = cursor.fetchone()
+
+    uwsgi.websocket_send('''{
+        "method": "response",
+        "request_id": "%s",
+        "data": %s
+    }''' % (cmd['request_id'], result.response))
+
+
+def attach_method(cmd, cursor, db_connection, env):
+    session_id = cmd['session_id']
+    if session_id is not None:
+        cursor.execute('select event.session_attach(%s);', (session_id,))
+        logging.info('session attached: %s (role: %s)' % (session_id, env['DB_USER']))
+        handle_db_notifications(db_connection)
+
+        uwsgi.websocket_send('''{
+            "method": "response",
+            "request_id": "%s",
+            "data": "true"
+        }''' % (cmd['request_id'],))
+
+
+def detach_method(cmd, cursor, env):
+    session_id = cmd['session_id']
+    if session_id is not None:
+        cursor.execute('select event.session_detach(%s);', (session_id,))
+        logging.info('session detached: %s (role: %s)' % (session_id, env['DB_USER']))
+
+        uwsgi.websocket_send('''{
+            "method": "response",
+            "request_id": "%s",
+            "data": "true"
+        }''' % (cmd['request_id'],))
 
 
 def application(env, start_response):
@@ -63,61 +117,13 @@ def application(env, start_response):
                                         logging.info('command received: %s' % cmd['method'])
 
                                     if cmd['method'] == 'request':
-
-                                        logging.info('websocket endpoint request: %s, %s, %s, %s' % (
-                                            cmd['verb'],                # HTTP method               - GET, POST, PATCH, DELETE
-                                            cmd['uri'],                 # selector                  - '/relation/widget/dependency_js'
-                                            ImmutableMultiDict(json.loads(cmd['query'])),   # query string arguments    - including event.session id
-                                            json.dumps(cmd['data'])     # post data
-                                        ))
-
-                                        cursor.execute('select status, message, response, mimetype from endpoint.request2(%s, %s, %s::json, %s::json);', (
-                                            cmd['verb'],                # HTTP method               - GET, POST, PATCH, DELETE
-                                            cmd['uri'],                 # selector                  - '/relation/widget/dependency_js'
-                                            json.dumps(ImmutableMultiDict(json.loads(cmd['query'])).to_dict(flat=False)),   # query string arguments    - including event.session id
-                                            json.dumps(cmd['data'])     # post data
-                                        ))
-
-                                        result = cursor.fetchone()
-
-                                        uwsgi.websocket_send('''{
-                                            "method": "response",
-                                            "request_id": "%s",
-                                            "data": %s
-                                        }''' % (cmd['request_id'], result.response))
-
+                                        request_method(cmd, cursor)
 
                                     elif cmd['method'] == 'attach':
-                                        session_id = cmd['session_id']
-                                        if session_id is not None:
-                                            cursor.execute('select event.session_attach(%s);', (session_id,))
-                                            logging.info('session attached: %s (role: %s)' % (session_id, env['DB_USER']))
-                                            handle_db_notifications(db_connection)
-
-                                            uwsgi.websocket_send('''{
-                                                "method": "response",
-                                                "request_id": "%s",
-                                                "data": "true"
-                                            }''' % (cmd['request_id'],))
+                                        attach_method(cmd, cursor, db_connection)
 
                                     elif cmd['method'] == 'detach':
-                                        session_id = cmd['session_id']
-                                        if session_id is not None:
-                                            cursor.execute('select event.session_detach(%s);', (session_id,))
-                                            logging.info('session detached: %s (role: %s)' % (session_id, env['DB_USER']))
-
-                                            uwsgi.websocket_send('''{
-                                                "method": "response",
-                                                "request_id": "%s",
-                                                "data": "true"
-                                            }''' % (cmd['request_id'],))
-
-                                    #uwsgi.websocket_send('''{
-                                    #    "method": "response",
-                                    #    "request_id": "%s",
-                                    #    "data": %s
-                                    #}''' % (cmd['request_id'], result.response))
-
+                                        detach_method(cmd, cursor, db_connection, env)
 
                                 except Warning as err:
                                     logging.error(str(err))

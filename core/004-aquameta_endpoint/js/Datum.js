@@ -343,6 +343,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                 }
 
                 var request = socket_send({
+                    version: '0.1',
                     method: 'request',
                     verb: method,
                     uri: id_url,
