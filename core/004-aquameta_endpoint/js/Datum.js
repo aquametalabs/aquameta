@@ -142,7 +142,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                 return socket;
             }
 
-            socket = new WebSocket('ws://' + location.host + '/endpoint/event');
+            socket = new WebSocket('ws://' + location.host + url + '/event');
             
             socket.onopen = function (event) {
                 console.log('socket opened', this.readyState);
