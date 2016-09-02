@@ -528,10 +528,10 @@ define(['/jQuery.min.js'], function($, undefined) {
 
                 if (rows == null) {
                     throw 'Empty response';
-                }
+                }/*
                 else if (rows.result.length < 1) {
                     throw 'No rows returned';
-                }
+                }*/
                 return new AQ.Rowset(this, rows);
 
             }.bind(this)).catch(function(err) {
@@ -814,7 +814,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         this.schema = relation.schema;
         this.row_data = response.result[0].row;
 
-        this.fields = {};
+        this.cached_fields = {};
         this.columns = response.columns || null;
         this.pk_column_name = null;
         this.pk_value = null;
@@ -827,11 +827,20 @@ define(['/jQuery.min.js'], function($, undefined) {
         if (typeof response.pk != 'undefined') {
             this.pk_column_name = response.pk;
             this.pk_value = this.get(this.pk_column_name);
-            this.id = { relation_id: this.relation.id, pk_column_name: this.pk_column_name, pk_value: this.pk_value }; 
+            // this.id = {"pk_column_id":{"relation_id":{"schema_id":{"name":this.schema.name},"name":this.relation.name},"name":this.pk_column_name},"pk_value": this.pk_value}
+            this.id = {
+                pk_column_id: {
+                    relation_id: this.relation.id,
+                    name: this.pk_column_name
+                },
+                pk_value: this.pk_value
+            };
+
             this.to_url = function( id_only ) {
                 return id_only ? '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value :
                     this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value;
            };
+
         }
     };
     AQ.Row.prototype = {
@@ -841,10 +850,18 @@ define(['/jQuery.min.js'], function($, undefined) {
         to_string: function()           { return JSON.stringify(this.row_data); },
         clone: function()               { return new AQ.Row(this.relation, { columns: this.columns, pk: this.pk_column_name, result: [{ row: this.row_data }]}); },
         field: function( name ) {
-            if (typeof this.fields[name] == 'undefined') {
-                this.fields[name] = new AQ.Field(this, name);
+            if (typeof this.cached_fields[name] == 'undefined') {
+                this.cached_fields[name] = new AQ.Field(this, name);
             }
-            return this.fields[name];
+            return this.cached_fields[name];
+        },
+        fields: function() {
+            if (this.columns != null) {
+                return this.columns.map(function(c) {
+                    return this.field(c.name);
+                }.bind(this));
+            }
+            return null;
         }
     };
     AQ.Row.prototype.update = function() {

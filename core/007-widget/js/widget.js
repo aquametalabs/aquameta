@@ -330,6 +330,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                 row.related_rows('id', 'widget.widget_dependency_js', 'widget_id', { use_cache: true, meta_data: true })
                     .then(function(deps_js) {
 
+                        if (!deps_js.length) { return; }
                         return deps_js.related_rows('dependency_js_id', 'widget.dependency_js', 'id', { use_cache: true, meta_data: true });
 
                     }).then(function(deps) {
