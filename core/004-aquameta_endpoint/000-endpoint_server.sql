@@ -719,8 +719,7 @@ create or replace function endpoint.row_update(
                                   c.relation_name = _relation_name and
                                   c.name = json_object_keys
                    ) || ' where ' || (
-                       select 'r.' || quote_ident(pk_name) || ' = ' || quote_literal(pk) || '::' || pk_type
-                       from endpoint.pk(_schema_name, _relation_name) p
+                       select 'r.' || quote_ident((row_id).pk_column_id.name) || ' = ' || quote_literal((row_id).pk_value)
                    )
         ) using args;
 
