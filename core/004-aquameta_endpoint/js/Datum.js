@@ -837,8 +837,8 @@ define(['/jQuery.min.js'], function($, undefined) {
             };
 
             this.to_url = function( id_only ) {
-                return id_only ? '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value :
-                    this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + this.pk_value;
+                return id_only ? '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + JSON.stringify(this.pk_value) :
+                    this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + JSON.stringify(this.pk_value);
            };
 
         }
@@ -952,8 +952,8 @@ define(['/jQuery.min.js'], function($, undefined) {
                 console.error('You must call a row with "meta_data: true" in order to use the to_url function');
                 throw 'Datum.js: Programming Error';
             }
-            return id_only ? '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name :
-                this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + this.row.pk_value + '/' + this.column.name;
+            return id_only ? '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + JSON.stringify(this.row.pk_value) + '/' + this.column.name :
+                this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + JSON.stringify(this.row.pk_value) + '/' + this.column.name;
             };
     };
     AQ.Field.prototype = {
