@@ -461,16 +461,18 @@ from (
         case
             when sr.row_id is null then 'deleted'
             when hcr.row_id is null then  'added'
-            when 1 = 2 /* not sure */ then  'modified'
+            when
+                array_remove(array_agg(ofc.field_id), null) != '{}'
+                or array_remove(array_agg(sfc.field_id), null) != '{}' then  'modified'
             else 'same'
         end as change_type,
 
         -- offstage changes
-        array_agg(ofc.field_id) as offstage_field_changes,
+        array_remove(array_agg(ofc.field_id), null) as offstage_field_changes,
         array_agg(ofc.old_value) as offstage_field_changes_old_vals,
         array_agg(ofc.new_value) as offstage_field_changes_new_vals,
         -- staged changes
-        array_agg(sfc.field_id) as stage_field_changes,
+        array_remove(array_agg(sfc.field_id), null) as stage_field_changes,
         array_agg(ofc.old_value) as stage_field_changes_old_vals, -- FIXME this is coming in as null
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
@@ -492,8 +494,8 @@ end, row_id;
 create view head_db_stage_changed as
 select * from bundle.head_db_stage
 where change_type != 'same'
-    or stage_field_changes::text != '{NULL}'
-    or offstage_field_changes::text != '{NULL}'
+    or stage_field_changes::text != '{}'
+    or offstage_field_changes::text != '{}'
     or row_exists = false;
 
 

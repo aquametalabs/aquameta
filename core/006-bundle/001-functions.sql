@@ -114,10 +114,12 @@ as $$
 
 -- todo: make this recursive, up the commit_parent list
 select c.id as commit_id, message, count(*)
-from bundle.commit c
+from bundle b
+join bundle.commit c on c.bundle_id = b.id
 join bundle.rowset r on c.rowset_id=r.id
 join bundle.rowset_row rr on rr.rowset_id = r.id
-group by c.id, message
+where b.name = bundle_name
+group by b.id, c.id, message
 
 $$ language sql;
 
