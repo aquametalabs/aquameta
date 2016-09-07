@@ -14,7 +14,7 @@ a widget is:
 widget() function
 -----------------
 
-function widget(selector, args, callback) {}
+function widget(selector, args) {}
 
 pipeline:
 
@@ -53,7 +53,6 @@ function($, endpoint, widget, other deps) {
 - (nice to have) trick the script source tracker to think that the widget code is at the post_js field's URL so we get nice source maps?
 - wait for the html to be inserted onto the page????  is this why we used mutation observers?
 - run the javascript
-- call callback
 - return html string
 
 
@@ -93,7 +92,7 @@ widget('/use/edit/integer', { value: 5 })
 * Company: http://aquameta.com/
 * Project: http://blog.aquameta.com/
 ******************************************************************************/
-define(['/doT.min.js', 'jQuery.min.js', '/Datum.js'], function(doT, $, AQ, undefined) {
+define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undefined) {
 
     'use strict';
 
@@ -113,41 +112,45 @@ widget('semantics/list_view', row)
 widget('semantics/list_item', row)
 widget('semantics/list_item/com.aquameta.extra.ide', row)
 */
-    AQ.Widget.widget = function ( selector, input, callback ) {
-    /* AQ.Widget.load = function ( selector, db_obj ) { for semantics */
+    AQ.Widget.widget = function ( selector, input, extra ) {
 
         if (!selector || typeof selector != 'string') {
             throw "Widget - Selector argument is invalid or missing";
         }
 
-        var default_namespace = '';
-        if (typeof this != 'undefined' && typeof this.namespace != 'undefined') {
-            // Same namespace as calling widget, instead of global '' namespace
-            default_namespace = this.namespace;
-        }
-
+        // Same namespace as calling widget, instead of global '' namespace
+        var default_namespace = (typeof this != 'undefined' && typeof this.namespace != 'undefined') ? this.namespace : '';
 
         var is_semantic_dsl_lookup = selector.indexOf('/') != -1;
 
+        // For semantic lookup
+        // * selector is 'semantics/purpose/default_bundle'
+        // * input is AQ.* object
+        // * extra is {} to send to widget
         if (is_semantic_dsl_lookup) {
 
-            var context = {};
-
+            var context = extra || {};
             var semantics = selector.split('/');
             var args_object = {};
 
+            // If input is a promise (that will resolve as a Rowset or a Row), resolve it first
             if (input instanceof Promise) {
 
                 var widget_getter = input.then(function(input) {
 
                     context.datum = input;
 
+                    // These are the same for both Rowset and Row
+                    var endpoint = input.relation.schema.database;
+                    var fn = 'relation_widget';
+                    var type = 'meta.relation_id';
+                    args_object.relation_id = input.relation.id;
+
                     if (input instanceof AQ.Rowset) {
-                        var endpoint = input.relation.schema.database;
-                        var fn = 'relation_widget';
-                        var type = 'meta.relation_id';
-                        args_object.relation_id = input.relation.id;
                         context.rows = input;
+                    }
+                    else if (input instanceof AQ.Row) {
+                        context.row = input;
                     }
                     args_object.widget_purpose = semantics[1];
                     args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
@@ -160,6 +163,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                 });
 
             }
+            // Else, check which type it is
             else {
 
                 context.datum = input;
@@ -215,9 +219,15 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
             });
 
         }
+
+        // For regular widget lookup
+        // * selector is '[namespace:]widget_name'
+        // * input is {} to send to widget
+        // * extra is ignored
         else {
 
-            var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
+            //var context = typeof input != 'undefined' ? Object.assign({}, input) : {};
+            var context = input || {};
 
             var name_parts = selector.split(':');
 
@@ -258,7 +268,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
         context.widget.sync = AQ.Widget.widget.sync;
 
         // Prepare and render the widget - each prepare_promise is unique because inputs are different - they are cached by the unique uuid created for the context
-        widget_promises[context.id] = prepare(widget_retrieve_promise, context, callback);
+        widget_promises[context.id] = prepare(widget_retrieve_promise, context);
 
         // Return script that calls swap
         return '<script id="widget-stub_' + context.id  + '" data-widget_id="' + context.id + '">' +
@@ -366,7 +376,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
 
 
 
-    function prepare( retrieve_promise, context, callback ) {
+    function prepare( retrieve_promise, context ) {
 
         return retrieve_promise.then(function( widget_data ) {
 
@@ -440,8 +450,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                 html: rendered_widget,
                 widget_id: context.id,
                 widget_name: context.name,
-                post_js: post_js_function,
-                callback: callback
+                post_js: post_js_function
             };
 
         });
@@ -556,11 +565,6 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
             }
 
             var w = $('#' + rendered_widget.widget_id);
-
-            // Call widget callback
-            if(rendered_widget.callback) {
-                rendered_widget.callback(w);
-            }
 
             // Trigger widget_loaded? Necessary?
             // w.trigger('widget_loaded', w);
