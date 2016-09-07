@@ -532,13 +532,14 @@ define(['/jQuery.min.js'], function($, undefined) {
                 else if (rows.result.length < 1) {
                     throw 'No rows returned';
                 }*/
-                return new AQ.Rowset(this, rows);
+                return new AQ.Rowset(this, rows, options);
 
             }.bind(this)).catch(function(err) {
                 throw 'Rows request failed: ' + err;
             });
     };
     AQ.Relation.prototype.row = function() {
+
         // Multiple different ways to call 'row' function
 
         // 1. Calling with Options object
@@ -618,7 +619,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                     throw 'Empty response';
                 }
                 if (typeof data.length != 'undefined' && data.length > 1) {
-                    return new AQ.Rowset(this, inserted_row);
+                    return new AQ.Rowset(this, inserted_row, null);
                 }
                 return new AQ.Row(this, inserted_row);
 
@@ -638,13 +639,14 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.View.prototype.constructor = AQ.View;
 
     /*--------------------------------- * Rowset * ---------------------------------*/
-    AQ.Rowset = function( relation, response ) {
+    AQ.Rowset = function( relation, response, server_arguments ) {
         this.relation = relation;
         this.schema = relation.schema;
         this.columns = response.columns || null;
         this.pk_column_name = response.pk || null;
         this.rows = response.result;
         this.length = response.result.length;
+        this.server_arguments = server_arguments || {};
     };
     AQ.Rowset.prototype.constructor = AQ.Rowset;
     AQ.Rowset.prototype.map = function(fn) {
@@ -656,6 +658,9 @@ define(['/jQuery.min.js'], function($, undefined) {
         return this.rows.map(function(row) {
             return new AQ.Row(this.relation, { columns: this.columns, pk: this.pk_column_name, result: [ row ] });
         }.bind(this)).forEach(fn);
+    };
+    AQ.Rowset.prototype.reload = function() {
+        return this.relation.rows(this.server_arguments);
     };
 
     /**
@@ -773,11 +778,13 @@ define(['/jQuery.min.js'], function($, undefined) {
         });
 
         options = options || {};
-        options.where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: 'in',
             value: values
-        };
+        });
+
 
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
@@ -798,11 +805,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         });
 
         options = options || {};
-        var where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: 'in',
             value: values
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).row(where, options);
 
@@ -837,8 +845,8 @@ define(['/jQuery.min.js'], function($, undefined) {
             };
 
             this.to_url = function( id_only ) {
-                return id_only ? '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + JSON.stringify(this.pk_value) :
-                    this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + JSON.stringify(this.pk_value);
+                return id_only ? '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + /*JSON.stringify(this.pk_value)*/ this.pk_value :
+                    this.relation.schema.database.endpoint.url + '/row/' + this.relation.schema.name + '/' + this.relation.name + '/' + /*JSON.stringify(this.pk_value)*/ this.pk_value;
            };
 
         }
@@ -902,11 +910,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         var db = this.relation.schema.database;
 
         options = options || {};
-        options.where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: '=',
             value: this.get(self_column_name)
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
@@ -923,11 +932,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         var db = this.relation.schema.database;
 
         options = options || {};
-        var where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: '=',
             value: this.get(self_column_name)
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).row(where, options);
     };
@@ -952,8 +962,8 @@ define(['/jQuery.min.js'], function($, undefined) {
                 console.error('You must call a row with "meta_data: true" in order to use the to_url function');
                 throw 'Datum.js: Programming Error';
             }
-            return id_only ? '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + JSON.stringify(this.row.pk_value) + '/' + this.column.name :
-                this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + JSON.stringify(this.row.pk_value) + '/' + this.column.name;
+            return id_only ? '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + /*JSON.stringify(this.row.pk_value)*/ this.row.pk_value + '/' + this.column.name :
+                this.row.relation.schema.database.endpoint.url + '/field/' + this.row.relation.schema.name + '/' + this.row.relation.name + '/' + /*JSON.stringify(this.row.pk_value)*/ this.row.pk_value + '/' + this.column.name;
             };
     };
     AQ.Field.prototype = {
@@ -1021,11 +1031,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         var db = this.function.schema.database;
 
         options = options || {};
-        options.where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: '=',
             value: this.get(self_column_name)
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
@@ -1041,11 +1052,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         var db = this.function.schema.database;
 
         options = options || {};
-        var where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: '=',
             value: this.get(self_column_name)
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).row(where, options);
     };
@@ -1085,11 +1097,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         });
 
         options = options || {};
-        options.where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: 'in',
             value: values
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).rows(options);
     };
@@ -1110,11 +1123,12 @@ define(['/jQuery.min.js'], function($, undefined) {
         });
 
         options = options || {};
-        var where = {
+        options.where = options.where instanceof Array ? options.where : (typeof options.where == 'undefined' ?  [] : [options.where]);
+        options.where.push({
             name: related_column_name,
             op: 'in',
             value: values
-        };
+        });
 
         return db.schema(schema_name).relation(relation_name).row(where, options);
 
