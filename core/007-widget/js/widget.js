@@ -129,6 +129,10 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
         // * extra is {} to send to widget
         if (is_semantic_dsl_lookup) {
 
+            if (!input) {
+                throw "Semantics requires an AQ.* to be passed in";
+            }
+
             var context = extra || {};
             var semantics = selector.split('/');
             var args_object = {};
