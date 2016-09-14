@@ -307,7 +307,7 @@ select
     b.value as old_value,
     meta.field_id_literal_value(field_id) as new_value,
     bundle_id
-from bundle.head_commit_field f 
+from bundle.head_commit_field f
 join bundle.blob b on f.value_hash = b.hash
 where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so slow?  workaround by nesting selects.  still slow.
     and */ f.field_id not in
@@ -446,6 +446,7 @@ select
         when change_type = 'deleted' then (stage_row_id is null)
         when change_type = 'added' then true
         when change_type = 'modified' then /* not sure */ false
+        when change_type = 'tracked' then false
     end as staged,
 
     (head_row_id is not null) in_head
@@ -464,6 +465,7 @@ from (
             when
                 array_remove(array_agg(ofc.field_id), null) != '{}'
                 or array_remove(array_agg(sfc.field_id), null) != '{}' then  'modified'
+            when meta.row_exists(sr.row_id) = false then 'deleted'
             else 'same'
         end as change_type,
 
@@ -481,9 +483,16 @@ from (
     left join stage_field_changed sfc on (sfc.field_id).row_id=hcr.row_id
     left join offstage_field_changed ofc on ofc.row_id=hcr.row_id
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, ofc.row_id
+
+    union
+
+    select tra.bundle_id, null, tra.row_id, null, null, 'tracked', null, null, null, null, null, null
+    from bundle.tracked_row_added tra
+
 ) c
 order by
 case c.change_type
+    when 'tracked' then 0
     when 'deleted' then 1
     when 'modified' then 2
     when 'same' then 3
@@ -507,6 +516,36 @@ where change_type != 'same'
 -- cascade), not currently in any of the head commits, and not in
 -- stage_row_added [or stage_row_deleted?].
 ------------------------------------------------------------------------------
+
+create table tracked_row_added (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid not null references bundle(id) on delete cascade,
+    row_id meta.row_id,
+    unique (row_id)
+);
+
+
+create or replace view bundle.tracked_row as
+   select b.id as bundle_id, hcr.row_id
+   from bundle.bundle b
+   join bundle.head_commit_row hcr on hcr.bundle_id=b.id
+
+   union
+
+   -- tracked_row_added
+   select b.id, tra.row_id
+   from bundle.bundle b
+   join bundle.tracked_row_added tra on tra.bundle_id=b.id
+
+   union
+
+   select b.id, sra.row_id
+   from bundle.bundle b
+   join bundle.stage_row_added sra on sra.bundle_id=b.id;
+
+
+
+
 
 -- Relations that are not specifically ignored, and not in a ignored schema
 create or replace view not_ignored_relation as

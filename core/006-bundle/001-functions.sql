@@ -126,6 +126,28 @@ $$ language sql;
 
 
 ------------------------------------------------------------------------------
+-- TRACKED ROW FUNCTIONS
+------------------------------------------------------------------------------
+-- track a row
+create or replace function tracked_row_add (
+    bundle_name text,
+    schema_name text,
+    relation_name text,
+    pk_column_name text,
+    pk_value text
+) returns void
+as $$
+    -- TODO: check to see if this row is not tracked by some other bundle!
+    insert into bundle.tracked_row_added (bundle_id, row_id) values (
+        (select id from bundle.bundle where name=bundle_name),
+        meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+    );
+$$ language sql;
+
+
+
+
+-------------------------------------------------------------------------------
 -- STAGE FUNCTIONS
 ------------------------------------------------------------------------------
 -- stage an add
@@ -137,11 +159,27 @@ create or replace function stage_row_add (
     pk_value text
 ) returns void
 as $$
-    insert into bundle.stage_row_added (bundle_id, row_id) values (
-        (select id from bundle.bundle where name=bundle_name),
-        meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
-    );
-$$ language sql;
+    begin
+    insert into bundle.stage_row_added (bundle_id, row_id)
+        select b.id, meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+        from bundle.bundle b
+        join bundle.tracked_row_added tra on tra.bundle_id=b.id
+        where b.name=bundle_name and tra.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
+
+    if not FOUND then
+        raise exception 'No such bundle, or this row is not yet tracked by this bundle.';
+    end if;
+
+    delete from bundle.tracked_row_added tra
+        where tra.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
+
+    if not FOUND then
+        raise exception 'Row could not be delete from tracked_row_added';
+    end if;
+    end;
+$$
+language plpgsql;
+
 
 
 -- unstage an add
@@ -153,10 +191,31 @@ create or replace function unstage_row_add (
     pk_value text
 ) returns void
 as $$
+    begin
     delete from bundle.stage_row_added
         where bundle_id = (select id from bundle.bundle where name=bundle_name)
           and row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
-$$ language sql;
+
+    if not FOUND then
+        raise exception 'No such bundle or row.';
+    end if;
+
+
+    insert into bundle.tracked_row_added (bundle_id, row_id)
+        values (
+            (select id from bundle.bundle where name=bundle_name),
+            meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+        );
+
+    if not FOUND then
+        raise exception 'No such bundle or row.';
+    end if;
+    end
+
+;
+$$
+language plpgsql;
+
 
 
 create or replace function stage_row_delete (
