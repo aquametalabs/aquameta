@@ -17,7 +17,8 @@ create table semantics.relation_purpose (
 );
 
 create table semantics.relation (
-    id meta.relation_id,
+    id uuid default public.uuid_generate_v4() primary key,
+    relation_id meta.relation_id,
     purpose_id uuid references semantics.relation_purpose(id),
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
@@ -39,14 +40,16 @@ create table semantics.column_purpose (
 );
 
 create table semantics."type" (
-    id meta.type_id,
+    id uuid default public.uuid_generate_v4() primary key,
+    type_id meta.type_id,
     purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
 );
 
 create table semantics."column" (
-    id meta.column_id,
+    id uuid default public.uuid_generate_v4() primary key,
+    column_id meta.column_id,
     purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
@@ -54,6 +57,7 @@ create table semantics."column" (
 
 
 insert into semantics.column_purpose (purpose) values
+    ('new_field'),
     ('form_field'),
     ('form_label'),
     ('form_display'),
@@ -64,7 +68,8 @@ insert into semantics.column_purpose (purpose) values
 
 
 create table semantics.foreign_key (
-    id meta.foreign_key_id primary key,
+    id uuid default public.uuid_generate_v4() primary key,
+    foreign_key_id meta.foreign_key_id,
     inline boolean default false
 );
 
@@ -86,7 +91,7 @@ begin
         from semantics.relation r
             join semantics.relation_purpose rp on rp.id = r.purpose_id
             join widget.widget w on w.id = r.widget_id
-        where r.id = meta.relation_id(' || quote_literal((relation_id::meta.schema_id).name) || ', ' || quote_literal((relation_id).name) || ')
+        where r.relation_id = meta.relation_id(' || quote_literal((relation_id::meta.schema_id).name) || ', ' || quote_literal((relation_id).name) || ')
             and rp.purpose = ' || quote_literal(widget_purpose) ||
         'union
         select *, -1 as priority from widget.bundled_widget(' || quote_literal(default_bundle) || ', ' || quote_literal(widget_purpose) || ')
@@ -114,7 +119,7 @@ begin
         from semantics.column c
             join semantics.column_purpose cp on cp.id = c.purpose_id
             join widget.widget w on w.id = c.widget_id
-        where c.id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
+        where c.column_id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
                                          quote_literal((column_id::meta.relation_id).name) || ', ' ||
                                          quote_literal((column_id).name) || ')
             and cp.purpose = ' || quote_literal(widget_purpose) ||
@@ -123,7 +128,7 @@ begin
         from semantics.type t
             join semantics.column_purpose cp on cp.id = t.purpose_id
             join widget.widget w on w.id = t.widget_id
-            join meta.column mc on mc.type_id = t.id
+            join meta.column mc on mc.type_id = t.type_id
         where mc.id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
                                          quote_literal((column_id::meta.relation_id).name) || ', ' ||
                                          quote_literal((column_id).name) || ')
