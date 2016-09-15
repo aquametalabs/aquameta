@@ -815,7 +815,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             value: values
         });
 
-        return db.schema(schema_name).relation(relation_name).row(where, options);
+        return db.schema(schema_name).relation(relation_name).row(options);
 
     };
 
@@ -942,7 +942,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             value: this.get(self_column_name)
         });
 
-        return db.schema(schema_name).relation(relation_name).row(where, options);
+        return db.schema(schema_name).relation(relation_name).row(options);
     };
 
     /*--------------------------------- * Column * ---------------------------------*/
@@ -1063,7 +1063,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             value: this.get(self_column_name)
         });
 
-        return db.schema(schema_name).relation(relation_name).row(where, options);
+        return db.schema(schema_name).relation(relation_name).row(options);
     };
 
     /*--------------------------------- * Function Result Set * ---------------------------------*/
@@ -1134,7 +1134,7 @@ define(['/jQuery.min.js'], function($, undefined) {
             value: values
         });
 
-        return db.schema(schema_name).relation(relation_name).row(where, options);
+        return db.schema(schema_name).relation(relation_name).row(options);
 
     };
 
