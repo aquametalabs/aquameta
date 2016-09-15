@@ -27,51 +27,25 @@ create table widget (
 );
 
 
-create function widget.bundled_widget (
+create or replace function widget.bundled_widget (
 	bundle_name text,
 	widget_name text
 ) returns setof widget.widget as $$
-    select * from (
         select w.*
-        from bundle.head_rows(bundle_name) hr
-            join widget.widget w on w.id = hr.pk_value::uuid
+        from bundle.tracked_row tr
+            join widget.widget w on w.id = (tr.row_id).pk_value::uuid
         where hr.schema_name='widget'
             and hr.relation_name='widget'
             and w.name=widget_name
-    
-        union
-    
-        select w.*
-        from bundle.bundle b
-            join bundle.stage_row_added sra on b.id = sra.bundle_id
-            join widget.widget w on w.id = (sra.row_id).pk_value::uuid
-        where ((sra.row_id)::meta.schema_id).name='widget'
-            and ((sra.row_id)::meta.relation_id).name='widget'
-            and w.name=widget_name
-            and b.name=bundle_name
-    ) r
-    limit 1;
 $$ language sql;
 
 
 create view widget.bundled_widget as
-    select b.name as bundle_name, w.*
-    from bundle.bundle b
-        join bundle.commit c on c.id = b.head_commit_id
-        join bundle.rowset r on r.id = c.rowset_id
-        join bundle.rowset_row rr on rr.rowset_id = r.id
-        join widget.widget w on w.id = (rr.row_id).pk_value::uuid
-    where ((rr.row_id)::meta.schema_id).name = 'widget'
-        and ((rr.row_id)::meta.relation_id).name = 'widget'
-    
-    union
-    
-    select b.name as bundle_name, w.*
-    from bundle.bundle b
-        join bundle.stage_row_added sra on sra.bundle_id = b.id
-        join widget.widget w on w.id = (sra.row_id).pk_value::uuid
-    where ((sra.row_id)::meta.schema_id).name = 'widget'
-        and ((sra.row_id)::meta.relation_id).name = 'widget';
+    select b.name as bundle_name, w.* from bundle.bundle b
+        join bundle.tracked_row tr on tr.bundle_id = b.id
+        join widget.widget w on w.id::text = (tr.row_id).pk_value
+    where ((tr.row_id)::meta.schema_id).name = 'widget'
+        and ((tr.row_id)::meta.relation_id).name = 'widget';
 
 
 
