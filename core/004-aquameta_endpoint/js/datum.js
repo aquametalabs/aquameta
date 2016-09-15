@@ -521,6 +521,9 @@ define(['/jQuery.min.js'], function($, undefined) {
         return id_only ? '/relation/' + this.schema.name + '/' + this.name :
               this.schema.database.endpoint.url + '/relation/' + this.schema.name + '/' + this.name;
     };
+    AQ.Relation.prototype.column = function( name ) {
+        return new AQ.Column(this, name);
+    };
     AQ.Relation.prototype.rows = function( options ) {
 
         return this.schema.database.endpoint.get(this, options)
@@ -859,7 +862,7 @@ define(['/jQuery.min.js'], function($, undefined) {
         clone: function()               { return new AQ.Row(this.relation, { columns: this.columns, pk: this.pk_column_name, result: [{ row: this.row_data }]}); },
         field: function( name ) {
             if (typeof this.cached_fields[name] == 'undefined') {
-                this.cached_fields[name] = new AQ.Field(this, name);
+                this.cached_fields[name] = new AQ.Field(this, name, name === this.pk_column_name);
             }
             return this.cached_fields[name];
         },
@@ -951,9 +954,10 @@ define(['/jQuery.min.js'], function($, undefined) {
     AQ.Column.prototype.constructor = AQ.Column;
 
     /*--------------------------------- * Field * ---------------------------------*/
-    AQ.Field = function( row, name ) {
+    AQ.Field = function( row, name, pk ) {
         this.row = row;
         this.column = new AQ.Column(row.relation, name);
+        this.is_primary_key = pk;
         this.name = name;
         this.value = row.get(name);
         this.id = { row_id: this.row.id, column_id: this.column.id };
