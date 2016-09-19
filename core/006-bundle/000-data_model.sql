@@ -445,7 +445,7 @@ select
         when change_type = 'same' then null
         when change_type = 'deleted' then (stage_row_id is null)
         when change_type = 'added' then true
-        when change_type = 'modified' then /* not sure */ false
+        when change_type = 'modified' then null
         when change_type = 'tracked' then false
     end as staged,
 
@@ -475,7 +475,7 @@ from (
         array_agg(ofc.new_value) as offstage_field_changes_new_vals,
         -- staged changes
         array_remove(array_agg(sfc.field_id), null) as stage_field_changes,
-        array_agg(ofc.old_value) as stage_field_changes_old_vals, -- FIXME this is coming in as null
+        array_agg(ofc.old_value) as stage_field_changes_old_vals,
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
     from bundle.head_commit_row hcr
