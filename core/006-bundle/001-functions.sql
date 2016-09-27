@@ -464,6 +464,7 @@ $$ language plpgsql;
 
 
 
+-- checkout can only be run by superusers because it disables triggers, as described here: http://blog.endpoint.com/2012/10/postgres-system-triggers-error.html
 create or replace function checkout (in commit_id uuid) returns void as $$
     declare
         commit_row record;
