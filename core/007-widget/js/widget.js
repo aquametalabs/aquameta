@@ -552,13 +552,37 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
     };
 
 
+    // detect svg widgets by tag name.  might be better to check the dom to see if we're inside an svg tag?
+    AQ.Widget.is_svg = function( e ) {
+        var svg_tags = ['circle','rect','polygon','g']; // TODO: add more, or change approach?
+        for (var i=0;i<svg_tags.length;i++) {
+            if (e.tagName.toUpperCase() == svg_tags[i].toUpperCase()) {
+                // console.log('svg  widget: ' + svg_tags[i]);
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
     AQ.Widget.swap = function( $element, id ) {
 
         widget_promises[id].then(function(rendered_widget) {
 
             // Replace stub
-            $element.replaceWith(rendered_widget.html);
+            // special case for svg elements - http://stackoverflow.com/questions/3642035/jquerys-append-not-working-with-svg-element
+            if (AQ.Widget.is_svg(rendered_widget.html[0])) { // TODO: is there ever a case where there is more than one element in this array?
+                var div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+                div.innerHTML= '<svg xmlns="http://www.w3.org/2000/svg">'+rendered_widget.html[0].outerHTML+'</svg>';
+
+                var frag= document.createDocumentFragment();
+                while (div.firstChild.firstChild)
+                    frag.appendChild(div.firstChild.firstChild);
+
+                $element.replaceWith(frag);
+            }
+            else $element.replaceWith(rendered_widget.html);
 
             // Run post_js - or this may have to be done with a script tag appended to the widget
             try {
