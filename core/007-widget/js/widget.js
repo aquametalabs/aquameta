@@ -594,8 +594,8 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
 
             var w = $('#' + rendered_widget.widget_id);
 
-            // Trigger widget_loaded? Necessary?
-            // w.trigger('widget_loaded', w);
+            // notify the world that a widget has loaded.  debugger uses this to detect widget tree changes
+            w.trigger('widget_loaded', { widget: w });
 
             // Delete prepeared_promise
             delete widget_promises[id];
