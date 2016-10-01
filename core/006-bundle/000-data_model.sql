@@ -428,8 +428,46 @@ from bundle.stage_row sr
 
 
 
+
+
 ------------------------------------------------------------------------------
--- 7. STATUS
+-- 7. TRACKED
+--
+-- rows that are in the "scope of concern" of the bundle.  a row must be
+-- tracked before it can be staged.
+------------------------------------------------------------------------------
+
+create table tracked_row_added (
+    id uuid default public.uuid_generate_v4() primary key,
+    bundle_id uuid not null references bundle(id) on delete cascade,
+    row_id meta.row_id,
+    unique (row_id)
+);
+
+
+create or replace view bundle.tracked_row as
+   select b.id as bundle_id, hcr.row_id
+   from bundle.bundle b
+   join bundle.head_commit_row hcr on hcr.bundle_id=b.id
+
+   union
+
+   -- tracked_row_added
+   select b.id, tra.row_id
+   from bundle.bundle b
+   join bundle.tracked_row_added tra on tra.bundle_id=b.id
+
+   union
+
+   select b.id, sra.row_id
+   from bundle.bundle b
+   join bundle.stage_row_added sra on sra.bundle_id=b.id;
+
+
+
+
+------------------------------------------------------------------------------
+-- 8. STATUS
 --
 -- a view that pulls together rows from the head commit, live working copy db,
 -- and stage.  it's sorted by change_type: deleted, modified, same, added.
@@ -510,41 +548,12 @@ where change_type != 'same'
 
 
 ------------------------------------------------------------------------------
--- 8. UNTRACKED
+-- 9. UNTRACKED
 --
 -- All currently existing database rows that are not ignored (directly or via a
 -- cascade), not currently in any of the head commits, and not in
 -- stage_row_added [or stage_row_deleted?].
 ------------------------------------------------------------------------------
-
-create table tracked_row_added (
-    id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle(id) on delete cascade,
-    row_id meta.row_id,
-    unique (row_id)
-);
-
-
-create or replace view bundle.tracked_row as
-   select b.id as bundle_id, hcr.row_id
-   from bundle.bundle b
-   join bundle.head_commit_row hcr on hcr.bundle_id=b.id
-
-   union
-
-   -- tracked_row_added
-   select b.id, tra.row_id
-   from bundle.bundle b
-   join bundle.tracked_row_added tra on tra.bundle_id=b.id
-
-   union
-
-   select b.id, sra.row_id
-   from bundle.bundle b
-   join bundle.stage_row_added sra on sra.bundle_id=b.id;
-
-
-
 
 
 -- Relations that are not specifically ignored, and not in a ignored schema
@@ -626,7 +635,7 @@ group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_
 
 /*
 ------------------------------------------------------------------------------
--- 9. REMOTE PUSH/PULL
+-- 10. REMOTE PUSH/PULL
 -- Other copies of this bundle that we push to and/or pull from.
 ------------------------------------------------------------------------------
 

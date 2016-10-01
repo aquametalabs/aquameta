@@ -1677,7 +1677,8 @@ create view meta.connection as
           psa.query_start as query_start,
           psa.state as state,
           psa.state_change as last_state_change,
-          psa.waiting as waiting
+          psa.wait_event as wait_event,
+          psa.wait_event_type as wait_event_type
    from pg_stat_activity psa;
 
 

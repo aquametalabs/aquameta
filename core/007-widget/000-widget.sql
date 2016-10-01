@@ -11,6 +11,8 @@
 * TABLE widget
 *******************************************************************************/
 
+begin;
+
 create schema widget;
 set search_path=widget;
 
@@ -32,11 +34,13 @@ create or replace function widget.bundled_widget (
 	widget_name text
 ) returns setof widget.widget as $$
         select w.*
-        from bundle.tracked_row tr
+        from bundle.bundle b
+            join bundle.tracked_row tr on tr.bundle_id=b.id
             join widget.widget w on w.id = (tr.row_id).pk_value::uuid
-        where hr.schema_name='widget'
-            and hr.relation_name='widget'
+        where ((tr.row_id)::meta.schema_id).name = 'widget'
+            and ((tr.row_id)::meta.relation_id).name = 'widget'
             and w.name=widget_name
+            and b.name = bundle_name
 $$ language sql;
 
 
@@ -178,3 +182,7 @@ language sql stable rows 1;
 *******************************************************************************/
 create view widget_name as
 select id, name from widget.widget;
+
+
+
+commit;

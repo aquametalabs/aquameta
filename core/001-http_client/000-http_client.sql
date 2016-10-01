@@ -8,7 +8,7 @@
 
 begin;
 
-create language plpythonu;
+-- create language plpythonu;
 create schema http_client;
 set search_path=http_client;
 
