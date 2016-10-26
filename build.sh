@@ -2,6 +2,10 @@
 echo "Creating database ..."
 createdb aquameta # --encoding UNICODE aquameta
 
+
+echo "Loading requirements ..."
+cat core/requirements.sql | psql -U postgres aquameta
+
 echo "Loading core/*.sql ..."
 cat core/0*/0*.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
