@@ -1,3 +1,8 @@
+#!/bin/bash
+# exit on failure
+set -e 
+set -o pipefail
+
 apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev #upervisor
 
 
@@ -12,7 +17,7 @@ cd postgresql-9.6.0
 make world
 make install-world
 
-adduser --disable-password --no-create-home --disabled-login postgres
+adduser --disabled-password --no-create-home --disabled-login postgres
 
 mkdir --parents /var/lib/postgresql/data
 mkdir --parents /var/log/postgresql
