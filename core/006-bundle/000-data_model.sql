@@ -105,7 +105,8 @@ create table rowset_row_field (
     id uuid default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
     field_id meta.field_id,
-    value_hash text references blob(hash) on delete cascade
+    value_hash text references blob(hash) on delete cascade,
+    unique(rowset_row_id, field_id)
 );
 
 /*
