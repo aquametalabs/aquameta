@@ -43,7 +43,7 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 # setup /etc/nginx settings
 cp $DIR/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
 cd /etc/nginx/sites-enabled
-# rm ./default
+rm ./default
 ln -s ../sites-available/aquameta_endpoint.conf
 
 
@@ -102,3 +102,9 @@ echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
 cd $DIR/core/002-filesystem/fs_fdw
 pip install . --upgrade
 cat fs_fdw.sql | psql -U postgres aquameta
+
+
+
+# start uwsgi
+mkdir /var/log/aquameta
+uwsgi --die-on-term --emperor /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/uwsgi/aquameta_db.ini >> /var/log/aquameta/uwsgi.log
