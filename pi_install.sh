@@ -4,11 +4,11 @@ set -e
 set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-##
+
 apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev #upervisor
-##
-##
-##
+
+
+
 #################### install postgresql 9.6 from source ####################
 cd /tmp
 wget https://ftp.postgresql.org/pub/source/v9.6.0/postgresql-9.6.0.tar.gz
@@ -18,49 +18,49 @@ cd postgresql-9.6.0
 ./configure --prefix=/usr/local --enable-nls --with-perl --with-python --with-openssl --with-ossp-uuid --with-libxml
 make world
 make install-world
-##
+
 adduser --disabled-password --no-create-home --disabled-login postgres
-##
+
 mkdir --parents /var/lib/postgresql/data
 mkdir --parents /var/log/postgresql
 chown postgres:postgres /var/lib/postgresql/data
 chown postgres:postgres /var/log/postgresql
-##
-sudo -U postgres /usr/local/bin/initdb -D /var/lib/postgresql/data
-sudo -U postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
-##
+
+sudo /usr/local/bin/initdb -D /var/lib/postgresql/data
+sudo /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
+
 apt-get install -y pgxnclient fuse libfuse-dev sendmail
 # needs pg_config but not in $PATH yet
 pgxn install multicorn
 pgxn install pgtap
 pip install requests sphinx sphinx-autobuild fusepy
 locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
-##
+
 # FQDN for sendmail
 echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
-##
+
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
 cp $DIR/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
 cd /etc/nginx/sites-enabled
 # rm ./default
 ln -s ../sites-available/aquameta_endpoint.conf
-##
-##
+
+
 # build the aquameta db python egg
 cd $DIR/core/004-aquameta_endpoint/servers/uwsgi
 pip install .
-##
-##
+
+
 # ADD docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-##
+
 # pgfs
 mkdir /mnt/aquameta
-##
-##
+
+
 #################### build aquameta ###############################
 createdb -U postgres aquameta
-##
+
 cd $DIR
 
 echo "Loading requirements ..."
