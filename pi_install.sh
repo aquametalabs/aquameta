@@ -3,6 +3,8 @@
 set -e 
 set -o pipefail
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev #upervisor
 
 
@@ -39,14 +41,14 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
-cp core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-enabled
+cp $DIR/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-enabled
 cd /etc/nginx/sites-enabled
 rm ./default
 ln -s ../sites-available/aquameta_endpoint.conf
 
 
 # build the aquameta db python egg
-cd /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi
+cd $DIR/core/004-aquameta_endpoint/servers/uwsgi
 pip install .
 
 
@@ -57,9 +59,9 @@ mkdir /mnt/aquameta
 
 
 #################### build aquameta ###############################
-cd /s/aquameta
-
 createdb -U postgres aquameta
+
+cd $DIR
 
 echo "Loading requirements ..."
 cat core/requirements.sql | psql -U postgres aquameta
@@ -97,6 +99,6 @@ echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
 # RUN psql -c "create extension pgtap" aquameta
 
 # Install FS FDW
-cd /s/aquameta/core/002-filesystem/fs_fdw
+cd $DIR/core/002-filesystem/fs_fdw
 pip install . --upgrade
 cat fs_fdw.sql | psql -U postgres aquameta
