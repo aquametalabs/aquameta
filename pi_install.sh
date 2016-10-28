@@ -8,7 +8,7 @@ wget https://ftp.postgresql.org/pub/source/v9.6.0/postgresql-9.6.0.tar.gz
 tar -zxvf postgresql-9.6.0.tar.gz
 cd postgresql-9.6.0
 # alternate location?
-./configure --enable-nls --with-perl --with-python --with-openssl --with-ossp-uuid --with-libxml
+./configure --prefix=/usr/local --enable-nls --with-perl --with-python --with-openssl --with-ossp-uuid --with-libxml
 make world
 make install-world
 
@@ -38,12 +38,10 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
-cd /etc/nginx/sites-available
-cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf .
-
+cp core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-enabled
 cd /etc/nginx/sites-enabled
-rm ./default && \
-        ln -s ../sites-available/aquameta_endpoint.conf
+rm ./default
+ln -s ../sites-available/aquameta_endpoint.conf
 
 
 # build the aquameta db python egg
