@@ -26,8 +26,8 @@ mkdir --parents /var/log/postgresql
 chown postgres:postgres /var/lib/postgresql/data
 chown postgres:postgres /var/log/postgresql
 
-sudo /usr/local/bin/initdb -D /var/lib/postgresql/data
-sudo /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
+sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/data
+sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
 
 apt-get install -y pgxnclient fuse libfuse-dev sendmail
 # needs pg_config but not in $PATH yet
