@@ -12,19 +12,15 @@ cd postgresql-9.6.0
 make world
 make install-world
 
-adduser postgres
+adduser --disable-password --no-create-home --disabled-login postgres
 
-mkdir /usr/local/pgsql/data
-mkdir /var/log/postgresql
-chown postgres:postgres /usr/local/pgsql/data
+mkdir --parents /var/lib/postgresql/data
+mkdir --parents /var/log/postgresql
+chown postgres:postgres /var/lib/postgresql/data
 chown postgres:postgres /var/log/postgresql
 
-su - postgres
-echo 'set PATH=$PATH:/usr/local/pgsql/bin' >> ~/.bash_profile
-/usr/local/pgsql/bin/initdb -D /usr/local/pgsql/data
-/usr/local/pgsql/bin/pg_ctl -D /usr/local/pgsql/data -l /var/log/postgresql/postgresql.log start
-
-exit
+sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/data
+sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
 
 apt-get install -y pgxnclient fuse libfuse-dev sendmail
 # needs pg_config but not in $PATH yet
@@ -56,23 +52,46 @@ mkdir /mnt/aquameta
 
 
 #################### build aquameta ###############################
-su - postgres
 cd /s/aquameta
 
-createdb aquameta
-./build.sh # insert rest of build.sh script here?
+createdb -U postgres aquameta
+
+echo "Loading requirements ..."
+cat core/requirements.sql | psql -U postgres aquameta
+
+echo "Loading core/*.sql ..."
+cat core/0*/0*.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+
+
+echo "Loading bundles-enabled/*.sql ..."
+cat bundles-enabled/*.sql | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+
+echo "Checking out head commit of every bundle ..."
+echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
+
+echo "Loading semantics ..."
+cat core/0*/semantics.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+
+echo "Loading default permissions ..."
+cat core/004-aquameta_endpoint/default_permissions.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+
+echo "Loading mimetypes ..."
+cat core/004-aquameta_endpoint/mimetypes.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+
+
+
+
 
 # audit this...
-echo "host all  all 0.0.0.0/0  md5"   >> /etc/postgresql/9.5/main/pg_hba.conf
-sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/9.5/main/pg_hba.conf
-echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf
-psql -c "alter role postgres password 'postgres'" aquameta
+echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/data/pg_hba.conf
+sed -i "s/^local   all.*$/local all all trust/" /var/lib/postgresql/data/pg_hba.conf
+echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
+# psql -U postgres -c "alter role postgres password 'postgres'" aquameta
 
 # Install pgtap
 # RUN psql -c "create extension pgtap" aquameta
-exit
 
 # Install FS FDW
 cd /s/aquameta/core/002-filesystem/fs_fdw
 pip install . --upgrade
-cat fs_fdw.sql | psql -a -U postgres aquameta
+cat fs_fdw.sql | psql -U postgres aquameta
