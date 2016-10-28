@@ -19,7 +19,7 @@ cd postgresql-9.6.0
 make world
 make install-world
 
-adduser --disabled-password --no-create-home --disabled-login postgres
+adduser --gecos "Postgresql" --disabled-password --no-create-home --disabled-login postgres
 
 mkdir --parents /var/lib/postgresql/data
 mkdir --parents /var/log/postgresql
