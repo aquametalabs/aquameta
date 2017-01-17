@@ -107,4 +107,6 @@ cat fs_fdw.sql | psql -U postgres aquameta
 
 # start uwsgi
 mkdir /var/log/aquameta
-uwsgi --die-on-term --emperor /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/uwsgi/aquameta_db.ini >> /var/log/aquameta/uwsgi.log
+uwsgi --die-on-term --emperor $DIR/core/004-aquameta_endpoint/servers/uwsgi/conf/uwsgi/aquameta_db.ini & # >> /var/log/aquameta/uwsgi.log &
+
+sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
