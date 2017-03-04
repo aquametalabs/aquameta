@@ -9,6 +9,16 @@ begin;
 
 set search_path=semantics;
 
+/*
+
+doesn't work:
+
+ERROR:  column "list_item_identifier_widget_id" of relation "relation" does not exist
+LINE 1: insert into semantics.relation (id, list_item_identifier_wid...
+
+
+
+
 insert into semantics.relation (id, list_item_identifier_widget_id) values
 (
     ( select relation_id from meta.relation_id('semantics', 'relation') ),
@@ -21,4 +31,5 @@ insert into semantics.relation (id, list_item_identifier_widget_id) values
     ( select id from widget.widget where name = 'column_listitem_identifier')
 );
 
+*/ 
 commit;

@@ -50,7 +50,7 @@ grant execute on function endpoint.register_confirm(text, text) to anonymous;
 
 -- endpoint.resource - RLS
 insert into meta.policy (name, schema_name, relation_name, command, "using")
-	values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/login'', ''/register'', ''/register/confirm'') or path like ''%.js''');
+	values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/'', ''/login'', ''/register'', ''/register/confirm'') or path like ''%.js''');
 insert into meta.policy_role (policy_name, schema_name, relation_name, role_name) values ('resource_anonymous', 'endpoint', 'resource', 'anonymous');
 
 
