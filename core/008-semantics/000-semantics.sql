@@ -82,7 +82,7 @@ create or replace function semantics.relation_widget (
 $$
 begin
     return query execute 'select ' || (
-        select string_agg(name, ', ')
+        select string_agg(name, ', ' order by position)
         from meta.column
         where schema_name='widget'
             and relation_name='widget' ) ||
