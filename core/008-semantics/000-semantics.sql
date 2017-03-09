@@ -18,8 +18,8 @@ create table semantics.relation_purpose (
 
 create table semantics.relation (
     id uuid default public.uuid_generate_v4() primary key,
-    relation_id meta.relation_id,
-    purpose_id uuid references semantics.relation_purpose(id),
+    relation_id meta.relation_id not null,
+    purpose_id uuid references semantics.relation_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
 );
@@ -110,7 +110,7 @@ create or replace function semantics.column_widget (
 $$
 begin
     return query execute 'select ' || (
-        select string_agg(name, ', ')
+        select string_agg(name, ', ' order by position)
         from meta.column
         where schema_name='widget'
             and relation_name='widget' ) ||
