@@ -140,6 +140,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
             // If input is a promise (that will resolve as a Rowset or a Row), resolve it first
             if (input instanceof Promise) {
 
+                var url_id;
                 var widget_getter = input.then(function(input) {
 
                     context.datum = input;
@@ -152,9 +153,11 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
 
                     if (input instanceof AQ.Rowset) {
                         context.rows = input;
+                        url_id = input.relation.to_url(true);
                     }
                     else if (input instanceof AQ.Row) {
                         context.row = input;
+                        url_id = input.to_url(true);
                     }
                     args_object.widget_purpose = semantics[1];
                     args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
@@ -177,6 +180,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                     var fn = 'relation_widget';
                     var type = 'meta.relation_id';
                     args_object.relation_id = input.id;
+                    var url_id = input.to_url(true);
                     context.relation = input;
                 }
                 else if (input instanceof AQ.Row) {
@@ -184,6 +188,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                     var fn = 'relation_widget';
                     var type = 'meta.relation_id';
                     args_object.relation_id = input.relation.id;
+                    var url_id = input.to_url(true);
                     context.row = input;
                 }
                 else if (input instanceof AQ.Rowset) {
@@ -191,6 +196,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                     var fn = 'relation_widget';
                     var type = 'meta.relation_id';
                     args_object.relation_id = input.relation.id;
+                    var url_id = input.relation.to_url(true);
                     context.rows = input;
                 }
                 else if (input instanceof AQ.Column) {
@@ -198,6 +204,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                     var fn = 'column_widget';
                     var type = 'meta.column_id';
                     args_object.column_id = input.id;
+                    var url_id = input.relation.to_url(true);
                     context.column = input;
                 }
                 else if (input instanceof AQ.Field) {
@@ -205,6 +212,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                     var fn = 'column_widget';
                     var type = 'meta.column_id';
                     args_object.column_id = input.column.id;
+                    var url_id = input.to_url(true);
                     context.field = input;
                 }
                 
@@ -219,7 +227,8 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
 
             // Go get this widget - retrieve_promises don't change for calls to the same widget - they are cached by the widget name
             var widget_retrieve_promise = retrieve(widget_getter, {
-                semantic_selector: selector
+                semantic_selector: selector,
+                url_id: url_id
             });
 
         }
@@ -370,7 +379,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
             ]);
         }).catch(function(err) {
             if (semantic_lookup) {
-                throw 'Widget not found from semantic lookup with ' + selector.semantic_selector;
+                throw 'Widget not found from semantic lookup with ' + selector.semantic_selector + ' on ' + selector.url_id;
             }
             else {
                 throw 'Widget does not exist, ' + selector.namespace + ':' + selector.name;
