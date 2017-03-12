@@ -135,13 +135,14 @@ create or replace function tracked_row_add (
     relation_name text,
     pk_column_name text,
     pk_value text
-) returns void
+) returns text
 as $$
     -- TODO: check to see if this row is not tracked by some other bundle!
     insert into bundle.tracked_row_added (bundle_id, row_id) values (
         (select id from bundle.bundle where name=bundle_name),
         meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
     );
+    select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
 
 
@@ -157,7 +158,7 @@ create or replace function stage_row_add (
     relation_name text,
     pk_column_name text,
     pk_value text
-) returns void
+) returns text
 as $$
     begin
     insert into bundle.stage_row_added (bundle_id, row_id)
@@ -176,6 +177,7 @@ as $$
     if not FOUND then
         raise exception 'Row could not be delete from tracked_row_added';
     end if;
+    return (bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value)::text;
     end;
 $$
 language plpgsql;
@@ -189,7 +191,7 @@ create or replace function unstage_row_add (
     relation_name text,
     pk_column_name text,
     pk_value text
-) returns void
+) returns text
 as $$
     begin
     delete from bundle.stage_row_added
@@ -210,8 +212,8 @@ as $$
     if not FOUND then
         raise exception 'No such bundle or row.';
     end if;
+    return 'hi'; --- bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
     end
-
 ;
 $$
 language plpgsql;
@@ -224,7 +226,7 @@ create or replace function stage_row_delete (
     relation_name text,
     pk_column_name text,
     pk_value text
-) returns void
+) returns text
 as $$
     insert into bundle.stage_row_deleted (bundle_id, rowset_row_id)
     select
@@ -235,7 +237,8 @@ as $$
         join bundle.rowset r on c.rowset_id = r.id
         join bundle.rowset_row rr on rr.rowset_id = r.id
     where bundle.name = bundle_name
-        and rr.row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+        and rr.row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
+    select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
 
 
@@ -246,13 +249,14 @@ create or replace function unstage_row_delete (
     relation_name text,
     pk_column_name text,
     pk_value text
-) returns void
+) returns text
 as $$
     delete from bundle.stage_row_deleted srd
     using bundle.rowset_row rr
     where rr.id = srd.rowset_row_id
         and srd.bundle_id=(select id from bundle.bundle where name=bundle_name)
         and rr.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
+    select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
 
 
@@ -264,7 +268,7 @@ create or replace function stage_field_change (
     pk_column_name text,
     pk_value text,
     column_name text -- FIXME: somehow the webserver thinks it's a relation if column_name is present??
-) returns void
+) returns text
 as $$
     insert into bundle.stage_field_changed (bundle_id, field_id, new_value)
     values (
@@ -274,6 +278,7 @@ as $$
             meta.field_id (schema_name, relation_name, pk_column_name, pk_value, column_name)
         )
     );
+    select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value || ' - ' || column_name;
 $$ language sql;
 
 
@@ -299,11 +304,12 @@ create or replace function unstage_field_change (
     pk_column_name text,
     pk_value text,
     column_name text -- FIXME: somehow the webserver thinks it's a relation if column_name is present??
-) returns void
+) returns text
 as $$
     delete from bundle.stage_field_changed
         where field_id=
             meta.field_id (schema_name, relation_name, pk_column_name, pk_value, column_name);
+    select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value || ' - ' || column_name;
 $$ language sql;
 
 
@@ -344,7 +350,7 @@ checkout -
 -- create or replace function checkout_row (in row_id meta.row_id, in fields text[], in vals text[], in force_overwrite boolean) returns void as $$
 CREATE TYPE checkout_field AS (name text, value text, type_name text);
 
-create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
+create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns text as $$
     declare
         query_str text;
     begin
@@ -436,7 +442,8 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
                 || coalesce(
                     quote_literal(fields[i].value)
                         || '::'
-                        || fields[i].type_name,
+                        || fields[i].type_name, -- not sure why this was ever like this.....  we are 
+--                         || 'text'
                     'NULL'
                 );
 
@@ -471,7 +478,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
     begin
         set local search_path=bundle,meta,public;
 
-        raise notice '################################################## CHECKOUT SCHEMA % ###############################', commit_id;
+        raise notice 'CHECKOUT SCHEMA %', commit_id;
         -- insert the meta-rows in this commit to the database
         for commit_row in
             select
@@ -509,16 +516,16 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 end
                     */
         loop
-            raise log '------------------------------------------------------------------------CHECKOUT meta row: % %',
-                (commit_row.row_id).pk_column_id.relation_id.name,
-                (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
+            -- raise log '------------------------------------------------------------------------CHECKOUT meta row: % %',
+            --    (commit_row.row_id).pk_column_id.relation_id.name,
+            --    (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
             perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
 
 
 
 
-        raise notice '################################################## DISABLING TRIGGERS % ###############################', commit_id;
+        -- raise notice '################################################## DISABLING TRIGGERS % ###############################', commit_id;
         -- turn off constraints
         for commit_row in
             select distinct
@@ -530,8 +537,8 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 where c.id = commit_id
                 and (rr.row_id::meta.schema_id).name != 'meta'
         loop
-            raise log '-------------------------------- DISABLING TRIGGER on table %',
-                quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name);
+            -- raise log '-------------------------------- DISABLING TRIGGER on table %',
+            --    quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name);
 
             execute 'alter table '
                 || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name)
@@ -540,7 +547,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
 
 
-        raise notice '################################################## CHECKOUT DATA % ###############################', commit_id;
+        raise notice 'CHECKOUT DATA %', commit_id;
         -- insert the non-meta rows
         for commit_row in
             select
@@ -562,16 +569,16 @@ create or replace function checkout (in commit_id uuid) returns void as $$
             and (rr.row_id::meta.schema_id).name != 'meta'
             group by rr.id
         loop
-            raise log '------------------------------------------------------------------------CHECKOUT row: % %',
-               (commit_row.row_id).pk_column_id.relation_id.name,
-               (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
+            -- raise log '------------------------------------------------------------------------CHECKOUT row: % %',
+            --  (commit_row.row_id).pk_column_id.relation_id.name,
+            --  (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
             perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
 
 
 
         -- turn constraints back on
-        raise notice '################################################## ENABLING TRIGGERS % ###############################', commit_id;
+        -- raise notice '################################################## ENABLING TRIGGERS % ###############################', commit_id;
         for commit_row in
             select distinct
                 (rr.row_id).pk_column_id.relation_id.name as relation_name,
