@@ -231,7 +231,7 @@ create function endpoint.columns_json(
 ) returns json as $$
     begin
         execute
-            'select (''['' || string_agg(row_to_json(row(c.name, c.type_name)::endpoint.column_type)::text, '','') || '']'')::json
+            'select (''['' || string_agg(row_to_json(row(c.name, c.type_name)::endpoint.column_type, true)::text, '','') || '']'')::json
             from meta.column c
             where c.schema_name = ' || quote_literal(_schema_name) || ' and
                 c.relation_name = ' || quote_literal(_relation_name) ||
@@ -387,7 +387,7 @@ as $$
         q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
             || ' select distinct ''' || label || ''','
             || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || pk_field || ''',' || label || '.' || pk_field || '::text), '
-            || '     row_to_json(' || label || ')::jsonb, '
+            || '     row_to_json(' || label || ', true)::jsonb, '
             || '     ' || position || ', '
             || '     ' || exclude
             || ' from ' || schema_name || '.' || relation_name || ' ' || label
@@ -422,7 +422,7 @@ as $$
             q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
                 || ' select distinct ''' || label || ''','
                 || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || join_pk_field || ''',' || label || '.' || join_pk_field || '::text), '
-                || '     row_to_json(' || label || ')::jsonb, '
+                || '     row_to_json(' || label || ', true)::jsonb, '
                 || '     ' || position || ', '
                 || '     ' || exclude
                 || ' from ' || schema_name || '.' || relation_name || ' ' || label
@@ -598,7 +598,7 @@ create or replace function endpoint.row_insert(
             select (''{
                 "columns": ' || endpoint.columns_json(_schema_name, _relation_name, null::text[], null::text[]) || ',
                 "pk":"' || coalesce(endpoint.pk_name(_schema_name, _relation_name), 'null') || '",
-                "result": [{ "row": '' || row_to_json(inserted_row.*) || '' }]
+                "result": [{ "row": '' || row_to_json(inserted_row.*, true) || '' }]
             }'')::json
             from inserted_row
         '; 
@@ -786,7 +786,7 @@ create function endpoint.row_select(
         end if;
 
 
-        row_query := 'select ''[{"row": '' || row_to_json(t.*) || ''}]'' from ' ||
+        row_query := 'select ''[{"row": '' || row_to_json(t.*, true) || ''}]'' from ' ||
                         '(select ' || column_list || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || 
                         ' where ' || quote_ident(pk_column_name) || '=' || quote_literal(pk) ||
                             (
@@ -1120,7 +1120,7 @@ create function endpoint.rows_select(
         end if;
 
         row_query := 'select ''['' || string_agg(q.js, '','') || '']'' from (
-                          select ''{ "row":'' || row_to_json(t.*) || '' }'' js
+                          select ''{ "row":'' || row_to_json(t.*, true) || '' }'' js
                           from ((select ' || column_list || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' r ' || suffix || ')) as t
                      ) q';
 
@@ -1196,7 +1196,7 @@ create function endpoint.rows_select_function(
             -- Build columns_json
             if row_is_composite then
 
-              select string_agg(row_to_json(q.*)::text, ',')
+              select string_agg(row_to_json(q.*, true)::text, ',')
               from (
                     select pga.attname as name,
                         pgt2.typname as "type"
@@ -1273,7 +1273,7 @@ create function endpoint.rows_select_function(
             for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
                                 || '(' || function_args || ') ' || suffix
             loop
-                rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
+                rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row, true) || ' }');
             end loop;
 
             -- Result JSON object
@@ -1376,7 +1376,7 @@ create function endpoint.anonymous_rows_select_function(
             for _row in execute 'select * from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
                                 || '(' || function_args || ') ' || suffix
             loop
-                rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row) || ' }');
+                rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row, true) || ' }');
             end loop;
 
             -- Result JSON object
@@ -1453,7 +1453,7 @@ create function endpoint.rows_select_function(
         -- Build columns_json
         if row_is_composite then
 
-            select string_agg(row_to_json(q.*)::text, ',')
+            select string_agg(row_to_json(q.*, true)::text, ',')
             from (
                 select pga.attname as name,
                     pgt2.typname as "type"
@@ -1471,7 +1471,7 @@ create function endpoint.rows_select_function(
 
         else
 
-            select row_to_json(q.*)
+            select row_to_json(q.*, true)
             from (select (function_id).name as name, row_type as "type") q
             into columns_json;
 
@@ -1850,6 +1850,7 @@ create trigger endpoint_user_delete_trigger before delete on endpoint.user for e
  ******************************************************************************/
 
 -- User-defined roles inherit from "user" role
+/*
 create role "user" nologin;
 
 
@@ -1859,6 +1860,7 @@ create role anonymous login;
 
 -- Superuser is aquameta
 create role aquameta superuser createdb createrole login replication bypassrls;
+*/
 
 
 /******************************************************************************
