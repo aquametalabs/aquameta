@@ -9,7 +9,7 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #                      ^uwsgi   ^postgres   ^fuse
 #
 # access PostgreSQL (password 'postgres') with:
-#   psql -h localhost -p 5432 -U postgres aquameta
+#   psql -h localhost -p 5432 aquameta
 #
 # access the ide by browsing to port 80 of the host machine.
 
@@ -74,7 +74,7 @@ USER root
 WORKDIR /s/aquameta/core/002-filesystem/fs_fdw
 RUN pip install . --upgrade && \
 	/etc/init.d/postgresql start && \
-	cat fs_fdw.sql | psql -a -U postgres aquameta 2>&1 && \
+	cat fs_fdw.sql | psql -a aquameta 2>&1 && \
 	/etc/init.d/postgresql stop
 
 

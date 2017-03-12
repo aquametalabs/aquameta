@@ -21,13 +21,13 @@ make install-world
 
 adduser --gecos "Postgresql" --disabled-password --no-create-home --disabled-login postgres
 
-mkdir --parents /var/lib/postgresql/data
+mkdir --parents /var/lib/postgresql/aquameta
 mkdir --parents /var/log/postgresql
-chown postgres:postgres /var/lib/postgresql/data
+chown postgres:postgres /var/lib/postgresql/aquameta
 chown postgres:postgres /var/log/postgresql
 
-sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/data
-sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
+sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/aquameta
+sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/aquameta -l /var/log/postgresql/postgresql.log start
 
 apt-get install -y pgxnclient fuse libfuse-dev sendmail
 # needs pg_config but not in $PATH yet
@@ -59,41 +59,41 @@ mkdir /mnt/aquameta
 
 
 #################### build aquameta ###############################
-createdb -U postgres aquameta
+createdb aquameta
 
 cd $DIR
 
 echo "Loading requirements ..."
-cat core/requirements.sql | psql -U postgres aquameta
+cat core/requirements.sql | psql aquameta
 
 echo "Loading core/*.sql ..."
-cat core/0*/0*.sql  | psql -U postgres -a aquameta
+cat core/0*/0*.sql  | psql -a aquameta
 
 
 echo "Loading bundles-enabled/*.sql ..."
-cat bundles-enabled/*.sql | psql -U postgres -a aquameta
+cat bundles-enabled/*.sql | psql -a aquameta
 
 echo "Checking out head commit of every bundle ..."
-echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql -U postgres aquameta
+echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
 
 ### echo "Loading semantics ..."
-### cat core/0*/semantics.sql  | psql -U postgres -a aquameta
+### cat core/0*/semantics.sql  | psql -a aquameta
 ### 
 ### echo "Loading default permissions ..."
-### cat core/004-aquameta_endpoint/default_permissions.sql  | psql -U postgres -a aquameta
+### cat core/004-aquameta_endpoint/default_permissions.sql  | psql -a aquameta
 ### 
 ### echo "Loading mimetypes ..."
-### cat core/004-aquameta_endpoint/mimetypes.sql  | psql -U postgres -a aquameta
+### cat core/004-aquameta_endpoint/mimetypes.sql  | psql -a aquameta
 ### 
 
 
 
 
 # audit this...
-echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/data/pg_hba.conf
-sed -i "s/^local   all.*$/local all all trust/" /var/lib/postgresql/data/pg_hba.conf
-echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
-# psql -U postgres -c "alter role postgres password 'postgres'" aquameta
+echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/aquameta/pg_hba.conf
+sed -i "s/^local   all.*$/local all all trust/" /var/lib/postgresql/aquameta/pg_hba.conf
+echo "listen_addresses='*'" >> /var/lib/postgresql/aquameta/postgresql.conf
+# psql -c "alter role postgres password 'postgres'" aquameta
 
 # Install pgtap
 # RUN psql -c "create extension pgtap" aquameta
@@ -101,7 +101,7 @@ echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
 # Install FS FDW
 cd $DIR/core/002-filesystem/fs_fdw
 pip install . --upgrade
-cat fs_fdw.sql | psql -U postgres aquameta
+cat fs_fdw.sql | psql aquameta
 
 
 
@@ -109,4 +109,4 @@ cat fs_fdw.sql | psql -U postgres aquameta
 mkdir /var/log/aquameta
 uwsgi --die-on-term --emperor $DIR/core/004-aquameta_endpoint/servers/uwsgi/conf/uwsgi/aquameta_db.ini & # >> /var/log/aquameta/uwsgi.log &
 
-sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql/postgresql.log start
+sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/aquameta -l /var/log/postgresql/postgresql.log start
