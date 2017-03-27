@@ -41,10 +41,10 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
-cp $DIR/core/004-http_server/servers/uwsgi/conf/nginx/http_server.conf /etc/nginx/sites-available
+cp $DIR/core/004-http_server/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
 cd /etc/nginx/sites-enabled
 rm ./default
-ln -s ../sites-available/http_server.conf
+ln -s ../sites-available/aquameta_endpoint.conf
 
 
 # build the aquameta db python egg

@@ -79,7 +79,7 @@ update test_vars set starting_untracked_rows = (select count(*)::integer from bu
 -- TEST 1: no bundle
 -------------------------------------------------------------------------------
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         0, -- commit
         0, -- head_commit_row
@@ -98,9 +98,9 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 2: empty bundle
 -------------------------------------------------------------------------------
-insert into bundle.bundle (id, name) values (:bundle_id, 'com.aquameta.bundle.tests');
+insert into bundle.bundle (id, name) values (:bundle_id, 'com.aquameta.core.bundle.tests');
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         0, -- commit
         0, -- head_commit_row
@@ -126,7 +126,7 @@ insert into bundle_test.chakra (id, position, name, color, tone_hz) values
     (4, 4, 'Heart',        'green', 136.10)
 ;
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         0, -- commit
         0, -- head_commit_row
@@ -145,12 +145,12 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 4: stage_row_add()
 -------------------------------------------------------------------------------
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_test','chakra','id',1::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_test','chakra','id',2::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_test','chakra','id',3::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_test','chakra','id',4::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',1::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',2::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',3::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',4::text);
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         0, -- commit
         0, -- head_commit_row
@@ -169,9 +169,9 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 5: bundle.commit()
 -------------------------------------------------------------------------------
-select bundle.commit('com.aquameta.bundle.tests','here come the first four chakras');
+select bundle.commit('com.aquameta.core.bundle.tests','here come the first four chakras');
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -195,7 +195,7 @@ insert into bundle_test.chakra (id, position, name, color, tone_hz) values
     (6, 6, 'Third Eye',    'indego', 210.42)
 ;
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -214,9 +214,9 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 7: second round of stage_row_add()
 -------------------------------------------------------------------------------
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_test','chakra','id',5::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',5::text);
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -237,7 +237,7 @@ select row_eq(
 -------------------------------------------------------------------------------
 delete from bundle_test.chakra where id=4;
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -256,9 +256,9 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 9: stage the delete of a tracked row
 -------------------------------------------------------------------------------
-select bundle.stage_row_delete('com.aquameta.bundle.tests', 'bundle_test','chakra','id',4::text);
+select bundle.stage_row_delete('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',4::text);
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -279,7 +279,7 @@ select row_eq(
 -------------------------------------------------------------------------------
 delete from bundle_test.chakra where id=6;
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -298,9 +298,9 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 11: unstage a delete
 -------------------------------------------------------------------------------
-select bundle.unstage_row_delete('com.aquameta.bundle.tests', 'bundle_test','chakra','id',4::text);
+select bundle.unstage_row_delete('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',4::text);
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -321,7 +321,7 @@ select row_eq(
 -------------------------------------------------------------------------------
 update bundle_test.chakra set color='rojo' where position=1;
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -340,9 +340,9 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 13: Staging a changed field
 -------------------------------------------------------------------------------
-select bundle.stage_field_change('com.aquameta.bundle.tests', 'bundle_test','chakra','id','1', 'color');
+select bundle.stage_field_change('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id','1', 'color');
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         1, -- commit
         4, -- head_commit_row
@@ -364,12 +364,12 @@ select row_eq(
 insert into bundle_test.chakra (id, position, name, color, tone_hz) values
     (7, 7, 'Crown',        'violet', 194.18)
 ;
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_test','chakra','id',7::text);
-select bundle.commit('com.aquameta.bundle.tests','last few');
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',7::text);
+select bundle.commit('com.aquameta.core.bundle.tests','last few');
 select bundle.checkout((select id from bundle.commit where message='last few'));
 /*
 select row_eq(
-    $$ select * from repo_summary('com.aquameta.bundle.tests') $$,
+    $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
     row(
         2, -- commit
         6, -- head_commit_row

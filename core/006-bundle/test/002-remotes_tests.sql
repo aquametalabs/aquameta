@@ -23,7 +23,7 @@ create table bundle_remotes_test.chakra (
 \set remote_endpoint_id '\'67f7d009-52d8-4a01-9b13-00188c904249\''
 \set remote_id '\'24aa68f7-0676-4289-8246-27d1d075e194\''
 
-insert into bundle.bundle (id, name) values (:bundle_id, 'com.aquameta.bundle.tests');
+insert into bundle.bundle (id, name) values (:bundle_id, 'com.aquameta.core.bundle.tests');
 insert into endpoint.remote_endpoint(id,url, name) values (:remote_endpoint_id, 'http://demo.aquameta.org/endpoint', 'Test Server');
 insert into bundle.remote(id, endpoint_id, bundle_id) values (:remote_id, :remote_endpoint_id, :bundle_id);
 
@@ -54,11 +54,11 @@ insert into bundle_remotes_test.chakra (id, position, name, color, tone_hz) valu
 ;
 
 -- test commit
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',1::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',2::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',3::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',4::text);
-select bundle.commit('com.aquameta.bundle.tests','here come the first four chakras');
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_remotes_test','chakra','id',1::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_remotes_test','chakra','id',2::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_remotes_test','chakra','id',3::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_remotes_test','chakra','id',4::text);
+select bundle.commit('com.aquameta.core.bundle.tests','here come the first four chakras');
 
 -------------------------------------------------------------------------------
 -- TEST 2: remote_compare_commits
@@ -93,9 +93,9 @@ from bundle.remote_has_bundle(:remote_id) r;
 -------------------------------------------------------------------------------
 -- TEST 6: new commit
 -------------------------------------------------------------------------------
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',5::text);
-select bundle.stage_row_add('com.aquameta.bundle.tests', 'bundle_remotes_test','chakra','id',6::text);
-select bundle.commit('com.aquameta.bundle.tests','next two chakras');
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_remotes_test','chakra','id',5::text);
+select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_remotes_test','chakra','id',6::text);
+select bundle.commit('com.aquameta.core.bundle.tests','next two chakras');
 
 
 -------------------------------------------------------------------------------
