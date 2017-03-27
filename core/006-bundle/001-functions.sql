@@ -382,7 +382,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
             for i in 1 .. array_upper(fields, 1)
             loop
-                query_str := query_str || quote_ident(fields[i].name);
+                query_str := query_str || quote_ident(fields[i].name) || '::text';
 
                 if i < array_upper(fields, 1) then
                     query_str := query_str || ', ';
@@ -441,9 +441,8 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
                 query_str := query_str
                 || coalesce(
                     quote_literal(fields[i].value)
-                        || '::'
-                        || fields[i].type_name, -- not sure why this was ever like this.....  we are 
---                         || 'text'
+                        || '::text::'
+                        || fields[i].type_name,
                     'NULL'
                 );
 
