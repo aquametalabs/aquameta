@@ -8,6 +8,11 @@ cat core/requirements.sql | psql aquameta
 echo "Loading core/*.sql ..."
 cat core/0*/0*.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
+echo "Installing fs_fdw..."
+cd core/002-filesystem/fs_fdw
+./install_fs_fdw.sh
+cd ../../../
+
 echo "Loading bundles-enabled/*.sql ..."
 cat bundles-enabled/*.sql | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
