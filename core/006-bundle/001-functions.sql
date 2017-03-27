@@ -382,7 +382,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
             for i in 1 .. array_upper(fields, 1)
             loop
-                query_str := query_str || quote_ident(fields[i].name) || '::text';
+                query_str := query_str || quote_ident(fields[i].name);
 
                 if i < array_upper(fields, 1) then
                     query_str := query_str || ', ';

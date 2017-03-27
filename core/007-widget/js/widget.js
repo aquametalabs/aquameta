@@ -1,96 +1,8 @@
-/*
-widget.js
----------
-
-a widget is:
-
-- dom element
-- unique id
-- data-widget-name attribute
-- data-widget-id attribute
-- args link?
-
-
-widget() function
------------------
-
-function widget(selector, args) {}
-
-pipeline:
-
-- fetch widget data
-    * widget
-    * widget_input
-    * widget_dependency_js
-    * widget_view
-    * widget_import?  would be importing widgets from other bundles via data instead of widget_import()
-    * ...plugins...
-- inject css into header (avoiding duplication...?)
-- parse html string w/ template parser (DoT? is there a better choice here?)
-- process inputs
-    * validate required inputs
-    * how to distinguish between "supported" inputs and just random ones?
-- setup javascript scope if present
-
-function($, endpoint, widget, other deps) {
-    function(id, name, input1, input2, ...etc, views) {
-        var w = $('#'+id);
-
-        // post_js
-
-        // sourceMap='/widget/lkdjsf/post_js'
-    }
-}
-
-    * widget()
-    * widget_name
-    * widget_id
-    * input{}
-    * xinput{}
-    * view{ customers: RowSet }
-    * dep{}
-    * endpoint (that the widget was loaded from)
-- (nice to have) trick the script source tracker to think that the widget code is at the post_js field's URL so we get nice source maps?
-- wait for the html to be inserted onto the page????  is this why we used mutation observers?
-- run the javascript
-- return html string
-
-
-
-Widget Selector DSL Grammar
-
-1. Import Mode - import a widget into the widget name dsl's namespace
-
-// from bh import *
-function widget_import( bundle_name, local_namespace )
-widget_import('com.aquameta.beehive', 'bh')
-
-// import *
-// is this feature going to collide with the "evolving dsl" below?  probably.  but it simplifies dev environment a lot (true?)
-widget_import('com.aquameta.beehive', '' )
-
-// ^^ should these be ui?  probably
-
-// use imported widget namespace
-
-widget('bh:pallet_planner', { default_pallet_count: 22 });
-
-
-// 2. Evolving dsl for looking up widgets in cool ways
-// use/edit/integer
-// use/display/temperature
-// ...?
-
-widget('/use/edit/integer', { value: 5 })
-
-*/
-
 /*******************************************************************************
 * Widget.js
 *
 * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
-* Company: http://aquameta.com/
-* Project: http://blog.aquameta.com/
+* Project: http://aquameta.com/
 ******************************************************************************/
 define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undefined) {
 
@@ -106,12 +18,6 @@ define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undef
     AQ.Widget = {};
 
 
-/*
-widget('core:list_view', {})
-widget('semantics/list_view', row)
-widget('semantics/list_item', row)
-widget('semantics/list_item/com.aquameta.extra.ide', row)
-*/
     AQ.Widget.widget = function ( selector, input, extra ) {
 
         if (!selector || typeof selector != 'string') {
@@ -160,7 +66,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                         url_id = input.to_url(true);
                     }
                     args_object.widget_purpose = semantics[1];
-                    args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
+                    args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.semantics';
                     
                     return endpoint.schema('semantics').function({
                         name: fn,
@@ -217,7 +123,7 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
                 }
                 
                 args_object.widget_purpose = semantics[1];
-                args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.ide';
+                args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.semantics';
                 
                 var widget_getter = endpoint.schema('semantics').function({
                     name: fn,
@@ -576,7 +482,6 @@ widget('semantics/list_item/com.aquameta.extra.ide', row)
 
 
     AQ.Widget.swap = function( $element, id ) {
-
         widget_promises[id].then(function(rendered_widget) {
 
             // Replace stub
