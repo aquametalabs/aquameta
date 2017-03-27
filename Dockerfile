@@ -38,15 +38,15 @@ RUN echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 #################### nginx/uwsgi server ###############################
 # setup /etc/nginx settings
 WORKDIR /etc/nginx/sites-available
-RUN cp /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf .
+RUN cp /s/aquameta/core/004-http_server/servers/uwsgi/conf/nginx/http_server.conf .
 
 WORKDIR /etc/nginx/sites-enabled
 RUN rm ./default && \
-        ln -s ../sites-available/aquameta_endpoint.conf
+        ln -s ../sites-available/http_server.conf
 
 
 # build the aquameta db python egg
-WORKDIR /s/aquameta/core/004-aquameta_endpoint/servers/uwsgi
+WORKDIR /s/aquameta/core/004-http_server/servers/uwsgi
 RUN pip install .
 
 

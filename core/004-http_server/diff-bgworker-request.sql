@@ -1,7 +1,7 @@
-diff --git a/core/004-aquameta_endpoint/000-endpoint_server.sql b/core/004-aquameta_endpoint/000-endpoint_server.sql
+diff --git a/core/004-http_server/000-endpoint_server.sql b/core/004-http_server/000-endpoint_server.sql
 index 91b176b..59cb1b2 100644
---- a/core/004-aquameta_endpoint/000-endpoint_server.sql
-+++ b/core/004-aquameta_endpoint/000-endpoint_server.sql
+--- a/core/004-http_server/000-endpoint_server.sql
++++ b/core/004-http_server/000-endpoint_server.sql
 @@ -922,105 +922,6 @@ create or replace function endpoint.request(
  $$ language plpgsql;
  

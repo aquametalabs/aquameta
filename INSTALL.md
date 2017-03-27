@@ -38,7 +38,7 @@ Run `./build.sh` as the user who has superuser access
 4. Build and install the webserver
 ----------------------------------
 
-See [core/004-aquameta_endpoint/servers/background_worker/README.md](core/004-aquameta_endpoint/servers/background_worker/README.md).
+See [core/004-http_server/servers/background_worker/README.md](core/004-http_server/servers/background_worker/README.md).
 
 
 5. Browse to `localhost`

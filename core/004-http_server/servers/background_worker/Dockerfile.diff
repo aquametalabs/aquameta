@@ -35,7 +35,7 @@ index dfa7f88..808f567 100644
 -    cd /usr/lib && ln -s /usr/local/lib/libwebsockets.so.5.0.0
 -
 -# add aquameta (assuming we're building this from cwd)
--RUN cd /s/aquameta/core/004-aquameta_endpoint/servers/background_worker && make && make install
+-RUN cd /s/aquameta/core/004-http_server/servers/background_worker && make && make install
 -
 -#shared_preload_libraries = 'pg_http'
 -RUN sed -i "s/#shared_preload_libraries = ''/shared_preload_libraries = 'pg_http'/" /etc/postgresql/9.4/main/postgresql.conf
