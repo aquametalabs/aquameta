@@ -350,7 +350,7 @@ checkout -
 -- create or replace function checkout_row (in row_id meta.row_id, in fields text[], in vals text[], in force_overwrite boolean) returns void as $$
 CREATE TYPE checkout_field AS (name text, value text, type_name text);
 
-create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns text as $$
+create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
     declare
         query_str text;
     begin
