@@ -64,7 +64,7 @@ def application(env, start_response):
                     from filesystem.file f
                         left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
                         left join endpoint.mimetype m on m.id = e.mimetype_id
-                    where f.path = (select file_id from endpoint.resource_file where url=%s);
+                    where f.path = (select file_id from endpoint.resource_file where path=%s);
                 ''', (request.path,))
                 row = cursor.fetchone()
 
@@ -75,7 +75,7 @@ def application(env, start_response):
                     with dir as (
                         select directory_id as dir_id
                         from endpoint.resource_directory
-                        where url=%s and indexes=true
+                        where path=%s and indexes=true
                     )
                     select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.directory where parent_id=(select dir_id from dir)
                     union

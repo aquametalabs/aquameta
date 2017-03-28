@@ -114,13 +114,13 @@ create table endpoint."resource_text" (
 create table endpoint.resource_file (
     id uuid default public.uuid_generate_v4() primary key,
     file_id text not null,
-    url text not null unique
+    path text not null unique
 );
 
 create table endpoint.resource_directory (
     id uuid default public.uuid_generate_v4() primary key,
     directory_id text,
-    url text,
+    path text,
     indexes boolean
 );
 
