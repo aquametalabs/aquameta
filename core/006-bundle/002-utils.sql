@@ -69,8 +69,8 @@ begin
     execute format('copy bundle.commit from ''%s/commit.csv''', directory);
     execute format('copy bundle.rowset from ''%s/rowset.csv''', directory);
     execute format('copy bundle.rowset_row from ''%s/rowset_row.csv''', directory);
-    execute format('copy bundle.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
     execute format('copy bundle.blob from ''%s/blob.csv''', directory);
+    execute format('copy bundle.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
     execute format('copy bundle.ignored_row from ''%s/ignored_row.csv''', directory);
     execute format('alter table bundle.bundle enable trigger all');
     execute format('alter table bundle.commit enable trigger all');
