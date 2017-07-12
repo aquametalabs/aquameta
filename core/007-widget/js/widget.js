@@ -66,7 +66,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undef
                         url_id = input.to_url(true);
                     }
                     args_object.widget_purpose = semantics[1];
-                    args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.semantics';
+                    args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'org.aquameta.core.semantics';
                     
                     return endpoint.schema('semantics').function({
                         name: fn,
@@ -123,7 +123,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undef
                 }
                 
                 args_object.widget_purpose = semantics[1];
-                args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'com.aquameta.core.semantics';
+                args_object.default_bundle = semantics.length >= 3 ? semantics[2] : 'org.aquameta.core.semantics';
                 
                 var widget_getter = endpoint.schema('semantics').function({
                     name: fn,
