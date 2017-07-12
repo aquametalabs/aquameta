@@ -611,6 +611,8 @@ select r.row_id, r.row_id::meta.relation_id as relation_id
 where r.row_id not in (
     select a.row_id from bundle.stage_row_added a
     union
+    select t.row_id from bundle.tracked_row_added t
+    union
     select rr.row_id from bundle.stage_row_deleted d join rowset_row rr on d.rowset_row_id=rr.id
     union
     select rr.row_id from bundle.bundle bundle
