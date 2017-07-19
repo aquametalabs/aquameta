@@ -87,10 +87,10 @@ mkdir /mnt/aquameta
 
 
 #################### build aquameta ###############################
-echo "create role root superuser login;" | psql -U postgres
+echo "create role root superuser login;" | psql -U postgres postgres
 
 # we're doing this for 0.1 version only!  remove this when we turn on permissions
-echo "create role anonymous login superuser" | psql -U postgres aquameta
+echo "create role anonymous login superuser" | psql -U postgres postgres
 createdb aquameta
 
 cd $DIR
@@ -99,23 +99,23 @@ echo "Loading requirements ..."
 cat core/requirements.sql | psql aquameta
 
 echo "Loading core/*.sql ..."
-cat core/0*/0*.sql  | psql -a aquameta
+cat core/0*/0*.sql  | psql aquameta
 
 
 echo "Loading bundles-enabled/*.sql ..."
-cat bundles-enabled/*.sql | psql -a aquameta
+cat bundles-enabled/*.sql | psql aquameta
 
 echo "Checking out head commit of every bundle ..."
 echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
 
 ### echo "Loading semantics ..."
-### cat core/0*/semantics.sql  | psql -a aquameta
+### cat core/0*/semantics.sql  | psql aquameta
 ### 
 ### echo "Loading default permissions ..."
-### cat core/004-http_server/default_permissions.sql  | psql -a aquameta
+### cat core/004-http_server/default_permissions.sql  | psql aquameta
 ### 
 ### echo "Loading mimetypes ..."
-### cat core/004-http_server/mimetypes.sql  | psql -a aquameta
+### cat core/004-http_server/mimetypes.sql  | psql aquameta
 ### 
 
 
@@ -142,3 +142,14 @@ mkdir /var/log/aquameta
 uwsgi --die-on-term --emperor $DIR/core/004-http_server/servers/uwsgi/conf/uwsgi/aquameta_db.ini & # >> /var/log/aquameta/uwsgi.log &
 
 sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/aquameta -l /var/log/postgresql/postgresql.log start
+
+
+
+
+echo ""
+echo ""
+echo ""
+echo "Aquameta was successfully installed.  Here are some starting places:"
+echo "    - IDE: http://localhost/ide"
+echo "    - Documentation: http://localhost/docs"
+
