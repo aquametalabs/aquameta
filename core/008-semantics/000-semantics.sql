@@ -24,6 +24,8 @@ create table semantics.relation (
     priority integer not null default 0
 );
 
+/*
+moved to bundle....
 insert into semantics.relation_purpose (purpose) values 
     ('overview'),
     ('list_view'),
@@ -32,6 +34,7 @@ insert into semantics.relation_purpose (purpose) values
     ('new_row'),
     ('grid_view'),
     ('grid_row');
+*/
 
 
 create table semantics.column_purpose (
@@ -56,6 +59,9 @@ create table semantics."column" (
 );
 
 
+/*
+moved to bundle
+
 insert into semantics.column_purpose (purpose) values
     ('new_field'),
     ('form_field'),
@@ -65,6 +71,7 @@ insert into semantics.column_purpose (purpose) values
     ('grid_label'),
     ('grid_display'),
     ('grid_edit');
+*/
 
 
 create table semantics.foreign_key (
