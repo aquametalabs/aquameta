@@ -3,7 +3,35 @@
 set -e
 set -o pipefail
 
+
+echo "Aquameta 0.1 Installer Script"
+echo "This script should be run on an Ubuntu server instance, 14.04 or greater."
+echo "This code is highly experimental and should NOT be run in a production environment."
+
+read -p "Are you sure? " -n 1 -r
+echo    # (optional) move to a new line
+if ! [[ $REPLY =~ ^[Yy]$ ]]
+then
+    exit 1
+fi
+
+
+
+
+
+
+# make sure we're running as root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
+# make sure this script is being run in /s/aquameta
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [[ "$DIR" != "/s/aquameta" ]]; then
+   echo "This script should be run from /s/aquameta"
+   exit 1
+fi
 
 apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev #upervisor
 
@@ -59,6 +87,10 @@ mkdir /mnt/aquameta
 
 
 #################### build aquameta ###############################
+echo "create role root superuser login;" | psql -U postgres
+
+# we're doing this for 0.1 version only!  remove this when we turn on permissions
+echo "create role anonymous login superuser" | psql -U postgres aquameta
 createdb aquameta
 
 cd $DIR
