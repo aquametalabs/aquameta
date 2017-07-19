@@ -53,8 +53,12 @@ cd postgresql-9.6.0
 make world
 make install-world
 adduser --gecos "Postgresql" --disabled-password --no-create-home --disabled-login postgres
-mkdir --parents /var/lib/postgresql/aquameta
+# log dir
+mkdir --parents /var/log/postgresql
 chown -R postgres:postgres /var/log/postgresql
+# data dir
+mkdir --parents /var/lib/postgresql/aquameta
+chown -R postgres:postgres /var/lib/postgresql/aquameta
 sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/aquameta
 # TODO: audit this...
 echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/aquameta/pg_hba.conf
