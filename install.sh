@@ -67,6 +67,7 @@ sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/aquameta
 sed -i "s/^local   all.*$/local all all trust/" /var/lib/postgresql/aquameta/pg_hba.conf
 echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/aquameta/pg_hba.conf
 echo "listen_addresses='*'" >> /var/lib/postgresql/aquameta/postgresql.conf
+echo "unix_socket_directories = '/tmp,/var/run/postgresql'" >> /var/lib/postgresql/aquameta/postgresql.conf
 
 # start the server
 sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/aquameta -l /var/log/postgresql/postgresql.log start
