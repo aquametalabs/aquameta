@@ -9,7 +9,7 @@ set -o pipefail
 #############################################################################
 
 echo "Aquameta 0.1 Installer Script"
-echo "This script should be run on an Ubuntu server instance, 14.04 or greater."
+echo "This script should be run on an Ubuntu Linux server instance, 14.04 or greater."
 echo "This code is highly experimental and should NOT be run in a production environment."
 
 read -p "Are you sure? " -n 1 -r
@@ -56,13 +56,16 @@ adduser --gecos "Postgresql" --disabled-password --no-create-home --disabled-log
 # log dir
 mkdir --parents /var/log/postgresql
 chown -R postgres:postgres /var/log/postgresql
+# socket dir
+mkdir --parents /var/run/postgresql
+chown -R postgres:postgres /var/run/postgresql
 # data dir
 mkdir --parents /var/lib/postgresql/aquameta
 chown -R postgres:postgres /var/lib/postgresql/aquameta
 sudo -u postgres /usr/local/bin/initdb -D /var/lib/postgresql/aquameta
 # TODO: audit this...
-echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/aquameta/pg_hba.conf
 sed -i "s/^local   all.*$/local all all trust/" /var/lib/postgresql/aquameta/pg_hba.conf
+echo "host all  all 0.0.0.0/0  md5"   >> /var/lib/postgresql/aquameta/pg_hba.conf
 echo "listen_addresses='*'" >> /var/lib/postgresql/aquameta/postgresql.conf
 
 # start the server
@@ -87,7 +90,6 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 # build the aquameta db python egg
 cd $DIR/core/004-http_server/servers/uwsgi
 pip install .
-sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/aquameta -l /var/log/postgresql/postgresql.log start
 uwsgi --die-on-term --emperor $DIR/core/004-http_server/servers/uwsgi/conf/uwsgi/aquameta_db.ini &
 
 #############################################################################
