@@ -7,7 +7,7 @@
  ******************************************************************************/
 begin;
 
-create extension if not exists multicorn;
+create extension if not exists multicorn schema public;
 
 set search_path=filesystem;
 
