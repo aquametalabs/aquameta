@@ -15,8 +15,6 @@ begin;
 
 create extension if not exists "uuid-ossp";
 
-create schema endpoint;
-
 set search_path = endpoint;
 
 /******************************************************************************
@@ -1843,24 +1841,6 @@ language plpgsql;
 create trigger endpoint_user_insert_trigger before insert on endpoint.user for each row execute procedure endpoint.user_insert();
 create trigger endpoint_user_update_trigger before update on endpoint.user for each row execute procedure endpoint.user_update();
 create trigger endpoint_user_delete_trigger before delete on endpoint.user for each row execute procedure endpoint.user_delete();
-
-
-/******************************************************************************
- * auth roles
- ******************************************************************************/
-
--- User-defined roles inherit from "user" role
-/*
-create role "user" nologin;
-
-
--- Guest role
-create role anonymous login;
-
-
--- Superuser is aquameta
-create role aquameta superuser createdb createrole login replication bypassrls;
-*/
 
 
 /******************************************************************************

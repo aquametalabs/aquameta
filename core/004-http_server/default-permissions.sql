@@ -6,17 +6,15 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 begin;
-
 set search_path=meta;
 
 /*
-
 Tables with RLS enabled
 -- These tables need to have a policy defined for the user group that wants to use them, unless the user group is set to bypass RLS
 
 - endpoint.resource 
-
 */
+
 alter table endpoint.resource enable row level security;
 
 
