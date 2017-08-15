@@ -1,15 +1,18 @@
 aquameta
 ========
 
-Aquameta is a web-based development environment designed on the first principle
-of datafication, and built entirely in PostgreSQL.
-
-For more info, see [aquameta.org](http://aquameta.org/).
+Aquameta is a web development environment where instead of storing code as flat
+files in the database, everything is stored in PostgreSQL as relational data,
+including source code, html, css, javascript, images and other resources,
+system configurations, database schema, permissions and more.  It has a
+web-based IDE, and can be used to build web applications and much more.  For
+more info, see [aquameta.org](http://aquameta.org/).
 
 Status
 ------
 
-Aquameta is in early prototype stages, version 0.1.
+Aquameta is in early prototype stages, version 0.1.  Do not use it in a
+production, or untrusted environment.
 
 Core Modules
 ------------
@@ -25,21 +28,47 @@ Core Modules
 Installation
 ------------
 
-If you want to give Aquameta a try at this early stage, feel free.  Aquameta is
-easiest to install on a isolated Linux instance such as an AWS EC2 or Docker
-container, running Ubuntu 14.04 or greater.  In this environment, just run the
-`install.sh` script and Aquameta and it's dependencies will be installed.  
+Aquameta can be installed either via Docker or from source.
 
-In other environments however, we recommend going through that install script
-and translating and sanity-checking any commands.  For example, if your system
-is not an apt-based OS, you'll have to translate the package installs into
-whatever packaging system (like Brew) you might be using.
+### Docker
+
+To install Aquameta using Docker, clone the git repository:
+
+```
+git clone https://github.com/aquametalabs/aquameta.git
+```
+
+Then build and run the container:
+
+```
+cd aquameta/
+docker build -t aquametalabs/aquameta
+docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
+```
+
+If you wish to use alternate ports, they can be changed in the `docker run` command.
+
+```
+# run the Aquameta webserver on port 8080, and the PostgreSQL server on port 5433
+sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged 0bd714f18bda
+```
+
+Once Aquameta is running just browse to `http://localhost:8080/ide`
+
+
+### From Source
+
+To install Aquameta from source, follow the steps in the
+[install.sh](https://github.com/aquametalabs/aquameta/blob/master/install.sh)
+script.  The script is designed to run on an Ubuntu 16.04 server, and will
+require some adaptation for different environments.
 
 Contribute
 ----------
 
-- Issue Tracker: [github.com/aquametalabs/aquameta/issues](http://github.com/aquametalabs/aquameta/issues)
 - Source Code: [github.com/aquametalabs/aquameta](github.com/aquametalabs/aquameta)
+- Issue Tracker: [github.com/aquametalabs/aquameta/issues](http://github.com/aquametalabs/aquameta/issues)
+- IRC Channel: `#aquameta` on `irc.freenode.net`
 
 Support
 -------
