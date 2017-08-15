@@ -140,7 +140,7 @@ echo "Checking out head commit of every bundle ..."
 echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
 
 echo "Loading default permissions..."
-cat core/004-http_server/default_permissions.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+cat core/default-permissions.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
 # Install FS FDW
 cd $DIR/core/002-filesystem/fs_fdw
@@ -152,6 +152,7 @@ echo ""
 echo ""
 echo ""
 echo "Aquameta was successfully installed.  Here are some starting places:"
-echo "    - IDE: http://localhost/ide"
+echo "    - IDE: http://localhost/dev"
 echo "    - Documentation: http://localhost/docs"
-
+echo ""
+echo ""

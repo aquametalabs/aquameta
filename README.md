@@ -50,10 +50,10 @@ If you wish to use alternate ports, they can be changed in the `docker run` comm
 
 ```
 # run the Aquameta webserver on port 8080, and the PostgreSQL server on port 5433
-sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged 0bd714f18bda
+sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged aquametalabs/aquameta
 ```
 
-Once Aquameta is running just browse to `http://localhost:8080/ide`
+Once Aquameta is running just browse to `http://localhost/dev`
 
 
 ### From Source
@@ -74,7 +74,7 @@ Support
 -------
 
 If you are having issues, please let us know.
-We have a mailing list located at: aquameta-discuss@google-groups.com
+We have a mailing list located at: aquameta-discuss@googlegroups.com
 
 License
 -------
