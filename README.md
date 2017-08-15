@@ -53,7 +53,16 @@ If you wish to use alternate ports, they can be changed in the `docker run` comm
 sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged aquametalabs/aquameta
 ```
 
-Once Aquameta is running just browse to `http://localhost/dev`
+Make a note of the container-id that this command outputs.  You can use it to
+restart the container later, if you restart your computer, to get your data back.
+
+Once Aquameta is running, browse to `http://localhost/dev` (or whatever
+host/port it is installed on) to access the web-based IDE.  To access the
+PostgreSQL database, use `psql -p 5432 aquameta`.
+
+Aquameta uses the "long-running container" pattern instead of exporting volumes
+at this time, so if you stop the container, just restart it with `docker
+restart {container_id}`.
 
 
 ### From Source
