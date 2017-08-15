@@ -41,7 +41,7 @@ fi
 # Apt package installs
 #############################################################################
 
-apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev pgxnclient fuse libfuse-dev sendmail
+apt-get update -y && apt-get install -y wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev pgxnclient fuse libfuse-dev sendmail supervisor
 
 
 #############################################################################
@@ -138,6 +138,9 @@ cat bundles-enabled/*.sql | psql aquameta
 
 echo "Checking out head commit of every bundle ..."
 echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
+
+echo "Loading default permissions..."
+cat core/004-http_server/default_permissions.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
 
 # Install FS FDW
 cd $DIR/core/002-filesystem/fs_fdw
