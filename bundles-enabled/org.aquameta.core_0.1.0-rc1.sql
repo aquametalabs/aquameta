@@ -1,1 +1,0 @@
-../bundles-available/org.aquameta.core_0.1.0-rc1.sql
