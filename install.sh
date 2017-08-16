@@ -12,7 +12,7 @@ echo "Aquameta 0.1 Installer Script"
 echo "This script should be run on an Ubuntu Linux server instance, 14.04 or greater."
 echo "This code is highly experimental and should NOT be run in a production environment."
 
-if [ $0 = '--silent' ]
+if [ "$1" != "--silent" ]
 then
     read -p "Are you sure? " -n 1 -r
     echo    # (optional) move to a new line
@@ -140,7 +140,7 @@ echo "Checking out head commit of every bundle ..."
 echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
 
 echo "Loading default permissions..."
-cat core/default-permissions.sql  | psql -a aquameta 2>&1 | grep -B 2 -A 10 ERROR:
+cat core/default-permissions.sql  | psql aquameta
 
 # Install FS FDW
 cd $DIR/core/002-filesystem/fs_fdw
