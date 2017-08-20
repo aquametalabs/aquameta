@@ -2,8 +2,8 @@ aquameta
 ========
 
 Aquameta is a web development environment where instead of storing code as flat
-files in the database, everything is stored in PostgreSQL as relational data,
-including source code, html, css, javascript, images and other resources,
+files in the file system, everything is stored in PostgreSQL as relational
+data, including source code, html, css, javascript, images and other resources,
 system configurations, database schema, permissions and more.  It has a
 web-based IDE, and can be used to build web applications and much more.  For
 more info, see [aquameta.org](http://aquameta.org/).
@@ -42,7 +42,7 @@ Then build and run the container:
 
 ```
 cd aquameta/
-docker build -t aquametalabs/aquameta
+docker build -t aquametalabs/aquameta .
 docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
 ```
 
