@@ -77,5 +77,15 @@ begin
 end
 $$;
 
+create or replace function garbage_collect ( ) returns void 
+as $$
+delete from bundle.blob where hash is null;
+delete from bundle.rowset_row_field where value_hash is null;
+delete from bundle.blob where hash not in (select value_hash from bundle.rowset_row_field);
+delete from bundle.rowset where id not in (select rowset_id from bundle.commit);
+$$ language sql;
+
+
 
 commit;
+
