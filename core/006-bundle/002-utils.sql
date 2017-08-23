@@ -20,40 +20,40 @@ as $$
 begin
     execute format('copy (select * from bundle.bundle
         where name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
+
     execute format('copy (select c.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
         where b.name=%L) to ''%s/commit.csv''', bundle_name, directory);
+
     execute format('copy (select r.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
         join bundle.rowset r on c.rowset_id=r.id 
-        where b.name=%L) to ''%s/rowset.csv''', bundle_name, directory);
+        where b.name=%L order by r.id) to ''%s/rowset.csv''', bundle_name, directory);
+
     execute format('copy (select rr.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
         join bundle.rowset r on c.rowset_id=r.id 
         join bundle.rowset_row rr on rr.rowset_id=r.id 
-        where b.name=%L) to ''%s/rowset_row.csv''', bundle_name, directory);
+        where b.name=%L order by rr.id) to ''%s/rowset_row.csv''', bundle_name, directory);
+
     execute format('copy (select rrf.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
         join bundle.rowset r on c.rowset_id=r.id 
         join bundle.rowset_row rr on rr.rowset_id=r.id 
         join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id 
-        where b.name=%L) to ''%s/rowset_row_field.csv''', bundle_name, directory);
-    execute format('copy (select rrf.* from bundle.bundle b
-        join bundle.commit c on c.bundle_id=b.id
-        join bundle.rowset r on c.rowset_id=r.id 
-        join bundle.rowset_row rr on rr.rowset_id=r.id 
-        join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id 
-        where b.name=%L) to ''%s/rowset_row_field.csv''', bundle_name, directory);
+        where b.name=%L order by rrf.id) to ''%s/rowset_row_field.csv''', bundle_name, directory);
+
     execute format('copy (select blob.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
         join bundle.rowset r on c.rowset_id=r.id 
         join bundle.rowset_row rr on rr.rowset_id=r.id 
         join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id 
         join bundle.blob on rrf.value_hash=blob.hash 
-        where b.name=%L) to ''%s/blob.csv''', bundle_name, directory);
+        where b.name=%L order by blob.id) to ''%s/blob.csv''', bundle_name, directory);
+
     execute format('copy (select ir.* from bundle.bundle b
         join bundle.ignored_row ir on ir.bundle_id=b.id
-        where b.name=%L) to ''%s/ignored_row.csv''', bundle_name, directory);
+        where b.name=%L order by ir.id) to ''%s/ignored_row.csv''', bundle_name, directory);
 end
 $$;
 
