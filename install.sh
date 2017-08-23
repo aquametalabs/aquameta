@@ -133,8 +133,14 @@ cat core/requirements.sql | psql aquameta
 echo "Loading core/*.sql ..."
 cat core/0*/0*.sql  | psql aquameta
 
-echo "Loading bundles-enabled/*.sql ..."
-cat bundles-enabled/*.sql | psql aquameta
+# echo "Loading bundles-enabled/*.sql ..."
+# cat bundles-enabled/*.sql | psql aquameta
+
+echo "Loading bundles-enabled/*/*.csv ..."
+for D in `find $PWD/bundles-enabled/* \( -type l -o -type d \)`
+do
+    echo "select bundle.bundle_import_csv('$D')" | psql aquameta
+done
 
 echo "Checking out head commit of every bundle ..."
 echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
