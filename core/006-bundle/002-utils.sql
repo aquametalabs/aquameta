@@ -49,7 +49,7 @@ begin
         join bundle.rowset_row rr on rr.rowset_id=r.id 
         join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id 
         join bundle.blob on rrf.value_hash=blob.hash 
-        where b.name=%L order by blob.id) to ''%s/blob.csv''', bundle_name, directory);
+        where b.name=%L order by blob.hash) to ''%s/blob.csv''', bundle_name, directory);
 
     execute format('copy (select ir.* from bundle.bundle b
         join bundle.ignored_row ir on ir.bundle_id=b.id
