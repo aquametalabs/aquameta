@@ -159,6 +159,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undef
                 // Namespaced lookup
                 context.namespace = name_parts[0];
                 context.name = name_parts[1];
+                context.bundle_name = namespaces[context.namespace].bundle_name;
             }
 
             // Namespace not found
@@ -393,6 +394,8 @@ define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undef
         try {
             var rendered = $(html).attr('data-widget', context.name)
                 .attr('data-widget_id', context.id)
+                .attr('data-bundle_alias', context.namespace)
+                .attr('data-bundle_name', context.bundle_name)
                 .data('help', widget_row.get('help'));
         } catch(e) {
             error(e, context.name, 'HTML (adding data-* attributes)');
