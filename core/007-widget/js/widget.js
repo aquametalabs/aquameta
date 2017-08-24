@@ -396,6 +396,7 @@ define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undef
                 .attr('data-widget_id', context.id)
                 .attr('data-bundle_alias', context.namespace)
                 .attr('data-bundle_name', context.bundle_name)
+                .attr('data-widget_row_id', widget_row.get('id'))
                 .data('help', widget_row.get('help'));
         } catch(e) {
             error(e, context.name, 'HTML (adding data-* attributes)');
