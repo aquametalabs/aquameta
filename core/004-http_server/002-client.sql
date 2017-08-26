@@ -24,11 +24,14 @@ set search_path=endpoint;
 * TABLE remote_endpoint, a known endpoint out in the universe
 *******************************************************************************/
 
+
+/*
 create table remote_endpoint (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text,
     url text not null
 );
+*/
 
 
 
@@ -39,12 +42,12 @@ create table remote_endpoint (
 create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args text[] default '{}', arg_vals text[] default '{}', out response http_client.http_response)
 as $$
 
+-- /endpoint/0.1/relation/widget/input?meta_data=true
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
-        || '/' || http_client.urlencode((relation_id.schema_id).name)
         || '/relation'
+        || '/' || http_client.urlencode((relation_id.schema_id).name)
         || '/' || http_client.urlencode(relation_id.name)
-        || '/rows'
         || coalesce('?' || http_client.array_to_querystring(args, arg_vals), '')
 );
 
@@ -55,15 +58,15 @@ $$ language sql;
 /*******************************************************************************
 * FUNCTION client_row_select
 *******************************************************************************/
+-- endpoint/0.1/relation/widget/input?meta_data=true&where=%7B%22name%22%3A%22id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%2212345%22%7D
 create or replace function endpoint.client_row_select(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
 
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
-        || '/' || (row_id::meta.schema_id).name
-        || '/table'
-        || '/' || (row_id::meta.relation_id).name
         || '/row'
+        || '/' || (row_id::meta.schema_id).name
+        || '/' || (row_id::meta.relation_id).name
         || '/' || row_id.pk_value
 );
 
@@ -78,10 +81,9 @@ as $$
 
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
+        || '/field'
         || '/' || (field_id::meta.schema_id).name
-        || '/table'
         || '/' || (field_id::meta.relation_id).name
-        || '/row'
         || '/' || (field_id.row_id).pk_value
         || '/' || (field_id.column_id).name
 );
@@ -97,10 +99,9 @@ as $$
 
 select http_client.http_delete (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
-        || '/' || (row_id::meta.schema_id).name
-        || '/table'
-        || '/' || (row_id::meta.relation_id).name
         || '/row'
+        || '/' || (row_id::meta.schema_id).name
+        || '/' || (row_id::meta.relation_id).name
         || '/' || row_id.pk_value
 );
 
@@ -117,10 +118,9 @@ as $$
 
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
-        || '/' || (function_id).schema_id.name
         || '/function'
+        || '/' || (function_id).schema_id.name
         || '/' || (function_id).name
-        || '/rows'
         || coalesce('?' || http_client.array_to_querystring((function_id).parameters, arg_vals),'')
 );
 
