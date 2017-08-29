@@ -441,6 +441,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                 this.endpoint.connect_session(result.get('session_create'));
             }.bind(this));
         }
+        this.query_string = query_options;
     };
     AQ.Database.prototype.constructor = AQ.Database;
     AQ.Database.prototype.schema = function( name ) { return new AQ.Schema(this, name); };
