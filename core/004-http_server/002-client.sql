@@ -23,16 +23,11 @@ set search_path=endpoint;
 /*******************************************************************************
 * TABLE remote_endpoint, a known endpoint out in the universe
 *******************************************************************************/
-
-
-/*
 create table remote_endpoint (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text,
     url text not null
 );
-*/
-
 
 
 
