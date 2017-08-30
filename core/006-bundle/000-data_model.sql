@@ -65,8 +65,12 @@ create table blob (
     value text
 );
 
-create function blob_hash_gen_trigger() returns trigger as $$
+create or replace function blob_hash_gen_trigger() returns trigger as $$
     begin
+        if NEW.value = NULL then
+            return NULL;
+        end if;
+
         NEW.hash = public.digest(NEW.value, 'sha256');
         if exists (select 1 from bundle.blob b where b.hash = NEW.hash) then
             return NULL;
@@ -105,7 +109,7 @@ create table rowset_row_field (
     id uuid default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
     field_id meta.field_id,
-    value_hash text not null references blob(hash) on delete cascade,
+    value_hash text references blob(hash) on delete cascade,
     unique(rowset_row_id, field_id)
 );
 
