@@ -28,21 +28,27 @@ Core Modules
 Installation
 ------------
 
-Aquameta can be installed either via Docker or from source.
+Aquameta can be installed either via Docker (very easy) or from source (very difficult).
 
 ### Docker
 
-To install Aquameta using Docker, clone the git repository:
+To install via Docker, the easiest way is to just pull down the latest image from Docker Hub:
+
+```
+docker pull aquametalabs/aquameta:0.1.0-rc1
+```
+
+Alternately, you can clone the Aquameta git repository and build your own Docker image (which takes about 15 minutes):
 
 ```
 git clone https://github.com/aquametalabs/aquameta.git
-```
-
-Then build and run the container:
-
-```
 cd aquameta/
 docker build -t aquametalabs/aquameta .
+```
+
+Once you've either pulled or built a Aquameta image, run the container to start it up:
+
+```
 docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
 ```
 
@@ -65,7 +71,7 @@ at this time, so if you stop the container, just restart it with `docker
 restart {container_id}`.
 
 
-### From Source
+### From Source (DIFFICULT)
 
 To install Aquameta from source, follow the steps in the
 [install.sh](https://github.com/aquametalabs/aquameta/blob/master/install.sh)
@@ -75,8 +81,8 @@ require some adaptation for different environments.
 Contribute
 ----------
 
-- Source Code: [github.com/aquametalabs/aquameta](github.com/aquametalabs/aquameta)
-- Issue Tracker: [github.com/aquametalabs/aquameta/issues](http://github.com/aquametalabs/aquameta/issues)
+- Source Code: [github.com/aquametalabs/aquameta](https://github.com/aquametalabs/aquameta)
+- Issue Tracker: [github.com/aquametalabs/aquameta/issues](https://github.com/aquametalabs/aquameta/issues)
 - IRC Channel: `#aquameta` on `irc.freenode.net`
 
 Support
