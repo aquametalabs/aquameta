@@ -1703,7 +1703,7 @@ create or replace function endpoint.request(
 
                 end if;
 
-            -- Calling a funciton with a specified parameter type list -- Exact funciton id known
+            -- Calling a function with a specified parameter type list -- Exact function id known
             else
 
                 -- URL /endpoint/function/{function_id}

@@ -26,7 +26,7 @@ create table event.session (
 
 
 /************************************************************************
- * funciton event.session_create()
+ * function event.session_create()
  * create a new event.session
  ***********************************************************************/
 
@@ -43,7 +43,7 @@ $$ language plpgsql;
 
 
 /************************************************************************
- * funciton event.session_attach()
+ * function event.session_attach()
  * attach to an existing session
  ***********************************************************************/
 
@@ -72,7 +72,7 @@ $$ language plpgsql;
 
 
 /************************************************************************
- * funciton event.session_detach()
+ * function event.session_detach()
  * detach from an existing session
  ***********************************************************************/
 
@@ -84,7 +84,7 @@ $$ language plpgsql;
 
 
 /************************************************************************
- * funciton event.session_delete()
+ * function event.session_delete()
  * delete from a session
  ***********************************************************************/
 
