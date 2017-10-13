@@ -97,22 +97,25 @@ create table endpoint.function_field_mimetype (
 
 create table endpoint."resource_binary" (
     id uuid default public.uuid_generate_v4() primary key,
-    path text not null unique,
+    path text not null /* unique */,
     mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
+    active boolean default true,
     content bytea not null
 );
 
 create table endpoint."resource_text" (
     id uuid default public.uuid_generate_v4() primary key,
-    path text not null unique,
+    path text not null /* unique */,
     mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
+    active boolean default true,
     content text not null
 );
 
 create table endpoint.resource_file (
     id uuid default public.uuid_generate_v4() primary key,
     file_id text not null,
-    path text not null unique
+    active boolean default true,
+    path text not null /* unique */
 );
 
 create table endpoint.resource_directory (
@@ -124,8 +127,9 @@ create table endpoint.resource_directory (
 
 create table "resource" (
     id uuid default public.uuid_generate_v4() primary key,
-    path text not null unique,
+    path text not null /* unique */,
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
+    active boolean default true,
     content text not null
 );
 

@@ -42,6 +42,7 @@ def application(env, start_response):
                 from endpoint.resource r
                     join endpoint.mimetype m on r.mimetype_id = m.id
                 where path = %s
+                and active = true
             ''', (request.path,))
             row = cursor.fetchone()
 
@@ -52,6 +53,7 @@ def application(env, start_response):
                     from endpoint.resource_binary r
                         join endpoint.mimetype m on r.mimetype_id = m.id
                     where path = %s
+                    and active = true
                 ''', (request.path,))
                 row = cursor.fetchone()
 
@@ -64,7 +66,7 @@ def application(env, start_response):
                     from filesystem.file f
                         left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
                         left join endpoint.mimetype m on m.id = e.mimetype_id
-                    where f.path = (select file_id from endpoint.resource_file where path=%s);
+                    where f.path = (select file_id from endpoint.resource_file where path=%s and active=true)
                 ''', (request.path,))
                 row = cursor.fetchone()
 
