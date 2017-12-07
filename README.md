@@ -49,7 +49,7 @@ docker build -t aquametalabs/aquameta .
 Once you've either pulled or built a Aquameta image, run the container to start it up:
 
 ```
-docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta
+docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta:0.1.0-rc1
 ```
 
 If you wish to use alternate ports, they can be changed in the `docker run` command.
