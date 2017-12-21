@@ -56,7 +56,7 @@ If you wish to use alternate ports, they can be changed in the `docker run` comm
 
 ```
 # run the Aquameta webserver on port 8080, and the PostgreSQL server on port 5433
-sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged aquametalabs/aquameta
+sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged aquametalabs/aquameta:0.1.0-rc1
 ```
 
 Make a note of the container-id that this command outputs.  You can use it to
