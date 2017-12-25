@@ -331,7 +331,8 @@ define(['/jQuery.min.js'], function($, undefined) {
 
             // Send websocket method if this connection uses websocket
             if (socket_connected()) {
-                function values_to_string( obj ) {
+                // function values_to_string( obj ) {  // FIXME: Why in the HECK does this not work in Firefox 23.0.1??
+                var values_to_string = function ( obj ) {
                     if (typeof obj == 'undefined' || obj == null) {
                         return null;
                     }
