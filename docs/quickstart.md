@@ -13,9 +13,9 @@ docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.1.0-rc1
 docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.1.0-rc1
 ```
 
-Then browse to the developer IDE:
+Your Aquameta instance is now installed.  Access the IDE by browsing to whatever hostname and port you installed it on, at `http://{hostname}:{port}/dev`, for example:
 
-http://my.host.net/dev
+http://localhost:80/dev
 
 ## Create a Bundle
 From the `/dev` interface, click "new bundle" and give it a name.  Use [Reverse domain name notation](https://en.wikipedia.org/wiki/Reverse_domain_name_notation) to give your bundle a unique name, like `org.flyingmonkeys.myproject`.
@@ -77,4 +77,7 @@ In the bottom right of your app, you should see the debugger.  Check the checkbo
 
 ## Commit Changes
 Click the "commit" button, which brings up a list of staged and unstaged changes.  Click "stage" for each row to stage for the next commit.  Click "commit" to commit the changes, and supply a commit summary.
+
+## Conclusion
+Congrats!  You've completed the quickstart.  Next, browse over to the [cheatsheet](cheatsheet.md) to see more of what you can do with Aquameta.
 

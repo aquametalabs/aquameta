@@ -112,3 +112,6 @@ widget.sync(users, w.find('.user_container'), function(user) {
 ```
 
 
+## 4. Events
+
+w.trigger('')....
