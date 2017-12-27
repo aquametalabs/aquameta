@@ -80,6 +80,21 @@ customers.each(function( customer ) {
 ```javascript
 customers.related_rows('id','beehive.order','customer_id').then(function(orders) {
     // now ya have a orders RowSet, but only orders that reference the customers
+    orders.forEach(function(order) {
+        // now we have a Row object 'order' 
+
+        // get fields
+        var customer_name = order.get( 'name' );
+        var customer_id = order.get( 'id' );
+
+        // set a field
+        order.set( 'name', 'Some New Name' );
+
+        // save the change
+        order.update().then(function() {
+            alert("We updated a customer");
+        };
+    }
 });
 ```
 
