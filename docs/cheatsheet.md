@@ -2,7 +2,7 @@
 
 Quick summary of Aquameta APIs and patterns.
 
-## Widgets
+## 1. Widgets
 Aquameta applications are made up of widgets.  A widget is a row in the database which contains fields of html, css and javascript.
 
 ### Available Variables
@@ -52,8 +52,11 @@ Widgets can call other widgets, via the `widget()` function.  The `name` argumen
 w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 ```
 
-## `datum.js`
+## 2. Database API
 API for reading and writing data from the database.
+
+### AQ.Database(url)
+
 
 ### AQ.Relation.rows([, modifiers ])
 Simple example:
@@ -81,7 +84,9 @@ customers.related_rows('id','beehive.order','customer_id').then(function(orders)
 ```
 
 
-## `widget.sync(RowSet, $container, widget_function)`
+## 3. Combining Widgets and Data
+
+### `widget.sync(RowSet, $container, widget_function)`
 For each row in RowSet, append the specified widget to the container.
 
 ```javascript
