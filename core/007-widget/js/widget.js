@@ -4,7 +4,7 @@
 * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
 * Project: http://aquameta.com/
 ******************************************************************************/
-define(['/doT.min.js', 'jQuery.min.js', '/datum.js'], function(doT, $, AQ, undefined) {
+define(['/doT.min.js', '/jQuery.min.js', '/datum.js'], function(doT, $, AQ, undefined) {
 
     'use strict';
 
