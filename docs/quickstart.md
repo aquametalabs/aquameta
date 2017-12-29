@@ -3,6 +3,9 @@
 This document guides you through the minimal steps to install Aquameta and create a new bundle and application.
 
 ## Install with Docker
+
+If you don't have Docker installed, [install it](https://docs.docker.com/engine/installation/).  Then:
+
 ```bash
 docker pull aquametalabs/aquameta:0.1.0-rc1
 
