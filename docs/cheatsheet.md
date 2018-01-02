@@ -36,6 +36,49 @@ Type "help" for help.
 aquameta=# 
 ```
 
+### show schemas
+```sh
+aquameta=# \dn
+    List of schemas
+    Name     |  Owner   
+-------------+----------
+ bundle      | root
+ endpoint    | root
+ event       | root
+ filesystem  | root
+ http_client | root
+ ide         | root
+ meta        | root
+ public      | postgres
+ semantics   | root
+ widget      | root
+(10 rows)
+
+```
+
+### `create schema`
+```sh
+aquameta=# create schema 'my_project';
+CREATE SCHEMA
+```
+
+### `set search_path`
+```sh
+aquameta=# set search_path=my_project;
+```
+
+### `create table`
+```sh
+aquameta=# create table some_table (
+id serial primary key,
+message text,
+color text,
+number integer);
+CREATE TABLE
+```
+
+You can do a lot with PostgreSQL.  Consult the [documentation](https://www.postgresql.org/docs/current/static/index.html) for more information.
+
 
 ## 3. Bundles
 A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.  The bundle management interface can be accessed via the browser at `/dev`, to manage bundles and create new ones, as well as stage and commit changes, and checkout previous versions of a repository.
