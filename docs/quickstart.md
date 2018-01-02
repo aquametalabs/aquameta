@@ -97,7 +97,7 @@ Browse to the page that you created, whatever path you supplied for the Base Pag
 In the bottom right of your app, you should see the debugger.  Check the checkbox, to bring up the list of widgets on the screen.  Click into any widget to edit it.
 
 ## 7. Commit Changes
-Click the "commit" button, which brings up a list of staged and unstaged changes.  Click "stage" for each row to stage for the next commit.  Click "commit" to commit the changes, and supply a commit summary.
+From the `/dev` interface, click the "commit" button, which brings up a list of staged and unstaged changes.  Click "stage" for each row to stage for the next commit.  Click "commit" to commit the changes, and supply a commit summary.
 
 ## Conclusion
 Congrats!  You've completed the quickstart.  Next, check out the [cheatsheet](cheatsheet.md) for a quick tour of Aquameta features and patterns, or dive into the [API Documentation](api.md).

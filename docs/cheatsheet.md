@@ -20,19 +20,25 @@ Once installed, note the Docker container id for use in all command-line argumen
 
 ### bash shell
 ```sh
-docker exec -it 0f84133a577e bash
+$ docker exec -it 0f84133a577e bash
+root@0f84133a577e:/s/aquameta#
 ```
 
 ## 2. Database
-Underneath the hood is a full-blown [PostgreSQL]() database, which you can access via the command line (and someday a fancy user interface) to create schemas, tables, etc. for use in your application.  Fire up a bash shell (above) and then open open the database via:
+Underneath the hood is a full-blown [PostgreSQL]() database, which you can access via the command line (and someday a fancy user interface) to create schemas, tables, etc. for use in your application.
 
+### open database shell
 ```sh
-psql aquameta
+$ docker exec -it 0f84133a577e psql aquameta
+psql (9.6.0)
+Type "help" for help.
+
+aquameta=# 
 ```
 
 
 ## 3. Bundles
-A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.  The bundle management interface can be accessed via the browser at `/dev`, to manage bundles and create new ones.
+A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.  The bundle management interface can be accessed via the browser at `/dev`, to manage bundles and create new ones, as well as stage and commit changes, and checkout previous versions of a repository.
 
 ## 4. Resources
 
@@ -125,17 +131,16 @@ w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 
 ## 6. Database API
 ### `AQ.Database(url)`
-Every widget has a variable called `endpoint` that references the widget's database.  The database object is instantiated in the Base HTML page, via the call to:
+Every widget has a variable called `endpoint` that can be used to access the database.  The database object is instantiated in the [Base HTML](#4-Resources) page, via the call to:
 
 ```javascript
 window.endpoint = new AQ.Database( '/endpoint/0.1', { evented: 'no' } );
 ```
 
+### Requesting Rows
 
+Here's a simple call to request all rows in the table `my_project.customers`:
 
-### Requesting Data
-
-AQ.Relation.rows([, modifiers ])
 Simple example:
 ```javascript
 // get a promise for some rows
@@ -172,6 +177,38 @@ customers.related_rows('id','beehive.order','customer_id').then(function(orders)
             alert("We updated a customer");
         };
     }
+});
+```
+
+
+### Using `.rows(Modifiers)`
+
+Modifiers provide a simple mechanisms for filtering result data via `where`, `order`, `limit`, and `offset`.
+
+Modifiers do not change the *structure* of data.  For more advanced server-side manipulation, create a [view](https://www.postgresql.org/docs/current/static/sql-createview.html).
+
+```javascript
+var customers = endpoint.schema('beehive').table('customer').rows({
+    where: [{
+        // the name of the column to filter on
+        name: 'name',
+        // the operation to use
+        op: 'like'
+        // the value to check against
+        value: '%john%'
+        // this results in a SQL statement "WHERE name like '%john%'"
+    }],
+    order_by: {
+        // column to sort on
+        column: 'name',
+        // direction to sort, either 'asc' or 'desc'
+        direction: 'desc'
+        // result: ORDER BY name desc
+    },
+    // only return a max of 20 results
+    limit: 20,
+    // skip the first 10 results
+    offset: 10
 });
 ```
 
