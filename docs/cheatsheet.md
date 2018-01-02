@@ -94,10 +94,12 @@ Aquameta uses the [doT.js](http://olado.github.io/doT/index.html) template langu
 
 In the widget's HTML:
 ```html
-<p>Hello my name is {{= name }}</p>
+<div id="{{= id }}" class="{{= name }}">
+    <p>Hello, I am a widget who was passed a variable called "color" whose value is  {{= color }}</p>
+</div>
 ```
 
-In the widget's CSS:
+In the widget's CSS, we use `{{= name }}` to reference the name of the widget and apply CSS rules to it:
 ```css
 /* apply css to the base element of the widget */
 .{{= name }} {
@@ -112,6 +114,9 @@ In the widget's CSS:
 ```
 
 ### Javascript
+
+A widget's Javascript is executed after the widget's HTML and CSS are inserted into the page.  From the Javascript, you can insert data into the widget's HTML, bind DOM events to handler functions, access the database, and more.
+
 Typically the fist line of a widget sets up the `w` variable, a jQuery object that references this widget:
 
 ```javascript
@@ -120,7 +125,43 @@ var w = $("#"+id);
 // my widget code here
 ```
 
-## `widget(name, args)`
+#### Simple button click handler
+
+html:
+```html
+<div id="{{= id }}" class="{{= name }}">
+    <button>click me</button>
+</div>
+```
+
+javascript:
+```javascript
+var w = $("#"+id);
+
+w.find('button').click(function() {
+    alert ('You clicked the button');
+});
+```
+
+#### Set contents of an element
+
+html:
+```html
+<div id="{{= id }}" class="{{= name }}">
+    <h3 class='person_name'></h3>
+</div>
+```
+
+javascript:
+```javascript
+var w = $("#"+id);
+
+w.find('div.person_name').html("John Smith");
+});
+```
+
+
+## Calling other widgets via `widget(name, args)`
 Widgets are loaded with a call to the widget() function, which returns an HTML fragment suitable for inserting into the page.  In the call to widget, the `name` argument expects a string with syntax `{bundle_alias}:{widget_name}`; the `args` argument is a Javascript object containing any arguments passed into the widget.
 
 For example, if we have a widget named "colorpicker" in a bundle imported with `AQ.Widget.import( 'org.fancypants.myproject', 'mp', endpoint )`, which expects an argument called `start_color`, the widget would be put on the screen as follows:
@@ -222,26 +263,6 @@ For each row in RowSet, append the specified widget to the container.
 var users = endpoint.schema('myproj').table('users').rows();
 widget.sync(users, w.find('.user_container'), function(user) {
     return widget('mp:user_list_item', { user: user });
-});
-```
-
-## 8. Local Event Handling
-
-Handle a button click:
-
-html:
-
-```html
-<div id="{{= id }}" class="{{= name }}">
-    <button>click me</button>
-</div>
-```
-
-javascript:
-
-```javascript
-w.find('button').click(function() {
-    alert ('You clicked the button');
 });
 ```
 
