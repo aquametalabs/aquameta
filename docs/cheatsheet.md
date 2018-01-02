@@ -203,11 +203,9 @@ javascript:
 var w = $("#"+id);
 
 w.find('div.person_name').html("John Smith");
-});
 ```
 
-
-## Calling other widgets via `widget(name, args)`
+### Calling other widgets via `widget(name, args)`
 Widgets are loaded with a call to the widget() function, which returns an HTML fragment suitable for inserting into the page.  In the call to widget, the `name` argument expects a string with syntax `{bundle_alias}:{widget_name}`; the `args` argument is a Javascript object containing any arguments passed into the widget.
 
 For example, if we have a widget named "colorpicker" in a bundle imported with `AQ.Widget.import( 'org.fancypants.myproject', 'mp', endpoint )`, which expects an argument called `start_color`, the widget would be put on the screen as follows:
@@ -216,7 +214,11 @@ For example, if we have a widget named "colorpicker" in a bundle imported with `
 w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 ```
 
+
+
+
 ## 6. Database API
+
 ### `AQ.Database(url)`
 Every widget has a variable called `endpoint` that can be used to access the database.  The database object is instantiated in the [Base HTML](#4-Resources) page, via the call to:
 
@@ -224,58 +226,98 @@ Every widget has a variable called `endpoint` that can be used to access the dat
 window.endpoint = new AQ.Database( '/endpoint/0.1', { evented: 'no' } );
 ```
 
-### Requesting Rows
+### Requesting a `AQ.Rowset` via `.rows()`
 
-Here's a simple call to request all rows in the table `my_project.customers`:
+Here's a simple call to request all rows in the table `my_project.customers`.  It returns a Promise for a `AQ.Rowset` as described in the [`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/) API.
 
-Simple example:
 ```javascript
-// get a promise for some rows
+// get a promise for all rows in the beehive.customer table
 var customers = endpoint.schema('beehive').table('customer').rows();
+```
 
-// when the promise is resolved, iterate through the results
-customers.then(function( customer ){
+This code immediately assigns `customers` to a Rowset Promise, and then asyncronously fires a request to the server to retrieve the actual customers data.
+
+### Handling Promise Resolution via `.then()`
+
+When the server returns the customer rows, we can attach an event handler via the `Promise.then()`:
+
+```javascript
+customers.then(function( customers ){
+    console.log('We got customers: ', customer);
 }).catch(function( e ){
     console.error("Error loading customers: ", e);
 });
+```
 
+### Iterating Through an `AQ.Rowset` via `.forEach()`
+
+We can iterate through a customers Rowset, and call a function on each row in the Rowset.  The function will be passed an `AQ.Row` object:
+
+```javascript
 // iterate through customers
-customers.each(function( customer ) {
-    console.log(customer.get('name'));
+customers.forEach(function( customer ) {
+    // customer is a AQ.Row object
+    console.log(customer);
+
+    // 
 })
 ```
 
-### `RowSet.related_rows(local_key_column, related_table, related_key_column [, modifiers ])`
+### Accessing Row data via `AQ.Row.get()`, `AQ.Row.set()` and `AQ.Row.update()`
+
+Each `AQ.Row` object has a bunch of functions for getting, setting and saving data:
+
 ```javascript
-customers.related_rows('id','beehive.order','customer_id').then(function(orders) {
-    // now ya have a orders RowSet, but only orders that reference the customers
-    orders.forEach(function(order) {
-        // now we have a Row object 'order' 
+customers.forEach(function( customer ) {
+    // get the customer address
+    var address = customer.get('address');
 
-        // get fields
-        var customer_name = order.get( 'name' );
-        var customer_id = order.get( 'id' );
+    // set the customer name
+    customer.set('name', 'Sally Smith');
 
-        // set a field
-        order.set( 'name', 'Some New Name' );
-
-        // save the change
-        order.update().then(function() {
-            alert("We updated a customer");
-        };
-    }
-});
+    // save the customer to the database
+    customer.update().then(function(customer) {
+        console.log('Customer saved');
+    }).catch(function(e) {
+        console.log('Customer update failed: ', e);
+    });
+})
 ```
 
+### Requesting a Single `AQ.Row` via `AQ.Relation.row(pk_name, pk_value)`
 
-### Using `.rows(Modifiers)`
+```javascript
+var customers = endpoint.schema('beehive').table('customer').row('id', 12345);
+```
+
+### Requesting Related Rows via `AQ.Row.related_rows()`
+
+Often times we have a row, and need to jump across a foreign-key to get related rows that foreign-key to or from the first row.  The `Row.related_rows()` method makes this possible:
+
+```
+AQ.Row.related_rows(local_key_column, related_table, related_key_column [, modifiers ])
+```
+
+For example, let's say we have two tables, `beehive.customer` and `beehive.order`.  Every `beehive.order` row foreign-keys to the the customer table's `id` field via the `order.customer_id` field.
+
+Once we have a customer object, we can retrieve all orders that foreign-key to it via:
+
+```javascript
+var orders = customer.related_rows('id','beehive.order','customer_id');
+```
+
+Now, `orders` is assigned a Promise to an `AQ.Rowset` containing all orders that foreign-key to this customer.
+
+
+### Filtering Results Using `.rows(Modifiers)`
 
 Modifiers provide a simple mechanisms for filtering result data via `where`, `order`, `limit`, and `offset`.
 
-Modifiers do not change the *structure* of data.  For more advanced server-side manipulation, create a [view](https://www.postgresql.org/docs/current/static/sql-createview.html).
+Modifiers never change the *structure* of results, they just sort and filter the results.  For more advanced server-side data manipulation, create a [view](https://www.postgresql.org/docs/current/static/sql-createview.html).
 
 ```javascript
 var customers = endpoint.schema('beehive').table('customer').rows({
+    // filter out results that do not match the supplied where-clause(s)
     where: [{
         // the name of the column to filter on
         name: 'name',
@@ -285,6 +327,7 @@ var customers = endpoint.schema('beehive').table('customer').rows({
         value: '%john%'
         // this results in a SQL statement "WHERE name like '%john%'"
     }],
+    // sort the results
     order_by: {
         // column to sort on
         column: 'name',
@@ -300,15 +343,33 @@ var customers = endpoint.schema('beehive').table('customer').rows({
 ```
 
 
-## 7. Combining Widgets and Data
+## 7. Combining Widgets and Data via `widget.sync()`
 
-### `widget.sync(RowSet, $container, widget_function)`
-For each row in RowSet, append the specified widget to the container.
+Often times when we have a `AQ.Rowset`, we want to put a widget on the screen for each row in the rowset.  We can of course iterate through the rowset with a `.forEach()` call, but `widget.sync` is a lot cooler.
 
+`widget.sync` takes a Rowset, iterates through each row, calls the specified widget_function, passing it the row, and appends what the function returns to the supplied container.  
+
+Syntax: `widget.sync(Rowset, $container, widget_function)`
+
+
+html:
+```html
+<div id="{{= id }}" class="{{= name }}">
+
+    <h3>All Customers</h3>
+
+    <div class='customers_container'>
+         <!-- customer widgets will go here -->
+    </div>
+</div>
+```
+
+javascript:
 ```javascript
-var users = endpoint.schema('myproj').table('users').rows();
-widget.sync(users, w.find('.user_container'), function(user) {
-    return widget('mp:user_list_item', { user: user });
+var customers = endpoint.schema('beehive').table('customer').rows();
+
+widget.sync(customers, w.find('.customers_container'), function(customer) {
+    return widget('bh:customer_summary', { customer: customer });
 });
 ```
 
