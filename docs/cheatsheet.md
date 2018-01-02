@@ -46,7 +46,9 @@ var w = $("#"+id);
 ```
 
 ## `widget(name, args)`
-Widgets can call other widgets, via the `widget()` function.  The `name` argument expects a string containing the bundle alias plus widget name.  For example, if we have a widget named "colorpicker" in a bundle imported with `AQ.Widget.import( 'org.fancypants.myproject', 'mp', endpoint )`, then the widget is called as follows:
+Widgets are loaded with a call to the widget() function.  The `name` argument expects a string with syntax `{bundle_alias}:{widget_name}`.  The `args` argument is a Javascript object containing any arguments passed into the widget.
+
+For example, if we have a widget named "colorpicker" in a bundle imported with `AQ.Widget.import( 'org.fancypants.myproject', 'mp', endpoint )`, then the widget is called as follows:
 
 ```javascript
 w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
@@ -56,7 +58,7 @@ w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 API for reading and writing data from the database.
 
 ### AQ.Database(url)
-
+Every widget has a variable called `endpoint` that references the database it was loaded from, so you usually don't have to call this explicitly.
 
 ### AQ.Relation.rows([, modifiers ])
 Simple example:
@@ -105,13 +107,71 @@ customers.related_rows('id','beehive.order','customer_id').then(function(orders)
 For each row in RowSet, append the specified widget to the container.
 
 ```javascript
-var users = endpoint.schema('myproj').table('users').rows()
+var users = endpoint.schema('myproj').table('users').rows();
 widget.sync(users, w.find('.user_container'), function(user) {
     return widget('mp:user_list_item', { user: user });
 });
 ```
 
+## 4. Local Event Handling
 
-## 4. Events
+Handle a button click:
 
-w.trigger('')....
+html:
+
+```html
+<div id="{{= id }}" class="{{= name }}">
+    <button>click me</button>
+</div>
+```
+
+javascript:
+
+```javascript
+w.find('button').click(function() {
+    alert ('You clicked the button');
+});
+```
+
+
+## 5. Events Between Widgets
+
+Widgets communicate with each other using DOM events via jQuery's [trigger()]() and [bind()]().  Trigger fires events that bubble up the DOM tree.  Bind listens for events with the same name, and fires the specified function, passing in any arguments from the trigger call.
+
+For example, let's say we want to create a widget that flashes a message on the screen to the user, and then any other widget can trigger an event to show send that wiget a message.  We will name the event `alert_message`.
+
+First, let's make a widget that triggers the `alert_message` event when a button is clicked.
+
+html:
+```html
+<div id="{{= id }}" class="{{= name }}">
+    <button class='message_sender'>Click me to alert a message!</button>
+</div>
+```
+
+javascript:
+```javascript
+var w = $("#"+id);
+
+w.find('button.message_sender').click(function() {
+    w.trigger('alert_message', {
+        message: 'Hey you clicked a button!'
+    });
+});
+```
+
+Next lets setup the message reciever.
+
+The message reciever should bind to some parent widget, often times the root widget of the app, so it recieves events from any child widget of .main, which should be all the widgets in the app.
+
+```javascript
+w.closest('.main').bind('alert_message', function(e,o) {
+    // o is whatever is passed into the second argument of .trigger()
+    var message = o.message;
+
+    // do the alert
+    alert(message);
+});
+```
+
+Now, whenever .main recieves a `alert_message` event, this handler will fire and show the message passed in.

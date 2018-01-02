@@ -7,13 +7,13 @@ This document guides you through the minimal steps to install Aquameta and creat
 If you don't have Docker installed, [install it](https://docs.docker.com/engine/installation/).  Then:
 
 ```bash
-docker pull aquametalabs/aquameta:0.1.0-rc1
+docker pull aquametalabs/aquameta:0.2.0-rc1
 
 # run on standard ports
-docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.1.0-rc1
+docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.2.0-rc1
 
 # run on alternate ports: Webserver on port 8080, PostgreSQL on port 5433
-docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.1.0-rc1
+docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.2.0-rc1
 ```
 
 Your Aquameta instance is now installed.  Access the IDE by browsing to whatever hostname and port you installed it on, at `http://{hostname}:{port}/dev`, for example:
@@ -40,11 +40,12 @@ Here is the minimal base page template:
                 // some commonly used bundles
                 AQ.Widget.import( 'org.aquameta.core.ide', 'ide', endpoint );
     
-                // import your project bundle's bundle, and specify a namespace alias
+                // import your project's bundle, and specify a namespace alias
                 // CUSTOMIZE THIS:
                 AQ.Widget.import( 'org.flyingmonkeys.myproject', 'myproj', endpoint );
 
-                // add your project's base widget, usually called "main"
+                // append a base widget to the page, usually called "main".
+                // syntax is {bundle_alias}:{widget_name}.
                 // CUSTOMIZE THIS:
                 $('body').append( widget( 'myproj:main' ) );
 
@@ -82,5 +83,5 @@ In the bottom right of your app, you should see the debugger.  Check the checkbo
 Click the "commit" button, which brings up a list of staged and unstaged changes.  Click "stage" for each row to stage for the next commit.  Click "commit" to commit the changes, and supply a commit summary.
 
 ## Conclusion
-Congrats!  You've completed the quickstart.  Next, browse over to the [cheatsheet](cheatsheet.md) to see more of what you can do with Aquameta.
+Congrats!  You've completed the quickstart.  Next, check out the [cheatsheet](cheatsheet.md) for a quick tour of Aquameta features and patterns, or dive into the [API Documentation](api.md).
 
