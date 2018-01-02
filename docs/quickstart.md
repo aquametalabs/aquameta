@@ -1,8 +1,17 @@
 # Aquameta 0.2 - Quick Start
 
-This document guides you through the minimal steps to install Aquameta and create a new bundle and application.
+This document guides you through the minimal steps to get started with Aquameta.  It contians the following steps:
 
-## Install with Docker
+- install Aquameta via Docker
+- create a new bundle
+- create a base HTML resource that imports the bundle and calls a widget
+- create a simple widget
+- view the resource and widget
+- open the on-screen debugger 
+- commit the changes to the bundle
+
+
+## 1. Install with Docker
 
 If you don't have Docker installed, [install it](https://docs.docker.com/engine/installation/).  Then:
 
@@ -20,10 +29,10 @@ Your Aquameta instance is now installed.  Access the IDE by browsing to whatever
 
 http://localhost:80/dev
 
-## Create a Bundle
+## 2. Create a Bundle
 From the `/dev` interface, click "new bundle" and give it a name.  Use [Reverse domain name notation](https://en.wikipedia.org/wiki/Reverse_domain_name_notation) to give your bundle a unique name, like `org.flyingmonkeys.myproject`.
 
-## Create a Base Page
+## 3. Create a Base Page
 Applications have a base HTML page, a static resource that bootstraps the app.  To create the page, click 'new row', then choose 'Resource', and give the resource a path that starts with a /, like `/myproj`.
 
 Here is the minimal base page template:  
@@ -62,7 +71,7 @@ Here is the minimal base page template:
 ```
 Paste this into the code section of the resource, customize the variables, and hit save (or CTRL-S).
 
-## Create a Main Widget
+## 4. Create a Main Widget
 In our base HTML page, we added to the page the `'myproj:main'` widget.  We need to make that widget.
 
 Click "New Row" and then "Widget", enter "main" for the name.  This will bring up a widget editor.  Under the HTML tab, set the HTML to:
@@ -73,13 +82,13 @@ Click "New Row" and then "Widget", enter "main" for the name.  This will bring u
 </div>
 ```
 
-## View Your App
-Finally, browse to the page that you created, whatever path you supplied for the Base Page, and you should see your Hello World widget.
+## 5. View Your App
+Browse to the page that you created, whatever path you supplied for the Base Page, and you should see your Hello World widget.
 
-## Open the Debugger
+## 6. Open the Debugger
 In the bottom right of your app, you should see the debugger.  Check the checkbox, to bring up the list of widgets on the screen.  Click into any widget to edit it.
 
-## Commit Changes
+## 7. Commit Changes
 Click the "commit" button, which brings up a list of staged and unstaged changes.  Click "stage" for each row to stage for the next commit.  Click "commit" to commit the changes, and supply a commit summary.
 
 ## Conclusion

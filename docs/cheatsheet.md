@@ -2,7 +2,47 @@
 
 Quick summary of Aquameta APIs and patterns.
 
-## 1. Widgets
+## 1. Bundles
+A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.
+
+## 2. Resources
+
+A resource is a static base page that is served up at the specified `path`.  You can put any HTML you want in a resource, but typically they look like this:
+
+```html
+<html>
+    <head>
+        <title>My Cool Project</title>
+        <script src='/system.js'></script>
+        <script>
+            System.import( '/widget.js' ).then( function( widget ) {
+                window.endpoint = new AQ.Database( '/endpoint/0.1', { evented: 'no' } );
+
+                // some commonly used bundles
+                AQ.Widget.import( 'org.aquameta.core.ide', 'ide', endpoint );
+    
+                // import your project's bundle, and specify a namespace alias
+                // CUSTOMIZE THIS:
+                AQ.Widget.import( 'org.flyingmonkeys.myproject', 'myproj', endpoint );
+
+                // append a base widget to the page, usually called "main".
+                // syntax is {bundle_alias}:{widget_name}.
+                // CUSTOMIZE THIS:
+                $('body').append( widget( 'myproj:main' ) );
+
+                // add the on-screen debugger
+                $('body').append( widget( 'ide:debugger3_manager' ) );
+
+            }).catch( function( e ) {
+                console.log( 'System.js error:', e );
+            });
+         </script>
+    </head>
+    <body></body>
+</html>
+```
+
+## 3. Widgets
 Aquameta applications are made up of widgets.  A widget is a row in the database which contains fields of html, css and javascript.
 
 ### Available Variables
@@ -54,7 +94,7 @@ For example, if we have a widget named "colorpicker" in a bundle imported with `
 w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 ```
 
-## 2. Database API
+## 4. Database API
 API for reading and writing data from the database.
 
 ### AQ.Database(url)
@@ -101,7 +141,7 @@ customers.related_rows('id','beehive.order','customer_id').then(function(orders)
 ```
 
 
-## 3. Combining Widgets and Data
+## 5. Combining Widgets and Data
 
 ### `widget.sync(RowSet, $container, widget_function)`
 For each row in RowSet, append the specified widget to the container.
@@ -113,7 +153,7 @@ widget.sync(users, w.find('.user_container'), function(user) {
 });
 ```
 
-## 4. Local Event Handling
+## 6. Local Event Handling
 
 Handle a button click:
 
@@ -134,7 +174,7 @@ w.find('button').click(function() {
 ```
 
 
-## 5. Events Between Widgets
+## 7. Events Between Widgets
 
 Widgets communicate with each other using DOM events via jQuery's [trigger()]() and [bind()]().  Trigger fires events that bubble up the DOM tree.  Bind listens for events with the same name, and fires the specified function, passing in any arguments from the trigger call.
 
@@ -175,3 +215,8 @@ w.closest('.main').bind('alert_message', function(e,o) {
 ```
 
 Now, whenever .main recieves a `alert_message` event, this handler will fire and show the message passed in.
+
+
+## Conclusion
+
+
