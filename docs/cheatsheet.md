@@ -37,7 +37,7 @@ aquameta=#
 ```
 
 ### show schemas
-```sh
+```sql
 aquameta=# \dn
     List of schemas
     Name     |  Owner   
@@ -53,28 +53,31 @@ aquameta=# \dn
  semantics   | root
  widget      | root
 (10 rows)
-
 ```
 
 ### `create schema`
-```sh
+```sql
 aquameta=# create schema 'my_project';
 CREATE SCHEMA
+aquameta=#
 ```
 
 ### `set search_path`
-```sh
+```sql
 aquameta=# set search_path=my_project;
+SET
+aquameta=#
 ```
 
 ### `create table`
-```sh
+```sql
 aquameta=# create table some_table (
-id serial primary key,
-message text,
-color text,
-number integer);
+aquameta(# id serial primary key,
+aquameta(# message text,
+aquameta(# color text,
+aquameta(# number integer);
 CREATE TABLE
+aquameta=#
 ```
 
 You can do a lot with PostgreSQL.  Consult the [documentation](https://www.postgresql.org/docs/current/static/index.html) for more information.
