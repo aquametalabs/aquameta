@@ -8,7 +8,7 @@ set -o pipefail
 # Prompting and sanity checking
 #############################################################################
 
-echo "Aquameta 0.1 Installer Script"
+echo "Aquameta 0.2 Installer Script"
 echo "This script should be run on an Ubuntu Linux server instance, 14.04 or greater."
 echo "This code is highly experimental and should NOT be run in a production environment."
 

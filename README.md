@@ -11,7 +11,7 @@ more info, see [aquameta.org](http://aquameta.org/).
 Status
 ------
 
-Aquameta is in early prototype stages, version 0.1.  Do not use it in a
+Aquameta is in early prototype stages, version 0.2.  Do not use it in a
 production, or untrusted environment.
 
 Core Modules
@@ -35,7 +35,7 @@ Aquameta can be installed either via Docker (very easy) or from source (very dif
 To install via Docker, the easiest way is to just pull down the latest image from Docker Hub:
 
 ```
-docker pull aquametalabs/aquameta:0.1.0-rc1
+docker pull aquametalabs/aquameta:0.2.0-rc1
 ```
 
 Alternately, you can clone the Aquameta git repository and build your own Docker image (which takes about 15 minutes):
@@ -49,14 +49,14 @@ docker build -t aquametalabs/aquameta .
 Once you've either pulled or built a Aquameta image, run the container to start it up:
 
 ```
-docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta:0.1.0-rc1
+docker run -dit -p 80:80 -p 5432:5432 --privileged aquametalabs/aquameta:0.2.0-rc1
 ```
 
 If you wish to use alternate ports, they can be changed in the `docker run` command.
 
 ```
 # run the Aquameta webserver on port 8080, and the PostgreSQL server on port 5433
-sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged aquametalabs/aquameta:0.1.0-rc1
+sudo docker run -dit -p 8080:80 -p 5433:5432 --privileged aquametalabs/aquameta:0.2.0-rc1
 ```
 
 Make a note of the container-id that this command outputs.  You can use it to

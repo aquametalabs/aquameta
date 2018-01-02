@@ -13,7 +13,7 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #
 # access the ide by browsing to port 80 of the host machine.
 
-ENV REFRESHED_AT 2017-08-14
+ENV REFRESHED_AT 2018-01-02
 
 # cp the repo to /s
 RUN mkdir -p /s/aquameta
