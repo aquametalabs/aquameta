@@ -16,16 +16,24 @@ This document guides you through the minimal steps to get started with Aquameta.
 If you don't have Docker installed, [install it](https://docs.docker.com/engine/installation/).  Then:
 
 ```bash
-docker pull aquametalabs/aquameta:0.2.0-rc1
+$ docker pull aquametalabs/aquameta:0.2.0-rc1
 
 # run on standard ports
-docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.2.0-rc1
+$ docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.2.0-rc1
 
 # run on alternate ports: Webserver on port 8080, PostgreSQL on port 5433
-docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.2.0-rc1
+$ docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.2.0-rc1
+1c59e82ed50ff4463af35d2cc5435c3086f4d67f0046365b4df505dc91e95d19
 ```
 
-Your Aquameta instance is now installed.  Access the IDE by browsing to whatever hostname and port you installed it on, at `http://{hostname}:{port}/dev`, for example:
+Your Aquameta instance is now installed.  The `docker run` command prints a container-id, which you should take save for running future commands against in the running docker container.  For example, to get a bash shell in the container, run:
+
+```bash
+$ docker exec -it 1c59e82ed50ff4463af35d2cc5435c3086f4d67f0046365b4df505dc91e95d19 bash
+root@0f84133a577e:/s/aquameta#
+```
+
+Now that you have a running container, you can access the IDE by browsing to whatever hostname and port you installed it on, at `http://{hostname}:{port}/dev`, for example:
 
 http://localhost:80/dev
 

@@ -1,11 +1,40 @@
 # Aquameta 0.2 - Cheat Sheet
 
-Quick summary of Aquameta APIs and patterns.
+Summary of Aquameta APIs and patterns.
 
-## 1. Bundles
-A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.
+- shell access via docker
+- command-line access to the database
+- bundles
+- resources
+- widgets
+- database API
+- combining widgets and data
+- local event handling
+- communicating between widgets 
 
-## 2. Resources
+## 1. Shell Access via Docker
+
+Aquameta is installed via Docker.  See the [quickstart](quickstart.md) for info on how to install Aquameta.
+
+Once installed, note the Docker container id for use in all command-line arguments.  Replace the `0f84133a577e` below with your docker container id:
+
+### bash shell
+```sh
+docker exec -it 0f84133a577e bash
+```
+
+## 2. Database
+Underneath the hood is a full-blown [PostgreSQL]() database, which you can access via the command line (and someday a fancy user interface) to create schemas, tables, etc. for use in your application.  Fire up a bash shell (above) and then open open the database via:
+
+```sh
+psql aquameta
+```
+
+
+## 3. Bundles
+A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.  The bundle management interface can be accessed via the browser at `/dev`, to manage bundles and create new ones.
+
+## 4. Resources
 
 A resource is a static base page that is served up at the specified `path`.  You can put any HTML you want in a resource, but typically they look like this:
 
@@ -42,7 +71,7 @@ A resource is a static base page that is served up at the specified `path`.  You
 </html>
 ```
 
-## 3. Widgets
+## 5. Widgets
 Aquameta applications are made up of widgets.  A widget is a row in the database which contains fields of html, css and javascript.
 
 ### Available Variables
@@ -86,21 +115,27 @@ var w = $("#"+id);
 ```
 
 ## `widget(name, args)`
-Widgets are loaded with a call to the widget() function.  The `name` argument expects a string with syntax `{bundle_alias}:{widget_name}`.  The `args` argument is a Javascript object containing any arguments passed into the widget.
+Widgets are loaded with a call to the widget() function, which returns an HTML fragment suitable for inserting into the page.  In the call to widget, the `name` argument expects a string with syntax `{bundle_alias}:{widget_name}`; the `args` argument is a Javascript object containing any arguments passed into the widget.
 
-For example, if we have a widget named "colorpicker" in a bundle imported with `AQ.Widget.import( 'org.fancypants.myproject', 'mp', endpoint )`, then the widget is called as follows:
+For example, if we have a widget named "colorpicker" in a bundle imported with `AQ.Widget.import( 'org.fancypants.myproject', 'mp', endpoint )`, which expects an argument called `start_color`, the widget would be put on the screen as follows:
 
 ```javascript
 w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 ```
 
-## 4. Database API
-API for reading and writing data from the database.
+## 6. Database API
+### `AQ.Database(url)`
+Every widget has a variable called `endpoint` that references the widget's database.  The database object is instantiated in the Base HTML page, via the call to:
 
-### AQ.Database(url)
-Every widget has a variable called `endpoint` that references the database it was loaded from, so you usually don't have to call this explicitly.
+```javascript
+window.endpoint = new AQ.Database( '/endpoint/0.1', { evented: 'no' } );
+```
 
-### AQ.Relation.rows([, modifiers ])
+
+
+### Requesting Data
+
+AQ.Relation.rows([, modifiers ])
 Simple example:
 ```javascript
 // get a promise for some rows
@@ -141,7 +176,7 @@ customers.related_rows('id','beehive.order','customer_id').then(function(orders)
 ```
 
 
-## 5. Combining Widgets and Data
+## 7. Combining Widgets and Data
 
 ### `widget.sync(RowSet, $container, widget_function)`
 For each row in RowSet, append the specified widget to the container.
@@ -153,7 +188,7 @@ widget.sync(users, w.find('.user_container'), function(user) {
 });
 ```
 
-## 6. Local Event Handling
+## 8. Local Event Handling
 
 Handle a button click:
 
@@ -174,7 +209,7 @@ w.find('button').click(function() {
 ```
 
 
-## 7. Events Between Widgets
+## 8. Communication Between Widgets
 
 Widgets communicate with each other using DOM events via jQuery's [trigger()]() and [bind()]().  Trigger fires events that bubble up the DOM tree.  Bind listens for events with the same name, and fires the specified function, passing in any arguments from the trigger call.
 
@@ -219,4 +254,4 @@ Now, whenever .main recieves a `alert_message` event, this handler will fire and
 
 ## Conclusion
 
-
+The end.
