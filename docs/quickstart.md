@@ -1,6 +1,6 @@
 # Aquameta 0.2 - Quick Start
 
-This document guides you through the minimal steps to get started with Aquameta.  It contians the following steps:
+This document guides you through the minimal steps to get started with Aquameta.  It contains the following steps:
 
 - install Aquameta via Docker
 - create a new bundle
