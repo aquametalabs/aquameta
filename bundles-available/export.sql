@@ -10,3 +10,5 @@ select bundle.bundle_export_csv('org.aquameta.core.semantics','/s/aquameta/bundl
 select bundle.bundle_export_csv('org.aquameta.games.snake','/s/aquameta/bundles-available/org.aquameta.games.snake');
 select bundle.bundle_export_csv('org.aquameta.core.docs','/s/aquameta/bundles-available/org.aquameta.core.docs');
 select bundle.bundle_export_csv('org.aquameta.core.ide','/s/aquameta/bundles-available/org.aquameta.core.ide');
+select bundle.bundle_export_csv('org.aquameta.ui.fsm','/s/aquameta/bundles-available/org.aquameta.ui.fsm');
+select bundle.bundle_export_csv('org.aquameta.ui.tags','/s/aquameta/bundles-available/org.aquameta.ui.tags');
