@@ -4,3 +4,4 @@ a8b8f6a1-089a-4361-89d0-ad4bdd635323	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	a590fb
 b204e9ce-4e4a-47f4-be26-9dcd837470ea	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	08648cc8-c840-44a7-81df-e01e5dd7ef51	\N	b3acd0c0-e4b1-46b6-9976-3867df608584	2017-08-23 20:13:33.228299	add some metadata to the widget dom element, for bundle awareness
 b3acd0c0-e4b1-46b6-9976-3867df608584	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	d80d560e-8cdc-420c-b972-c33c9071b8e6	\N	8a855bb2-cd5d-4adf-aceb-630bbe8773cd	2017-08-16 15:25:28.542818	move dev environment to /dev, and add a home page
 c3b17873-d0b9-4faf-a5f0-5a077e4ce903	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	31e32dbc-af98-48f8-a42e-64bdc2ecf044	\N	b204e9ce-4e4a-47f4-be26-9dcd837470ea	2017-08-23 22:06:46.078115	fix debugger bugs
+c52c87b9-b626-4e35-a601-6f74ab8963d3	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	4b67fc33-f022-42b4-80f1-12136a0c2d18	\N	0d06852c-82b8-410c-93bb-aa0c24ba16d9	2018-01-14 19:10:23.920661	hideable debugger
