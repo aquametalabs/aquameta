@@ -53,7 +53,7 @@ Here is the minimal base page template:
         <script>
             System.import( '/widget.js' ).then( function( widget ) {
                 var db = new AQ.Database( '/endpoint/0.1', { evented: 'no' } );
-	            window.endpoint = db;
+                window.endpoint = db;
 
                 // some commonly used bundles
                 AQ.Widget.import( 'org.aquameta.core.ide', 'ide', endpoint );
