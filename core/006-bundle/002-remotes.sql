@@ -220,4 +220,60 @@ end;
 $$ language plpgsql;
 
 
+/*******************************************************************************
+*
+*
+* BUNDLE REMOTES -- postgres_fdw
+*
+* This version uses the postgres_fdw foreign data wrapper to mount remote
+* databases via a normal postgresql connection.  It uses IMPORT FOREIGN SCHEMA
+* to import the bundle schema, and then provides various comparison functions
+* for push, pull and merge.
+* 
+*******************************************************************************/
+create extension postgres_fdw;
+
+create or replace function mount_remote (
+    foreign_server_name text,
+    schema_name text,
+    host text,
+	port integer,
+    dbname text,
+    username text,
+    password text
+)
+returns boolean as
+$$
+begin
+	-- create a postgres_fdw server
+    execute format(
+        'create server %I
+            foreign data wrapper postgres_fdw
+            options (host %L, port %L, dbname %L)',
+
+        foreign_server_name, host, port, dbname
+    );
+
+	-- create a user mapping
+    execute format(
+        'create user mapping for current_user server %I options (user %L, password %L)',
+        foreign_server_name, username, password
+    );
+
+	-- create a schema
+    execute format(
+        'create schema %I',
+        schema_name
+    );
+
+	-- import foreign schema
+    execute format(
+        'import foreign schema bundle from server %I into %I options (import_default %L)',
+        foreign_server_name, schema_name, 'true'
+    );
+
+    return true;
+end;
+$$ language plpgsql;
+
 commit;
