@@ -2,6 +2,7 @@
 *.swo
 *pg_http.o
 *pg_http.so
+*.pyc
 docs/build
 pg_log
 bundles-available/private
