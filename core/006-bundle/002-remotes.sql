@@ -233,11 +233,16 @@ $$ language plpgsql;
 *******************************************************************************/
 create extension postgres_fdw;
 
-create or replace function mount_remote (
+
+-- remote_mount()
+--
+-- setup a foreign server to a remote, and import it's bundle schema
+
+create or replace function remote_mount (
     foreign_server_name text,
     schema_name text,
     host text,
-	port integer,
+	port text,
     dbname text,
     username text,
     password text
@@ -245,7 +250,6 @@ create or replace function mount_remote (
 returns boolean as
 $$
 begin
-	-- create a postgres_fdw server
     execute format(
         'create server %I
             foreign data wrapper postgres_fdw
@@ -254,19 +258,17 @@ begin
         foreign_server_name, host, port, dbname
     );
 
-	-- create a user mapping
+
     execute format(
-        'create user mapping for current_user server %I options (user %L, password %L)',
+        'create user mapping for public server %I options (user %L, password %L)',
         foreign_server_name, username, password
     );
 
-	-- create a schema
     execute format(
         'create schema %I',
         schema_name
     );
 
-	-- import foreign schema
     execute format(
         'import foreign schema bundle from server %I into %I options (import_default %L)',
         foreign_server_name, schema_name, 'true'
@@ -275,5 +277,103 @@ begin
     return true;
 end;
 $$ language plpgsql;
+
+
+
+
+-- remote_diff ()
+-- 
+-- compare the bundles in two bundle schemas, typically a local one and a
+-- remote one.  returns bundles present in the local but not the remote,
+-- or visa versa.
+
+create or replace function remote_diff( b1_schema_name text, b2_schema_name text )
+returns table (
+    b1_id uuid, b1_name text, b1_head_commit_id uuid,
+    b2_id uuid, b2_name text, b2_head_commit_id uuid
+)
+as $$
+begin
+    return query execute format('
+        select
+            b1.id as b1_id, b1.name as b1_name, b1.head_commit_id as b1_head_commit_id,
+            b2.id as b2_id, b2.name as b2_name, b2.head_commit_id as b2_head_commit_id
+        from %I.bundle b1
+            full outer join %I.bundle b2
+                using (id, name)
+        where b1.name is null or b2.name is null
+        ', b1_schema_name, b2_schema_name
+    );
+end;
+$$
+language plpgsql;
+
+
+
+
+-- remote_clone ()
+--
+-- copy a repository from one bundle schema (typically a remote) to another (typically a local one)
+
+create or replace function remote_clone( bundle_id uuid, source_schema_name text, dest_schema_name text )
+returns boolean as $$
+begin
+    -- rowset
+    execute format ('insert into %2$I.rowset 
+        select r.* from %1$I.commit c
+            join %1$I.rowset r on c.rowset_id = r.id
+        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+    -- rowset_row
+    execute format ('
+        insert into %2$I.rowset_row 
+        select rr.* from %1$I.commit c 
+            join %1$I.rowset r on c.rowset_id = r.id
+            join %1$I.rowset_row rr on rr.rowset_id = r.id
+        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+    -- blob
+    execute format ('
+        insert into %2$I.blob
+        select b.* from %1$I.commit c 
+            join %1$I.rowset r on c.rowset_id = r.id
+            join %1$I.rowset_row rr on rr.rowset_id = r.id
+            join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
+            join %1$I.blob b on f.value_hash = b.hash
+        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+    -- rowset_row_field
+    execute format ('
+        insert into %2$I.rowset_row_field 
+        select f.* from %1$I.commit c 
+            join %1$I.rowset r on c.rowset_id = r.id
+            join %1$I.rowset_row rr on rr.rowset_id = r.id
+            join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
+        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+    -- bundle
+    execute format ('insert into %2$I.bundle
+		(id, name)
+        select b.id, b.name from %1$I.bundle b
+        where b.id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+    -- commit
+    execute format ('
+        insert into %2$I.commit
+        select c.* from %1$I.commit c
+        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+	execute format ('update %2$I.bundle
+		set head_commit_id = (
+        select b.head_commit_id
+		from %1$I.bundle b
+        where b.id=%3$L) where id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+
+    return true;
+end;
+$$
+language plpgsql;
+
 
 commit;
