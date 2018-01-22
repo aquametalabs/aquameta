@@ -231,7 +231,7 @@ $$ language plpgsql;
 * for push, pull and merge.
 * 
 *******************************************************************************/
-create extension postgres_fdw;
+create extension postgres_fdw schema public;
 
 
 -- remote_mount()
@@ -242,7 +242,7 @@ create or replace function remote_mount (
     foreign_server_name text,
     schema_name text,
     host text,
-	port text,
+	port integer,
     dbname text,
     username text,
     password text
@@ -387,7 +387,5 @@ create table remote_database (
     username text,
     password text
 );
-
-
 
 commit;
