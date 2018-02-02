@@ -1067,7 +1067,7 @@ create function endpoint.column_list(
                 case when exclude is not null then
                     ' and not name = any(' || quote_literal(exclude) || ')'
                 else '' end ||
-            ' order by position'
+            ' group by position order by position'
             into column_list;
 
     end;
