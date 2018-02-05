@@ -233,8 +233,8 @@ create function endpoint.columns_json(
 ) returns json as $$
     begin
         execute
-            'select (''['' || string_agg(row_to_json(row(c.name, c.type_name)::endpoint.column_type, true)::text, '','') || '']'')::json
-            from meta.column c
+            'select (''['' || string_agg(row_to_json(row(c2.name, c2.type_name)::endpoint.column_type, true)::text, '','') || '']'')::json
+            from (select * from meta.column c
             where c.schema_name = ' || quote_literal(_schema_name) || ' and
                 c.relation_name = ' || quote_literal(_relation_name) ||
                 case when include is not null then
@@ -242,7 +242,9 @@ create function endpoint.columns_json(
                 else '' end ||
                 case when exclude is not null then
                     ' and not c.name = any(' || quote_literal(exclude) || ')'
-                else '' end
+                else '' end ||
+            ' order by position) c2'
+
             into json;
     end;
 $$
@@ -1067,6 +1069,7 @@ create function endpoint.column_list(
                 case when exclude is not null then
                     ' and not name = any(' || quote_literal(exclude) || ')'
                 else '' end
+            -- || ' group by position order by position' wrong.
             into column_list;
 
     end;
