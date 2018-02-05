@@ -27,3 +27,6 @@ select bundle.bundle_export_csv('org.aquameta.core.ide','/s/aquameta/bundles-ava
 -- user interface modules
 select bundle.bundle_export_csv('org.aquameta.ui.fsm','/s/aquameta/bundles-available/org.aquameta.ui.fsm');
 select bundle.bundle_export_csv('org.aquameta.ui.tags','/s/aquameta/bundles-available/org.aquameta.ui.tags');
+select bundle.bundle_export_csv('org.aquameta.ui.dev','/s/aquameta/bundles-available/org.aquameta.ui.layout');
+select bundle.bundle_export_csv('org.aquameta.ui.dev','/s/aquameta/bundles-available/org.aquameta.ui.dev');
+select bundle.bundle_export_csv('org.aquameta.ui.admin','/s/aquameta/bundles-available/org.aquameta.ui.admin');
