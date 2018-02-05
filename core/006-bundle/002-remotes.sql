@@ -308,8 +308,27 @@ end;
 $$
 language plpgsql;
 
-
-
+create or replace function remote_diff_commits( b1_schema_name text, b2_schema_name text )
+returns table (
+    b1_id uuid, c1_commit_id uuid, c1_parent_id uuid, c1_commit_message text
+)
+as $$
+begin
+    return query execute format('
+        select
+            c1.bundle_id as b1_bundle_id, c1.id as b1_commit_id, c1.parent_id as b1_parent_id, c1.message as b1_commit_message
+        from 
+            %1$I.commit c1
+        except
+        select
+            c2.bundle_id as b2_bundle_id, c2.id as b2_commit_id, c2.parent_id as b2_parent_id, c2.message as b1_commit_message
+        from 
+            %2$I.commit c2
+        ', b1_schema_name, b2_schema_name
+    );
+end;
+$$
+language plpgsql;
 
 -- remote_clone ()
 --
