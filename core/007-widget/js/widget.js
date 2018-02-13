@@ -564,8 +564,8 @@ define(['/doT.min.js', '/jQuery.min.js', '/datum.js'], function(doT, $, AQ, unde
         }
 
         if (typeof rowset_promise == 'undefined' ||
-            (!(rowset_promise instanceof Promise) && !(rowset_promise instanceof AQ.Rowset))) {
-            throw 'widget.sync failed: rowset_promise must be a "thenable" promise or a resolved AQ.Rowset';
+            (!(rowset_promise instanceof Promise) && !(rowset_promise instanceof AQ.Rowset) && !(rowset_promise instanceof AQ.FunctionResultSet))) {
+            throw 'widget.sync failed: rowset_promise must be a "thenable" promise or a resolved AQ.Rowset or a resolved AQ.FunctionResultSet';
         }
 
         if (!(rowset_promise instanceof Promise)) {
