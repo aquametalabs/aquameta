@@ -16,13 +16,13 @@ This document guides you through the minimal steps to get started with Aquameta.
 If you don't have Docker installed, [install it](https://docs.docker.com/engine/installation/).  Then:
 
 ```bash
-$ docker pull aquametalabs/aquameta:0.2.0-rc1
+$ docker pull aquametalabs/aquameta:0.2.0-rc2
 
 # run on standard ports
-$ docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.2.0-rc1
+$ docker run -dit -p 80:80 -p 5432:5432 aquametalabs/aquameta:0.2.0-rc2
 
 # run on alternate ports: Webserver on port 8080, PostgreSQL on port 5433
-$ docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.2.0-rc1
+$ docker run -dit -p 8080:80 -p 5433:5432 aquametalabs/aquameta:0.2.0-rc2
 1c59e82ed50ff4463af35d2cc5435c3086f4d67f0046365b4df505dc91e95d19
 ```
 
