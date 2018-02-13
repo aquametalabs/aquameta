@@ -165,7 +165,7 @@ language plpgsql;
 --
 -- returns commits in local but not remote
 -- (just punts off to remote_commits_ahead, switching local with remote, cause it's the exact opposite)
-*/
+
 create or replace function remote_commits_behind ( local meta.relation_id, remote meta.relation_id )
 returns setof bundle.commit
 as $$
