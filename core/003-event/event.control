@@ -1,3 +1,4 @@
 comment = 'pub/sub data change event tracking system'
 default_version = '0.2.0'
 relocatable = true
+requires = 'meta'

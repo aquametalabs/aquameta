@@ -1,3 +1,4 @@
 comment = 'filesystem foreign data wrapper'
 default_version = '0.2.0'
 relocatable = true
+requires = 'meta'
