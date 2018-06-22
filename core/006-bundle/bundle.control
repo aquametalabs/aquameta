@@ -1,0 +1,4 @@
+comment = 'data version control system'
+default_version = '0.2.0'
+relocatable = true
+requires = 'meta' # , uuid-ossp, pgcrypto, postgres_fdw'
