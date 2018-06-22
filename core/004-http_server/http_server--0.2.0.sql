@@ -10,12 +10,65 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
-begin;
+create schema endpoint;
+set search_path=endpoint;
+
+/******************************************************************************
+ * auth roles
+ ******************************************************************************/
+
+-- User-defined roles inherit from "user" role
+DO
+$body$
+BEGIN
+   IF NOT EXISTS (
+      SELECT                       -- SELECT list can stay empty for this
+      FROM   pg_catalog.pg_roles
+      WHERE  rolname = 'user') THEN
+
+      CREATE ROLE "user" nologin;
+   END IF;
+
+   IF NOT EXISTS (
+      SELECT                       -- SELECT list can stay empty for this
+      FROM   pg_catalog.pg_roles
+      WHERE  rolname = 'anonymous') THEN
+
+      CREATE ROLE anonymous superuser login;
+   END IF;
+
+   IF NOT EXISTS (
+      SELECT                       -- SELECT list can stay empty for this
+      FROM   pg_catalog.pg_roles
+      WHERE  rolname = 'aquameta') THEN
+
+      CREATE ROLE aquameta LOGIN;
+   END IF;
 
 
-create extension if not exists "uuid-ossp";
+END
+$body$;
 
-set search_path = endpoint;
+/*
+if not exists (select from pg_catalog.pg_roles where rolname = 'user')
+then
+    create role "user" nologin;
+end if;
+
+-- anonymous (guest role)
+if not exists (select from pg_catalog.pg_roles where rolname = 'anonymous') 
+then
+    -- TODO: don't make anonymous a superuser -- enable security in 0.2
+    create role anonymous superuser login;
+end if;
+
+
+-- aquameta
+if not exists (select from pg_catalog.pg_roles where rolname = 'aquameta') 
+then
+    create role aquameta superuser login;
+end if;
+*/
 
 /******************************************************************************
  *
@@ -1199,7 +1252,7 @@ create function endpoint.rows_select_function(
 
 
             -- Build columns_json
-            if row_is_composite then
+            if row_is_composite or result_type = 'record' then
 
               select string_agg(row_to_json(q.*, true)::text, ',')
               from (
@@ -1273,6 +1326,8 @@ create function endpoint.rows_select_function(
 
             -- Default mimetype
             mimetype := 'application/json';
+
+            /*** FIXME: this is broken */
 
             -- Loop through function call results
             for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
@@ -2031,7 +2086,3 @@ s.sendmail(from_email, to_email, msg.as_string())
 s.quit()
 
 $$ language plpythonu;
-
-
-
-commit;

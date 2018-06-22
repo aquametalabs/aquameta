@@ -11,8 +11,6 @@
 * TABLE widget
 *******************************************************************************/
 
-begin;
-
 create schema widget;
 set search_path=widget;
 
@@ -182,7 +180,3 @@ language sql stable rows 1;
 *******************************************************************************/
 create view widget_name as
 select id, name from widget.widget;
-
-
-
-commit;
