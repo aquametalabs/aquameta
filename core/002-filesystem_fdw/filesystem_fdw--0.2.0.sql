@@ -5,20 +5,21 @@
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
-begin;
+-- begin;
 
-create extension if not exists multicorn schema public;
+-- create extension if not exists multicorn schema public;
 
-set search_path=filesystem;
+create schema filesystem;
+set search_path=filesystem,public;
 
-drop foreign data wrapper if exists fs_fdw cascade;
+-- drop foreign data wrapper if exists filesystem_fdw cascade;
 
-create foreign data wrapper fs_fdw
+create foreign data wrapper filesystem_fdw
   handler public.multicorn_handler
   validator public.multicorn_validator;
 
-create server fs_srv foreign data wrapper fs_fdw options (
-	wrapper 'fs_fdw.FilesystemForeignDataWrapper'
+create server filesystem_fdw_srv foreign data wrapper filesystem_fdw options (
+	wrapper 'filesystem_fdw.FilesystemForeignDataWrapper'
 );
 
 create foreign table filesystem.file (
@@ -33,7 +34,7 @@ create foreign table filesystem.file (
 	owner text,
 	"group" text,
 	last_mod text
-) server fs_srv options (table_name 'file');
+) server filesystem_fdw_srv options (table_name 'file');
 
 create foreign table filesystem.directory (
 	id text,
@@ -46,6 +47,6 @@ create foreign table filesystem.directory (
 	owner text,
 	"group" text,
 	last_mod text
-) server fs_srv options (table_name 'directory');
+) server filesystem_fdw_srv options (table_name 'directory');
 
-commit;
+-- commit;
