@@ -1537,6 +1537,35 @@ create function endpoint.row_delete(
 $$
 language plpgsql;
 
+/****************************************************************************************************
+ * FUNCTION rows_delete                                                                             *
+ ****************************************************************************************************/
+
+create function endpoint.rows_delete(
+    relation_id meta.relation_id,
+    args json
+) returns json as $$
+
+    declare
+        _schema_name text;
+        _table_name text;
+        pk text;
+        suffix text;
+
+    begin
+        select (relation_id::meta.schema_id).name into _schema_name;
+        select (relation_id::meta.relation_id).name into _table_name;
+
+        -- Suffix
+        select endpoint.suffix_clause(args) into suffix;
+
+        execute 'delete from ' || quote_ident(_schema_name) || '.' || quote_ident(_table_name) || ' ' || suffix;
+
+        return '{}';
+    end;
+
+$$
+language plpgsql;
 
 /****************************************************************************************************
  * FUNCTION request
@@ -1682,6 +1711,11 @@ create or replace function endpoint.request(
                     -- Insert multiple rows
                     return query select 200, 'OK'::text, (select endpoint.multiple_row_insert(relation_id, post_data))::text, 'application/json'::text;
                 end if;
+
+            elsif verb = 'DELETE' then
+
+                -- Delete rows 
+                return query select 200, 'OK'::text, (select endpoint.rows_delete(relation_id, query_args))::text, 'application/json'::text;
 
             else
                 -- HTTP method not allowed for this resource: 405
