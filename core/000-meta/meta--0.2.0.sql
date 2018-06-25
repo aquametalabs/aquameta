@@ -10,13 +10,6 @@
 
 \echo Use "CREATE EXTENSION meta" to load this file. \quit
 
--- this does not work unfortunately
--- create extension if not exists "uuid-ossp" schema public;
-
-create schema meta;
-set search_path=meta,public;
-
-
 /******************************************************************************
  * meta.schema_id
  *****************************************************************************/
