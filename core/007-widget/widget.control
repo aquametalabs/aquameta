@@ -1,3 +1,4 @@
 comment = 'Aquameta widget framework'
 default_version = '0.2.0'
-relocatable = true
+relocatable = false
+schema = 'widget'

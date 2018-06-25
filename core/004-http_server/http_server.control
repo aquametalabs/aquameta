@@ -1,4 +1,4 @@
 comment = 'Aquameta http endpoint request handler'
 default_version = '0.2.0'
-relocatable = true
-requires = 'meta, filesystem_fdw'
+relocatable = false
+schema = 'endpoint'
