@@ -1,16 +1,33 @@
 Filesystem Foreign Data Wrapper
 ===============================
+Exposes the filesystem to PostgreSQL, allowing files and directories to be read via SQL commands.
 
 Install
 -------
+
+First, install the required python modules:
+
 ```shell
-cd src/aquameta/core/002-filesystem/fs_fdw
-./install_fs_fdw.sh
-psql -U postgres aquameta
+pip install -r requirements.txt
+pip install .
 ```
 
-filesystem.file
----------------
+Next, install the extension files into PostgreSQL's `extension` directory:
+```shell
+make install
+```
+
+Finally, from a PostgreSQL shell, install the extension:
+```sql
+CREATE EXTENSION multicorn;
+CREATE EXTENSION filesystem_fdw;
+```
+
+
+Usage
+-----
+
+### filesystem.file
 
 List files in a directory or show contents of a file
 
@@ -32,8 +49,7 @@ select permissions, links, size, owner, group, last_mod, name from filesystem.fi
 select content from filesystem.file where path = '/var/www/public/index.php';
 ```
 
-filesystem.directory 
---------------------
+### filesystem.directory 
 
 List contents of a directory
 
@@ -49,4 +65,3 @@ List contents of a directory
 ```sql
 select * from filesystem.directory where parent_id = '/var/www';
 ```
-
