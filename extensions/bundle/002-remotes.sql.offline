@@ -6,10 +6,6 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
-begin;
-
-set search_path=bundle;
-
 /*******************************************************************************
 *
 *
@@ -218,6 +214,3 @@ begin
     -- drop table bundle_diff_1234;
 end;
 $$ language plpgsql;
-
-
-commit;

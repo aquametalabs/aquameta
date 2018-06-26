@@ -6,10 +6,6 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
-begin;
-
-set search_path=bundle;
-
 /*******************************************************************************
 *
 *
@@ -21,7 +17,6 @@ set search_path=bundle;
 * for push, pull and merge.
 * 
 *******************************************************************************/
-create extension postgres_fdw schema public;
 
 
 -- here's a table where you can stash some saved connections.
@@ -238,5 +233,3 @@ begin
 end;
 $$
 language plpgsql;
-
-commit;

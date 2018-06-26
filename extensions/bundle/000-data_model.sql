@@ -26,17 +26,6 @@
  *     9. remotes - pushing and pulling to other databases
  *
  */
-begin;
-
--- these require postgres-contrib to be installed
-create extension if not exists "uuid-ossp" schema public;
-create extension if not exists "pgcrypto" schema public;
-
-create schema bundle;
-
-set search_path=bundle,meta,public;
-
-
 -------------------------
 -- UTIL FIXME
 --------------------------
@@ -653,7 +642,6 @@ create table remote_webrtc (
     method text,
     push boolean not null default 'f'
 );
-*/
 
 create table remote (
     id uuid default public.uuid_generate_v4() primary key,
@@ -661,7 +649,4 @@ create table remote (
     endpoint_id uuid not null references endpoint.remote_endpoint(id) on delete cascade,
     push boolean not null default 'f'
 );
-
-
-commit;
-
+*/

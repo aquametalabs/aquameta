@@ -14,11 +14,6 @@
  *     3. checkout
  */
 
-begin;
-
-set search_path=bundle,meta,public;
-
-
 ------------------------------------------------------------------------------
 -- COMMIT FUNCTIONS
 ------------------------------------------------------------------------------
@@ -615,6 +610,3 @@ create or replace function bundle.delete_commit (in _commit_id uuid) returns voi
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
     delete from bundle.commit c where c.id = _commit_id;
 $$ language sql;
-
-
-commit;
