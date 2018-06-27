@@ -10,9 +10,6 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
-create schema endpoint;
-set search_path=endpoint;
-
 /******************************************************************************
  * auth roles
  ******************************************************************************/
@@ -78,26 +75,26 @@ end if;
  *
  ******************************************************************************/
 
-create type endpoint.resource_bin as 
+create type aquameta_endpoint.resource_bin as 
 (mimetype text, content bytea);
 
-create type endpoint.resource_txt as 
+create type aquameta_endpoint.resource_txt as 
 (mimetype text, content text);
 
-create function endpoint.resource_bin(value json) returns endpoint.resource_bin as $$
-select row(value->>'mimetype', value->>'content')::endpoint.resource_bin
+create function aquameta_endpoint.resource_bin(value json) returns aquameta_endpoint.resource_bin as $$
+select row(value->>'mimetype', value->>'content')::aquameta_endpoint.resource_bin
 $$ immutable language sql;
 
-create cast (json as endpoint.resource_bin)
-with function endpoint.resource_bin(json)
+create cast (json as aquameta_endpoint.resource_bin)
+with function aquameta_endpoint.resource_bin(json)
 as assignment;
 
-create function endpoint.resource_txt(value json) returns endpoint.resource_txt as $$
-select row(value->>'mimetype', value->>'content')::endpoint.resource_txt
+create function aquameta_endpoint.resource_txt(value json) returns aquameta_endpoint.resource_txt as $$
+select row(value->>'mimetype', value->>'content')::aquameta_endpoint.resource_txt
 $$ immutable language sql;
 
-create cast (json as endpoint.resource_txt)
-with function endpoint.resource_txt(json)
+create cast (json as aquameta_endpoint.resource_txt)
+with function aquameta_endpoint.resource_txt(json)
 as assignment;
 
 
@@ -112,7 +109,7 @@ as assignment;
 
 
 /******************************************************************************
- * endpoint.mimetype
+ * aquameta_endpoint.mimetype
  ******************************************************************************/
 
 create table mimetype (
@@ -122,56 +119,56 @@ create table mimetype (
 
 
 /******************************************************************************
- * endpoint.mimetype_extension
+ * aquameta_endpoint.mimetype_extension
  ******************************************************************************/
 
-create table endpoint.mimetype_extension (
+create table aquameta_endpoint.mimetype_extension (
     id uuid default public.uuid_generate_v4() primary key,
-    mimetype_id uuid not null references endpoint.mimetype(id),
+    mimetype_id uuid not null references aquameta_endpoint.mimetype(id),
     extension text unique
 );
 
 
-create table endpoint.column_mimetype (
+create table aquameta_endpoint.column_mimetype (
     id uuid default public.uuid_generate_v4() primary key,
     column_id meta.column_id not null,
-    mimetype_id uuid not null references endpoint.mimetype(id)
+    mimetype_id uuid not null references aquameta_endpoint.mimetype(id)
 );
 
 
-create table endpoint.function_field_mimetype (
+create table aquameta_endpoint.function_field_mimetype (
     id uuid default public.uuid_generate_v4() primary key,
     schema_name text,
     function_name text,
     field_name text,
-    mimetype_id uuid not null references endpoint.mimetype(id)
+    mimetype_id uuid not null references aquameta_endpoint.mimetype(id)
 );
 
 
-create table endpoint."resource_binary" (
+create table aquameta_endpoint."resource_binary" (
     id uuid default public.uuid_generate_v4() primary key,
     path text not null /* unique */,
-    mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
+    mimetype_id uuid not null references aquameta_endpoint.mimetype(id) on delete restrict on update cascade,
     active boolean default true,
     content bytea not null
 );
 
-create table endpoint."resource_text" (
+create table aquameta_endpoint."resource_text" (
     id uuid default public.uuid_generate_v4() primary key,
     path text not null /* unique */,
-    mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
+    mimetype_id uuid not null references aquameta_endpoint.mimetype(id) on delete restrict on update cascade,
     active boolean default true,
     content text not null
 );
 
-create table endpoint.resource_file (
+create table aquameta_endpoint.resource_file (
     id uuid default public.uuid_generate_v4() primary key,
     file_id text not null,
     active boolean default true,
     path text not null /* unique */
 );
 
-create table endpoint.resource_directory (
+create table aquameta_endpoint.resource_directory (
     id uuid default public.uuid_generate_v4() primary key,
     directory_id text,
     path text,
@@ -187,7 +184,7 @@ create table "resource" (
 );
 
 
-create function endpoint.is_indexed(_path text) returns boolean as $$
+create function aquameta_endpoint.is_indexed(_path text) returns boolean as $$
 begin
     return true;
     /*
@@ -208,7 +205,7 @@ begin
     with recursive t as (
     
         select indexes, path
-        from endpoint.resource_directory
+        from aquameta_endpoint.resource_directory
         where path = _path
     
         union all
@@ -222,12 +219,12 @@ begin
     
     /*
     
-    select indexes from endpoint.resource_directory where directory_id=_path;
+    select indexes from aquameta_endpoint.resource_directory where directory_id=_path;
     
     if indexes then
         return true;
     else
-        select indexes from endpoint.resource_directory where directory_id=(select parent_id from filesystem.directory where path=_path);
+        select indexes from aquameta_endpoint.resource_directory where directory_id=(select parent_id from filesystem.directory where path=_path);
     end if;
     
     */
@@ -249,16 +246,16 @@ $$ language plpgsql;
  *
  ******************************************************************************/
 
-create function endpoint.set_mimetype(
+create function aquameta_endpoint.set_mimetype(
     _schema name,
     _table name,
     _column name,
     _mimetype text
 ) returns void as $$
-    insert into endpoint.column_mimetype (column_id, mimetype_id)
+    insert into aquameta_endpoint.column_mimetype (column_id, mimetype_id)
     select c.id, m.id
     from meta.column c
-    cross join endpoint.mimetype m
+    cross join aquameta_endpoint.mimetype m
     where c.schema_name   = _schema and
           c.relation_name = _table and
           c.name          = _column and
@@ -277,7 +274,7 @@ create type column_type as (
 );
 
 -- returns the columns for a provided schema.relation as a json object
-create function endpoint.columns_json(
+create function aquameta_endpoint.columns_json(
     _schema_name text,
     _relation_name text,
     exclude text[],
@@ -286,7 +283,7 @@ create function endpoint.columns_json(
 ) returns json as $$
     begin
         execute
-            'select (''['' || string_agg(row_to_json(row(c2.name, c2.type_name)::endpoint.column_type, true)::text, '','') || '']'')::json
+            'select (''['' || string_agg(row_to_json(row(c2.name, c2.type_name)::aquameta_endpoint.column_type, true)::text, '','') || '']'')::json
             from (select * from meta.column c
             where c.schema_name = ' || quote_literal(_schema_name) || ' and
                 c.relation_name = ' || quote_literal(_relation_name) ||
@@ -376,7 +373,7 @@ create type join_graph_row as (
 
 
 /*******************************************************************************
- * FUNCTION endpoint.construct_join_graph
+ * FUNCTION aquameta_endpoint.construct_join_graph
  *
  * constructs a join graph table containing any rows matching the specified 
  * JOIN pattern
@@ -384,7 +381,7 @@ create type join_graph_row as (
 
 /*
 sample usage:
-select endpoint.construct_join_graph('foo',
+select aquameta_endpoint.construct_join_graph('foo',
     '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "join_local_field": "id", "where_clause": "b.id = ''e2edb6c9-cb76-4b57-9898-2e08debe99ee''" }',
     '[
         {"schema_name": "bundle", "relation_name": "commit", "label": "c", "join_local_field": "bundle_id", "related_label": "b", "related_field": "id"},
@@ -395,7 +392,7 @@ select endpoint.construct_join_graph('foo',
      ]');
 */
 
-create or replace function endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof endpoint.join_graph_row
+create or replace function aquameta_endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof aquameta_endpoint.join_graph_row
 as $$
     declare
         tmp text;
@@ -424,7 +421,7 @@ as $$
         tmp := quote_ident(temp_table_name);
         execute 'create temp table '
             || tmp
-    || ' of endpoint.join_graph_row';
+    || ' of aquameta_endpoint.join_graph_row';
 
         -- load up the starting relation
         schema_name := quote_ident(start_rowset->>'schema_name');
@@ -504,7 +501,7 @@ language plpgsql;
  *
  * REQUEST HANDLERS
  *
- * Functions called by endpoint.request, returning JSON/REST responses
+ * Functions called by aquameta_endpoint.request, returning JSON/REST responses
  *
  *
  *
@@ -515,7 +512,7 @@ language plpgsql;
  * FUNCTION multiple_row_insert                                                                      *
  ****************************************************************************************************/
 
-create or replace function endpoint.multiple_row_insert(
+create or replace function aquameta_endpoint.multiple_row_insert(
     relation_id meta.relation_id,
     args json
 ) returns setof json as $$
@@ -533,13 +530,13 @@ create or replace function endpoint.multiple_row_insert(
         select array_to_json(array_agg(t.json_array_elements))
         from
             (
-                select json_array_elements(endpoint.row_insert(relation_id, json_array_elements)->'result')
+                select json_array_elements(aquameta_endpoint.row_insert(relation_id, json_array_elements)->'result')
                 from json_array_elements(args)
             ) t
         into r;
 
         q := 'select (''{' ||
-                --"columns":'' || endpoint.columns_json($1, $2) || '',
+                --"columns":'' || aquameta_endpoint.columns_json($1, $2) || '',
                 '"result":'' || ($3) || ''
             }'')::json';
 
@@ -557,7 +554,7 @@ language plpgsql;
  * FUNCTION rows_insert                                                                              *
  ****************************************************************************************************/
 
-create or replace function endpoint.rows_insert(
+create or replace function aquameta_endpoint.rows_insert(
     args json
 ) returns void as $$
 
@@ -586,8 +583,8 @@ create or replace function endpoint.rows_insert(
             -- raise notice '(NOT) QUERY: %', q;
             -- execute q;
 
-            perform endpoint.row_insert(row_id::meta.relation_id, args->i->'row');
-            --perform endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
+            perform aquameta_endpoint.row_insert(row_id::meta.relation_id, args->i->'row');
+            --perform aquameta_endpoint.row_insert((row_id::meta.schema_id).name, 'table', (row_id::meta.relation_id).name, args->i->'row');
         end loop;
 
         -- enable triggers
@@ -604,7 +601,7 @@ language plpgsql;
  * FUNCTION row_insert                                                                              *
  ****************************************************************************************************/
 
-create or replace function endpoint.row_insert(
+create or replace function aquameta_endpoint.row_insert(
     relation_id meta.relation_id,
     args json
 ) returns setof json as $$
@@ -653,8 +650,8 @@ create or replace function endpoint.row_insert(
                 'returning *
             )
             select (''{
-                "columns": ' || endpoint.columns_json(_schema_name, _relation_name, null::text[], null::text[]) || ',
-                "pk":"' || coalesce(endpoint.pk_name(_schema_name, _relation_name), 'null') || '",
+                "columns": ' || aquameta_endpoint.columns_json(_schema_name, _relation_name, null::text[], null::text[]) || ',
+                "pk":"' || coalesce(aquameta_endpoint.pk_name(_schema_name, _relation_name), 'null') || '",
                 "result": [{ "row": '' || row_to_json(inserted_row.*, true) || '' }]
             }'')::json
             from inserted_row
@@ -675,10 +672,10 @@ language plpgsql;
  ****************************************************************************************************/
 
 /*
-                                    when endpoint.is_composite_type($4->>' || quote_literal(json_object_keys) || ') then
+                                    when aquameta_endpoint.is_composite_type($4->>' || quote_literal(json_object_keys) || ') then
                                         ($4->' || quote_literal(json_object_keys) || ')::text
 
-create function endpoint.is_composite_type(value text) returns boolean as $$
+create function aquameta_endpoint.is_composite_type(value text) returns boolean as $$
 begin
     perform json_object_keys(value::json);
     return true;
@@ -697,7 +694,7 @@ immutable language plpgsql;
  * FUNCTION is_json_object                                                                          *
  ****************************************************************************************************/
 
-create or replace function endpoint.is_json_object(
+create or replace function aquameta_endpoint.is_json_object(
     value text
 ) returns boolean as $$
 
@@ -719,7 +716,7 @@ immutable language plpgsql;
  * FUNCTION is_json_array                                                                           *
  ****************************************************************************************************/
 
-create function endpoint.is_json_array(
+create function aquameta_endpoint.is_json_array(
     value text
 ) returns boolean as $$
 
@@ -740,7 +737,7 @@ immutable language plpgsql;
  * FUNCTION row_update                                                                              *
  ****************************************************************************************************/
 
-create or replace function endpoint.row_update(
+create or replace function aquameta_endpoint.row_update(
     row_id meta.row_id,
     args json
 ) returns json as $$ -- FIXME: use json_to_row upon 9.4 release, alleviates all the destructuring below
@@ -790,7 +787,7 @@ language plpgsql;
  * FUNCTION row_select                                                                              *
  ****************************************************************************************************/
 
-create function endpoint.row_select(
+create function aquameta_endpoint.row_select(
     row_id meta.row_id,
     args json
 ) returns json as $$
@@ -811,7 +808,7 @@ create function endpoint.row_select(
 
     begin
         -- raise notice 'ROW SELECT ARGS: %, %, %, %', schema_name, table_name, queryable_type, pk;
-        set local search_path = endpoint;
+        set local search_path = aquameta_endpoint;
 
         select (row_id::meta.schema_id).name into _schema_name;
         select (row_id::meta.relation_id).name into _relation_name;
@@ -837,7 +834,7 @@ create function endpoint.row_select(
         into include;
 
         if exclude is not null or include is not null then
-            select endpoint.column_list(_schema_name, _relation_name, '', exclude, include) into column_list;
+            select aquameta_endpoint.column_list(_schema_name, _relation_name, '', exclude, include) into column_list;
         else
             select '*' into column_list;
         end if;
@@ -862,7 +859,7 @@ create function endpoint.row_select(
                      || quote_ident(schema_name) || '.' || quote_ident(relation_name)
                      || ' as t where ' || (
                          select quote_ident(pk_name) || ' = ' || quote_literal(pk) || '::' || pk_type
-                         from endpoint.pk(schema_name, relation_name) p
+                         from aquameta_endpoint.pk(schema_name, relation_name) p
                      );
 */
         execute row_query into row_json;
@@ -870,8 +867,8 @@ create function endpoint.row_select(
         --return '{"columns":' || columns_json(_schema_name, _relation_name) || ',"result":' || coalesce(row_json::text, '[]') || '}';
         return '{' ||
                case when args->>'meta_data' = '["true"]' then
-                   '"columns":' || endpoint.columns_json(_schema_name, _relation_name, exclude, include) || ',' ||
-                   '"pk":"' || endpoint.pk_name(_schema_name, _relation_name) || '",'
+                   '"columns":' || aquameta_endpoint.columns_json(_schema_name, _relation_name, exclude, include) || ',' ||
+                   '"pk":"' || aquameta_endpoint.pk_name(_schema_name, _relation_name) || '",'
                else ''
                end ||
                '"result":' || coalesce(row_json::text, '[]') || '}';
@@ -884,7 +881,7 @@ language plpgsql;
  * FUNCTION field_select                                                                            *
  ****************************************************************************************************/
 
-create or replace function endpoint.field_select(
+create or replace function aquameta_endpoint.field_select(
     field_id meta.field_id,
     out field text,
     out mimetype text
@@ -901,7 +898,7 @@ create or replace function endpoint.field_select(
 
     begin
         -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
-        set local search_path = endpoint;
+        set local search_path = aquameta_endpoint;
 
         select (field_id).column_id.relation_id.schema_id.name into _schema_name;
         select (field_id).column_id.relation_id.name into _relation_name;
@@ -923,18 +920,18 @@ create or replace function endpoint.field_select(
             and name = field_name
         into field_type;
 
-        if field_type <> 'endpoint.resource_bin' then
+        if field_type <> 'aquameta_endpoint.resource_bin' then
             -- Find mimetype for this field
             select m.mimetype
-            from endpoint.column_mimetype cm
-                join endpoint.mimetype m on m.id = cm.mimetype_id
+            from aquameta_endpoint.column_mimetype cm
+                join aquameta_endpoint.mimetype m on m.id = cm.mimetype_id
             where cm.column_id = (field_id).column_id
             into mimetype;
         end if;
 
         -- Default mimetype
         mimetype := coalesce(mimetype, 'application/json');
-        if field_type = 'endpoint.resource_bin' then
+        if field_type = 'aquameta_endpoint.resource_bin' then
             execute 'select (' || quote_ident(field_name) || ').mimetype, encode((' || quote_ident(field_name) || ').content, ''escape'')'
                 || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
                 || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into mimetype, field;
@@ -960,7 +957,7 @@ language plpgsql;
  *
  ****************************************************************************************************/
 
-create or replace function endpoint.suffix_clause(
+create or replace function aquameta_endpoint.suffix_clause(
     args json
 ) returns text as $$
 
@@ -976,7 +973,7 @@ create or replace function endpoint.suffix_clause(
 
             -- Limit clause
             -- URL
-            -- /endpoint?$limit=10
+            -- /aquameta_endpoint?$limit=10
             if r.key = 'limit' then
                 select ' limit ' || quote_literal(json_array_elements_text)
                 from json_array_elements_text(r.value::text::json)
@@ -984,7 +981,7 @@ create or replace function endpoint.suffix_clause(
 
             -- Offset clause
             -- URL
-            -- /endpoint?$offest=5
+            -- /aquameta_endpoint?$offest=5
             elsif r.key = 'offset' then
                 select ' offset ' || quote_literal(json_array_elements_text)
                 from json_array_elements_text(r.value::text::json)
@@ -992,8 +989,8 @@ create or replace function endpoint.suffix_clause(
 
             -- Order by clause
             -- URL
-            -- /endpoint?$order_by=city
-            -- /endpoint?$order_by=[city,-state,-full_name]
+            -- /aquameta_endpoint?$order_by=city
+            -- /aquameta_endpoint?$order_by=[city,-state,-full_name]
             elsif r.key = 'order_by' then
                 
                 if pg_typeof(r.value) = 'json'::regtype then
@@ -1015,8 +1012,8 @@ create or replace function endpoint.suffix_clause(
 
             -- Where clause
             -- URL
-            -- /endpoint?$where={name=NAME1,op=like,value=VALUE1}
-            -- /endpoint?$where=[{name=NAME1,op=like,value=VALUE1},{name=NAME2,op='=',value=VALUE2}]
+            -- /aquameta_endpoint?$where={name=NAME1,op=like,value=VALUE1}
+            -- /aquameta_endpoint?$where=[{name=NAME1,op=like,value=VALUE1},{name=NAME2,op='=',value=VALUE2}]
             elsif r.key = 'where' then
 
                 if pg_typeof(r.value) = 'json'::regtype then
@@ -1098,7 +1095,7 @@ language plpgsql;
  * FUNCTION column_list
  ****************************************************************************************************/
 
-create function endpoint.column_list(
+create function aquameta_endpoint.column_list(
     _schema_name text,
     _relation_name text,
     table_alias text,
@@ -1133,7 +1130,7 @@ $$ language plpgsql;
  * FUNCTION rows_select                                                                             *
  ****************************************************************************************************/
 
-create function endpoint.rows_select(
+create function aquameta_endpoint.rows_select(
     relation_id meta.relation_id,
     args json
 ) returns json as $$
@@ -1152,7 +1149,7 @@ create function endpoint.rows_select(
         select (relation_id).name into relation_name;
 
         -- Suffix
-        select endpoint.suffix_clause(args) into suffix;
+        select aquameta_endpoint.suffix_clause(args) into suffix;
 
         -- Column list
         -- Exclude
@@ -1172,7 +1169,7 @@ create function endpoint.rows_select(
         into include;
 
         if exclude is not null or include is not null then
-            select endpoint.column_list(schema_name, relation_name, 'r'::text, exclude, include) into column_list;
+            select aquameta_endpoint.column_list(schema_name, relation_name, 'r'::text, exclude, include) into column_list;
         else
             select 'r.*' into column_list;
         end if;
@@ -1186,8 +1183,8 @@ create function endpoint.rows_select(
 
         return '{' ||
                case when args->>'meta_data' = '["true"]' then
-                   '"columns":' || endpoint.columns_json(schema_name, relation_name, exclude, include) || ',' ||
-                   '"pk":"' || coalesce(endpoint.pk_name(schema_name, relation_name), 'null') || '",'
+                   '"columns":' || aquameta_endpoint.columns_json(schema_name, relation_name, exclude, include) || ',' ||
+                   '"pk":"' || coalesce(aquameta_endpoint.pk_name(schema_name, relation_name), 'null') || '",'
                else ''
                end ||
                '"result":' || coalesce(rows_json, '[]') || '}';
@@ -1210,7 +1207,7 @@ We also want to use column_mimetype if we are only sending one column back
 
  *****************************************************************************/
 
-create function endpoint.rows_select_function(
+create function aquameta_endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
     out result text,
@@ -1280,7 +1277,7 @@ create function endpoint.rows_select_function(
         end if;
 
         -- Suffix clause: where, order by, offest, limit
-        suffix := endpoint.suffix_clause(args);
+        suffix := aquameta_endpoint.suffix_clause(args);
 
         -- Return column
         return_column := json_array_elements_text(args->'column');
@@ -1351,12 +1348,12 @@ create function endpoint.rows_select_function(
                 quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name) ||
                 '(' || function_args || ') ' || suffix into result, result_type;
 
-            if result_type <> 'resource_bin' and result_type <> 'endpoint.resource_bin' then
+            if result_type <> 'resource_bin' and result_type <> 'aquameta_endpoint.resource_bin' then
 
                 -- Get mimetype
                 select m.mimetype
-                from endpoint.function_field_mimetype ffm
-                    join endpoint.mimetype m on m.id = ffm.mimetype_id
+                from aquameta_endpoint.function_field_mimetype ffm
+                    join aquameta_endpoint.mimetype m on m.id = ffm.mimetype_id
                 where ffm.schema_name = (_function_id).schema_id.name
                     and ffm.function_name = (_function_id).name
                     and field_name = return_column
@@ -1371,8 +1368,8 @@ create function endpoint.rows_select_function(
 
             else
 
-                mimetype := (result::endpoint.resource_bin).mimetype;
-                result := encode((result::endpoint.resource_bin).content, 'escape');
+                mimetype := (result::aquameta_endpoint.resource_bin).mimetype;
+                result := encode((result::aquameta_endpoint.resource_bin).content, 'escape');
 
             end if;
 
@@ -1386,7 +1383,7 @@ $$
 language plpgsql;
 
 
-create function endpoint.anonymous_rows_select_function(
+create function aquameta_endpoint.anonymous_rows_select_function(
     _schema_name text,
     _function_name text,
     args json,
@@ -1412,7 +1409,7 @@ create function endpoint.anonymous_rows_select_function(
         return_column := json_array_elements_text(args->'column');
 
         -- Suffix clause: where, order by, offest, limit
-        suffix := endpoint.suffix_clause(args);
+        suffix := aquameta_endpoint.suffix_clause(args);
 
         -- Args
         select json_array_elements_text::json
@@ -1447,12 +1444,12 @@ create function endpoint.anonymous_rows_select_function(
             execute 'select ' || return_column || ', pg_typeof(' || return_column || ') from ' || quote_ident(_schema_name) || '.' || quote_ident(_function_name)
                                 || '(' || function_args || ') ' || suffix into result, result_type;
 
-            if result_type <> 'resource_bin' and result_type <> 'endpoint.resource_bin' then
+            if result_type <> 'resource_bin' and result_type <> 'aquameta_endpoint.resource_bin' then
 
                 -- Get mimetype
                 select m.mimetype
-                from endpoint.function_field_mimetype ffm
-                    join endpoint.mimetype m on m.id = ffm.mimetype_id
+                from aquameta_endpoint.function_field_mimetype ffm
+                    join aquameta_endpoint.mimetype m on m.id = ffm.mimetype_id
                 where ffm.schema_name = _schema_name
                     and ffm.function_name = _function_name
                     and field_name = return_column
@@ -1467,8 +1464,8 @@ create function endpoint.anonymous_rows_select_function(
 
             else
 
-                mimetype := (result::endpoint.resource_bin).mimetype;
-                result := encode((result::endpoint.resource_bin).content, 'escape');
+                mimetype := (result::aquameta_endpoint.resource_bin).mimetype;
+                result := encode((result::aquameta_endpoint.resource_bin).content, 'escape');
 
             end if;
 
@@ -1481,7 +1478,7 @@ language plpgsql;
 
 
 -- This function should disappear. Factor column selection into previous rows_select_function()
-create function endpoint.rows_select_function(
+create function aquameta_endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
     column_name text
@@ -1563,7 +1560,7 @@ language plpgsql;
  * FUNCTION row_delete
  *****************************************************************************/
 
-create function endpoint.row_delete(
+create function aquameta_endpoint.row_delete(
     row_id meta.row_id
 ) returns json as $$
 
@@ -1597,7 +1594,7 @@ language plpgsql;
  * FUNCTION request
  ****************************************************************************************************/
 
-create or replace function endpoint.request(
+create or replace function aquameta_endpoint.request(
     version text,
     verb text,
     path text,
@@ -1620,7 +1617,7 @@ create or replace function endpoint.request(
         op_params text;
 
     begin
-        set local search_path = endpoint,meta,public;
+        set local search_path = aquameta_endpoint,meta,public;
 
         -- GET/POST requests are synonymous. Long query strings are converted to POST in the client
         -- We will only be subscribing to something on a GET or POST request
@@ -1643,7 +1640,7 @@ create or replace function endpoint.request(
         op := substring(path from '([^/]+)(/{1})'); -- row, relation, function, etc.
         op_params := substring(path from char_length(op) + 2); -- everything after {op}/
 
-        raise notice '##### endpoint.request % % %', version, verb, path;
+        raise notice '##### aquameta_endpoint.request % % %', version, verb, path;
         raise notice '##### op and params: % %', op, op_params;
         raise notice '##### query string args: %', query_args::text;
         raise notice '##### POST data: %', post_data::text;
@@ -1651,7 +1648,7 @@ create or replace function endpoint.request(
         case op
         when 'row' then
 
-            -- URL /endpoint/row/{row_id}
+            -- URL /aquameta_endpoint/row/{row_id}
             row_id := op_params::meta.row_id;
 
             if verb = 'GET' then
@@ -1662,7 +1659,7 @@ create or replace function endpoint.request(
                 end if;
 
                 -- Get single row
-                return query select 200, 'OK'::text, (select endpoint.row_select(row_id, query_args))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.row_select(row_id, query_args))::text, 'application/json'::text;
 
             elsif verb = 'POST' then
 
@@ -1672,17 +1669,17 @@ create or replace function endpoint.request(
                 end if;
 
                 -- Get single row
-                return query select 200, 'OK'::text, (select endpoint.row_select(row_id, post_data))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.row_select(row_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'PATCH' then
 
                 -- Update row
-                return query select 200, 'OK'::text, (select endpoint.row_update(row_id, post_data))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.row_update(row_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'DELETE' then
 
                 -- Delete row
-                return query select 200, 'OK'::text, (select endpoint.row_delete(row_id))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.row_delete(row_id))::text, 'application/json'::text;
 
             else
                 -- HTTP method not allowed for this resource: 405
@@ -1691,7 +1688,7 @@ create or replace function endpoint.request(
 
         when 'relation' then
 
-            -- URL /endpoint/relation/{relation_id}
+            -- URL /aquameta_endpoint/relation/{relation_id}
             relation_id := op_params::meta.relation_id;
 
             if verb = 'GET' then
@@ -1709,7 +1706,7 @@ create or replace function endpoint.request(
                 end if;
 
                 -- Get rows 
-                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.rows_select(relation_id, query_args))::text, 'application/json'::text;
 
             elsif verb = 'POST' then
 
@@ -1726,16 +1723,16 @@ create or replace function endpoint.request(
                 end if;
 
                 -- Get rows 
-                return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, post_data))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.rows_select(relation_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'PATCH' then
 
                 if json_typeof(post_data) = 'object' then
                     -- Insert single row
-                    return query select 200, 'OK'::text, (select endpoint.row_insert(relation_id, post_data))::text, 'application/json'::text;
+                    return query select 200, 'OK'::text, (select aquameta_endpoint.row_insert(relation_id, post_data))::text, 'application/json'::text;
                 elsif json_typeof(post_data) = 'array' then
                     -- Insert multiple rows
-                    return query select 200, 'OK'::text, (select endpoint.multiple_row_insert(relation_id, post_data))::text, 'application/json'::text;
+                    return query select 200, 'OK'::text, (select aquameta_endpoint.multiple_row_insert(relation_id, post_data))::text, 'application/json'::text;
                 end if;
 
             else
@@ -1753,11 +1750,11 @@ create or replace function endpoint.request(
 
                 if verb = 'GET' then
                     -- Get record from function call
-                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, query_args) as rsf;
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from aquameta_endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, query_args) as rsf;
 
                 elsif verb = 'POST' then
                     -- Get record from function call
-                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, post_data) as rsf;
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from aquameta_endpoint.anonymous_rows_select_function((function_id::meta.schema_id).name, function_id.name, post_data) as rsf;
 
                 else
                     -- HTTP method not allowed for this resource: 405
@@ -1768,16 +1765,16 @@ create or replace function endpoint.request(
             -- Calling a function with a specified parameter type list -- Exact function id known
             else
 
-                -- URL /endpoint/function/{function_id}
+                -- URL /aquameta_endpoint/function/{function_id}
                 function_id := op_params::meta.function_id;
 
                 if verb = 'GET' then
                     -- Get record from function call
-                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, query_args) as rsf;
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from aquameta_endpoint.rows_select_function(function_id, query_args) as rsf;
 
                 elsif verb = 'POST' then
                     -- Get record from function call
-                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from endpoint.rows_select_function(function_id, post_data) as rsf;
+                    return query select 200, 'OK'::text, rsf.result::text, rsf.mimetype::text from aquameta_endpoint.rows_select_function(function_id, post_data) as rsf;
 
                 else
                     -- HTTP method not allowed for this resource: 405
@@ -1789,7 +1786,7 @@ create or replace function endpoint.request(
 
         when 'field' then
 
-            -- URL /endpoint/field/{field_id}
+            -- URL /aquameta_endpoint/field/{field_id}
             field_id := op_params::meta.field_id;
 
             if verb = 'GET' or verb = 'POST' then
@@ -1800,7 +1797,7 @@ create or replace function endpoint.request(
                 end if;
 
                 -- Get field
-                return query select 200, 'OK'::text, fs.field::text, fs.mimetype::text from endpoint.field_select(field_id) as fs;
+                return query select 200, 'OK'::text, fs.field::text, fs.mimetype::text from aquameta_endpoint.field_select(field_id) as fs;
 
             else
                 -- HTTP method not allowed for this resource: 405
@@ -1822,10 +1819,10 @@ language plpgsql;
 
 
 /******************************************************************************
- * endpoint.user
+ * aquameta_endpoint.user
  ******************************************************************************/
 
-create table endpoint.user (
+create table aquameta_endpoint.user (
     id uuid default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null default public.uuid_generate_v4()::text::meta.role_id,
     email text not null unique,
@@ -1835,8 +1832,8 @@ create table endpoint.user (
 );
 
 
--- Trigger on endpoint.user for insert
-create or replace function endpoint.user_insert() returns trigger as $$
+-- Trigger on aquameta_endpoint.user for insert
+create or replace function aquameta_endpoint.user_insert() returns trigger as $$
 
     declare
         role_exists boolean;
@@ -1857,8 +1854,8 @@ $$
 language plpgsql;
 
 
--- Trigger on endpoint.user for update
-create or replace function endpoint.user_update() returns trigger as $$
+-- Trigger on aquameta_endpoint.user for update
+create or replace function aquameta_endpoint.user_update() returns trigger as $$
 
     declare
         role_exists boolean;
@@ -1889,8 +1886,8 @@ $$
 language plpgsql;
 
 
--- Trigger on endpoint.user for delete
-create or replace function endpoint.user_delete() returns trigger as $$
+-- Trigger on aquameta_endpoint.user for delete
+create or replace function aquameta_endpoint.user_delete() returns trigger as $$
     begin
         -- Delete old role
         delete from meta.role where id = OLD.role_id;
@@ -1900,38 +1897,38 @@ $$
 language plpgsql;
 
 
-create trigger endpoint_user_insert_trigger before insert on endpoint.user for each row execute procedure endpoint.user_insert();
-create trigger endpoint_user_update_trigger before update on endpoint.user for each row execute procedure endpoint.user_update();
-create trigger endpoint_user_delete_trigger before delete on endpoint.user for each row execute procedure endpoint.user_delete();
+create trigger aquameta_endpoint_user_insert_trigger before insert on aquameta_endpoint.user for each row execute procedure aquameta_endpoint.user_insert();
+create trigger aquameta_endpoint_user_update_trigger before update on aquameta_endpoint.user for each row execute procedure aquameta_endpoint.user_update();
+create trigger aquameta_endpoint_user_delete_trigger before delete on aquameta_endpoint.user for each row execute procedure aquameta_endpoint.user_delete();
 
 
 /******************************************************************************
- * endpoint.current_user
+ * aquameta_endpoint.current_user
  ******************************************************************************/
 
-create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
+create view aquameta_endpoint."current_user" AS SELECT "current_user"() AS "current_user";
 
-create function endpoint."current_user"() returns uuid as $$
-    SELECT id from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
+create function aquameta_endpoint."current_user"() returns uuid as $$
+    SELECT id from aquameta_endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
 $$ language sql;
 
 
 /******************************************************************************
- * endpoint.session
+ * aquameta_endpoint.session
  ******************************************************************************/
 
-create table endpoint.session (
+create table aquameta_endpoint.session (
     id uuid default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null,
-    user_id uuid references endpoint.user(id)
+    user_id uuid references aquameta_endpoint.user(id)
 );
 
 
 /******************************************************************************
- * endpoint.register
+ * aquameta_endpoint.register
  ******************************************************************************/
 
-create function endpoint.register (_email text, _password text) returns void
+create function aquameta_endpoint.register (_email text, _password text) returns void
     language plpgsql strict security definer
 as $$
 
@@ -1941,7 +1938,7 @@ as $$
 
     begin
         -- Create user
-        insert into endpoint.user (email, active) values (_email, false) returning * into _user_row;
+        insert into aquameta_endpoint.user (email, active) values (_email, false) returning * into _user_row;
 
 	select (_user_row.role_id).name into _role_id;
 
@@ -1952,7 +1949,7 @@ as $$
         insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
         -- Send email to {email}
-        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
+        perform aquameta_endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
 
         return;
 
@@ -1961,10 +1958,10 @@ $$;
 
 
 /******************************************************************************
- * endpoint.register_confirm
+ * aquameta_endpoint.register_confirm
  ******************************************************************************/
 
-create function endpoint.register_confirm (_email text, _confirmation_code text) returns void
+create function aquameta_endpoint.register_confirm (_email text, _confirmation_code text) returns void
     language plpgsql strict security definer
 as $$
 
@@ -1975,7 +1972,7 @@ as $$
     begin
         -- 1. check for existing user.  throw exceptions for
           -- a. non-matching code
-        execute 'select * from endpoint.user where email=' || quote_literal(_email) || ' and activation_code=' || quote_literal(_confirmation_code) into _user_row;
+        execute 'select * from aquameta_endpoint.user where email=' || quote_literal(_email) || ' and activation_code=' || quote_literal(_confirmation_code) into _user_row;
         if _user_row is null then
             raise exception 'Invalid confirmation code';
         end if;
@@ -1987,7 +1984,7 @@ as $$
 
 
         -- 2. update user set active=true;
-        update endpoint.user set active=true, activation_code=null::uuid where email=_email and activation_code=_confirmation_code::uuid returning (role_id).name into _role_id;
+        update aquameta_endpoint.user set active=true, activation_code=null::uuid where email=_email and activation_code=_confirmation_code::uuid returning (role_id).name into _role_id;
 
 
         -- 3. update role set login=true
@@ -1995,7 +1992,7 @@ as $$
 
 
         -- 4. send email?
-        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Account created successfully!', 'You have successfully created your account');
+        perform aquameta_endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Account created successfully!', 'You have successfully created your account');
 
         return;
     end
@@ -2003,10 +2000,10 @@ $$;
 
 
 /******************************************************************************
- * endpoint.login
+ * aquameta_endpoint.login
  ******************************************************************************/
 
-create function endpoint.login (_email text, _password text) returns uuid
+create function aquameta_endpoint.login (_email text, _password text) returns uuid
     language plpgsql strict security definer
 as $$
 
@@ -2017,9 +2014,9 @@ as $$
 
     begin
         -- Build encrypted password by getting role name associated with this email
-        select 'md5' || md5(_password || (role_id).name) from endpoint.user where email=_email into _encrypted_password;
+        select 'md5' || md5(_password || (role_id).name) from aquameta_endpoint.user where email=_email into _encrypted_password;
 
-        -- Email does not exists in endpoint.user table
+        -- Email does not exists in aquameta_endpoint.user table
         if _encrypted_password is null then
             raise exception 'No user with this email';
         end if;
@@ -2031,7 +2028,7 @@ as $$
 
         -- Create cookie session for this role/user
         if _role_name is not null then
-            insert into endpoint.session (role_id, user_id) values (meta.role_id(_role_name), (select id from endpoint.user where email=_email)) returning id into _session_id;
+            insert into aquameta_endpoint.session (role_id, user_id) values (meta.role_id(_role_name), (select id from aquameta_endpoint.user where email=_email)) returning id into _session_id;
         end if;
 
         -- Return cookie
@@ -2041,34 +2038,34 @@ $$;
 
 
 /******************************************************************************
- * endpoint.logout
+ * aquameta_endpoint.logout
  ******************************************************************************/
 
-create function endpoint.logout (_email text) returns void
+create function aquameta_endpoint.logout (_email text) returns void
     language sql strict security definer
 as $$
     -- Should this delete all sessions associated with this user? I think so
-    delete from endpoint.session where user_id = (select id from endpoint."user" where email = _email);
+    delete from aquameta_endpoint.session where user_id = (select id from aquameta_endpoint."user" where email = _email);
 $$;
 
 
 /******************************************************************************
- * endpoint.logout
+ * aquameta_endpoint.logout
  ******************************************************************************/
 
-create function endpoint.superuser (_email text) returns void
+create function aquameta_endpoint.superuser (_email text) returns void
     language sql strict security invoker
 as $$
-    insert into meta.role_inheritance (role_name, member_role_name) values ('aquameta', (select (role_id).name from endpoint."user" where email=_email));
-    update meta.role set superuser=true where name=(select (role_id).name from endpoint."user" where email=_email);
+    insert into meta.role_inheritance (role_name, member_role_name) values ('aquameta', (select (role_id).name from aquameta_endpoint."user" where email=_email));
+    update meta.role set superuser=true where name=(select (role_id).name from aquameta_endpoint."user" where email=_email);
 $$;
 
 
 /******************************************************************************
- * endpoint.email
+ * aquameta_endpoint.email
  ******************************************************************************/
 
-create function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
+create function aquameta_endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
 
 # -- Import smtplib for the actual sending function
 import smtplib

@@ -7,11 +7,6 @@
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
 
--- create extension if not exists "uuid-ossp" schema public;
-create schema event;
-set search_path=event;
-
-
 /************************************************************************
  * table event.session
  * persistent (cross-connection) session object.
