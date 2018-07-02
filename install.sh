@@ -80,6 +80,8 @@ sudo -u postgres /usr/local/bin/pg_ctl -D /var/lib/postgresql/aquameta -l /var/l
 # Install some cool PostgreSQL extensions and python modules
 pgxn install multicorn
 pgxn install pgtap
+# fix for pip 10
+echo 'export PATH="${HOME}/.local/bin:$PATH"' >> /etc/profile
 pip install --upgrade pip
 pip install requests fusepy
 
