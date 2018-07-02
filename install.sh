@@ -85,6 +85,9 @@ echo 'export PATH="${HOME}/.local/bin:$PATH"' >> /etc/profile
 pip install --upgrade pip
 pip install requests fusepy
 
+# make bundles-available owned by postgres:postgres so export.sql can write to the directory
+chown -R postgres:postgres /s/aquameta/bundles-available/*.*.*
+
 
 #############################################################################
 # Configure sendmail - used to send registration emails
