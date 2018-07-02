@@ -63,6 +63,7 @@ grant usage on schema filesystem to "user";
 grant usage on schema widget to "user";
 grant usage on schema meta to "user";
 grant usage on schema semantics to "user";
+grant usage on schema bundle to "user";
 
 
 -- table privileges
@@ -71,6 +72,9 @@ grant select on all tables in schema filesystem to "user";
 grant select on all tables in schema widget to "user";
 grant select on all tables in schema meta to "user";
 grant select on all tables in schema semantics to "user";
+grant select on all tables in schema bundle to "user";
+
+grant execute on all functions in schema widget to "user";
 
 
 -- row level security permissions
