@@ -30,3 +30,4 @@ select bundle.bundle_export_csv('org.aquameta.ui.tags','/s/aquameta/bundles-avai
 select bundle.bundle_export_csv('org.aquameta.ui.layout','/s/aquameta/bundles-available/org.aquameta.ui.layout');
 select bundle.bundle_export_csv('org.aquameta.ui.dev','/s/aquameta/bundles-available/org.aquameta.ui.dev');
 select bundle.bundle_export_csv('org.aquameta.ui.admin','/s/aquameta/bundles-available/org.aquameta.ui.admin');
+select bundle.bundle_export_csv('org.aquameta.ui.auth','/s/aquameta/bundles-available/org.aquameta.ui.auth');
