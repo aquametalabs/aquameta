@@ -31,11 +31,17 @@ grant usage on schema meta to anonymous;
 
 -- table privileges
 insert into meta.table_privilege (schema_name, relation_name, role_name, "type")
-values  ('endpoint',    'mimetype',                 'anonymous', 'select'), -- endpoint.mimetype
-        ('endpoint',    'session',                  'anonymous', 'select'), -- endpoint.session
-        ('endpoint',    'resource',                 'anonymous', 'select'), -- endpoint.resource
-        ('widget',      'dependency_js',            'anonymous', 'select'), -- widget.dependency_js
-        ('meta',        'function',                 'anonymous', 'select'); -- meta.function
+values  ('endpoint',    'mimetype',               'anonymous', 'select'),
+        ('endpoint',    'session',                'anonymous', 'select'),
+        ('endpoint',    'resource',               'anonymous', 'select'),
+        ('endpoint',    'mimetype_extension',     'anonymous', 'select'),
+        ('endpoint',    'resource_file',          'anonymous', 'select'),
+        ('endpoint',    'resource_binary',        'anonymous', 'select'),
+        ('endpoint',    'resource_directory',     'anonymous', 'select'),
+        ('filesystem',  'file',                   'anonymous', 'select'), -- TODO: insecure?
+        ('filesystem',  'directory',              'anonymous', 'select'), -- TODO: insecure?
+        ('widget',      'dependency_js',          'anonymous', 'select'),
+        ('meta',        'function',               'anonymous', 'select');
 
 
 -- function privileges
