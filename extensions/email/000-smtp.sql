@@ -81,7 +81,7 @@ create table email.template (
  ******************************************************************************/
 create function email.template_render(
     template text,
-    args json
+    args public.hstore
 ) returns void as $$
 from string import Template
 s = Template(template)
@@ -96,10 +96,11 @@ $$ language plpythonu;
 create function email.template_send (
     smtp_server_name text,
     from_email text,
-    to_email text[]
-    template_id uuid not null references email.template(id),
+    to_email text[],
+    template_id uuid,
     template_args json
 ) returns void as $$
+/*
     with template as (
         select subject, body from email.template where id=template_id
     )
@@ -110,4 +111,5 @@ create function email.template_send (
         email.template_render( template.subject, template_args ),
         email.template_render( template.body, template_args )
     );
+*/
 $$ language sql;
