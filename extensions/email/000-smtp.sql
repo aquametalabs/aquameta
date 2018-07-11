@@ -55,12 +55,12 @@ settings = rv[0]
 
 server = smtplib.SMTP(settings["hostname"], settings["port"])
 
-if settings["use_ttls"] == true:
+if settings["use_ttls"] == True:
         server.starttls()
         server.login(settings["ttl_username"], settings["ttl_password"])
 
 text = msg.as_string()
-server.sendmail(from_address, to_address, text)
+server.sendmail(from_email, to_email, text)
 server.quit()
 
 
