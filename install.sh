@@ -127,7 +127,7 @@ mkdir /mnt/aquameta
 echo "create role root superuser login;" | psql -U postgres postgres
 
 # we're doing this for 0.1 version only!  remove this when we build a permissions UI
-echo "create role anonymous login superuser" | psql -U postgres postgres
+# echo "create role anonymous login superuser" | psql -U postgres postgres
 createdb aquameta
 
 cd $DIR

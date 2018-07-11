@@ -31,11 +31,11 @@ grant usage on schema meta to anonymous;
 
 -- table privileges
 insert into meta.table_privilege (schema_name, relation_name, role_name, "type")
-values 	('endpoint', 'mimetype', 'anonymous', 'select'), -- endpoint.mimetype
-	('endpoint', 'session', 'anonymous', 'select'), -- endpoint.session
-	('endpoint', 'resource', 'anonymous', 'select'), -- endpoint.resource
-	('widget', 'dependency_js', 'anonymous', 'select'), -- widget.dependency_js
-	('meta', 'function', 'anonymous', 'select'); -- meta.function
+values  ('endpoint',    'mimetype',                 'anonymous', 'select'), -- endpoint.mimetype
+        ('endpoint',    'session',                  'anonymous', 'select'), -- endpoint.session
+        ('endpoint',    'resource',                 'anonymous', 'select'), -- endpoint.resource
+        ('widget',      'dependency_js',            'anonymous', 'select'), -- widget.dependency_js
+        ('meta',        'function',                 'anonymous', 'select'); -- meta.function
 
 
 -- function privileges
@@ -48,7 +48,7 @@ grant execute on function endpoint.register_confirm(text, text) to anonymous;
 
 -- endpoint.resource - RLS
 insert into meta.policy (name, schema_name, relation_name, command, "using")
-	values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/'', ''/login'', ''/register'', ''/register/confirm'') or path like ''%.js''');
+    values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/'', ''/login'', ''/register'', ''/confirm'') or path like ''%.js''');
 insert into meta.policy_role (policy_name, schema_name, relation_name, role_name) values ('resource_anonymous', 'endpoint', 'resource', 'anonymous');
 
 
