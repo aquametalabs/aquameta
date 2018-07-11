@@ -13,7 +13,7 @@
  ******************************************************************************/
 
 create function email.email (
-    stmp_server_name text,
+    smtp_server_name text,
     from_email text,
     to_email text[],
     subject text,
@@ -47,16 +47,17 @@ msg['To'] = ', '.join(to_email)
 
 # by arg
 plan = plpy.prepare("SELECT * FROM email.smtp_server WHERE name = $1", ["text"])
-rv = plpy.execute(plan, ["aws"])
-if len(rv) != 1:
-    
+rv = plpy.execute(plan, [smtp_server_name])
+
+print rv
+
 settings = rv[0]
 
 server = smtplib.SMTP(settings["hostname"], settings["port"])
 
 if settings["use_ttls"] == true:
-    server.starttls()
-    server.login(settings["ttl_username"], settings["ttl_password"])
+        server.starttls()
+        server.login(settings["ttl_username"], settings["ttl_password"])
 
 text = msg.as_string()
 server.sendmail(from_address, to_address, text)
@@ -76,3 +77,5 @@ create table email.smtp_server (
     ttl_password text not null default ''
 );
 
+insert into email.smtp_server( id, name )
+values ('ffb6e431-daa7-4a87-b3c5-1566fe73177c', 'local');
