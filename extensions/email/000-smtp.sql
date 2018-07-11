@@ -30,7 +30,7 @@ insert into email.smtp_server( id, name ) values ('ffb6e431-daa7-4a87-b3c5-1566f
  ******************************************************************************/
 
 create function email.send (
-    smtp_server_name text,
+    smtp_server_id uuid,
     from_email text,
     to_email text[],
     subject text,
@@ -46,11 +46,11 @@ msg['From'] = from_email
 msg['To'] = ', '.join(to_email)
 
 # grab the server settings
-plan = plpy.prepare("SELECT * FROM email.smtp_server WHERE name = $1", ["text"])
-rv = plpy.execute(plan, [smtp_server_name])
+plan = plpy.prepare("select * from email.smtp_server where id = $1", ["uuid"])
+rv = plpy.execute(plan, [smtp_server_id])
 
 if len(rv) != 1:
-        plpy.error('No such SMTP server as "%s"' % smtp_server_name)
+        plpy.error('No such SMTP server with id="%s"' % smtp_server_id)
 
 settings = rv[0]
 
@@ -94,7 +94,7 @@ $$ language plpythonu;
  ******************************************************************************/
 
 create function email.template_send (
-    smtp_server_name text,
+    smtp_server_id uuid,
     from_email text,
     to_email text[],
     template_id uuid,
@@ -105,7 +105,7 @@ create function email.template_send (
         select subject, body from email.template where id=template_id
     )
     select email.send (
-        smtp_server_name,
+        smtp_server_id,
         from_email,
         to_email,
         email.template_render( template.subject, template_args ),

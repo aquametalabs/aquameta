@@ -95,18 +95,6 @@ create table endpoint.function_field_mimetype (
 );
 
 /******************************************************************************
- * endpoint.site_settings
- ******************************************************************************/
-
-create table endpoint.site_settings (
-    id uuid default public.uuid_generate_v4() primary key,
-    name text,
-    url text,
-    smtp_server_id uuid not null references email.smtp_server(id)
-);
-
-
-/******************************************************************************
  * endpoint.resource
  ******************************************************************************/
 
@@ -152,18 +140,20 @@ create table "resource" (
  * endpoint.site_settings
  ******************************************************************************/
 
-create table endpoint.site (
+create table endpoint.site_settings (
     id uuid default public.uuid_generate_v4() primary key,
-	
-    site_name text not null,
-    site_url text not null,
-    site_host text not null,
-    
-    -- who should send the register, confirm and reset password emails used in auth
-    auth_name text not null,
-    auth_email text not null
+    name text,
+    active boolean default false,
+
+    site_title text,
+    site_url text,
+
+    smtp_server_id uuid not null references email.smtp_server(id),
+    auth_from_email text
 );
 
+insert into endpoint.site_settings (name, active, site_title, site_url, smtp_server_id, auth_from_email)
+values ('development', true, '[ default site title ]', 'http://localhost/','ffb6e431-daa7-4a87-b3c5-1566fe73177c', 'noreply@localhost');
 
 
 create function endpoint.is_indexed(_path text) returns boolean as $$
@@ -1963,7 +1953,13 @@ as $$
         insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
         -- Send email to {email}
-        perform email.send('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
+        perform email.send(
+            (select smtp_server_id from endpoint.site_settings where active=true),
+            (select auth_from_email from endpoint.site_settings where active=true),
+            array[_user_row.email],
+            'Activate your new account',
+            'Use this code to activate your account ' || _user_row.activation_code
+        );
 
         return;
 
@@ -2004,9 +2000,14 @@ as $$
         -- 3. update role set login=true
         update meta.role set can_login = true where id = _role_id; 
 
-
         -- 4. send email?
-        perform email.send('user_mgmt@aquameta.com', array[_user_row.email], 'Account created successfully!', 'You have successfully created your account');
+        perform email.send(
+            (select smtp_server_id from endpoint.site_settings where active=true),
+            (select auth_from_email from endpoint.site_settings where active=true),
+            array[_user_row.email],
+            'Welcome!',
+            'Your account is now active.'
+        );
 
         return;
     end
