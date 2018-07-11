@@ -94,6 +94,21 @@ create table endpoint.function_field_mimetype (
     mimetype_id uuid not null references endpoint.mimetype(id)
 );
 
+/******************************************************************************
+ * endpoint.site_settings
+ ******************************************************************************/
+
+create table endpoint.site_settings (
+    id uuid default public.uuid_generate_v4() primary key,
+    name text,
+    url text,
+    smtp_server_id uuid not null references email.smtp_server(id)
+);
+
+
+/******************************************************************************
+ * endpoint.resource
+ ******************************************************************************/
 
 create table endpoint."resource_binary" (
     id uuid default public.uuid_generate_v4() primary key,
@@ -132,6 +147,23 @@ create table "resource" (
     active boolean default true,
     content text not null
 );
+
+/******************************************************************************
+ * endpoint.site_settings
+ ******************************************************************************/
+
+create table endpoint.site (
+    id uuid default public.uuid_generate_v4() primary key,
+	
+    site_name text not null,
+    site_url text not null,
+    site_host text not null
+    
+    -- who should send the register, confirm and reset password emails used in auth
+    auth_name text not null,
+    auth_email text not null,
+);
+
 
 
 create function endpoint.is_indexed(_path text) returns boolean as $$
@@ -1931,7 +1963,7 @@ as $$
         insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
         -- Send email to {email}
-        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
+        perform email.send('user_mgmt@aquameta.com', array[_user_row.email], 'Activate your new account', 'Use this code to activate your account ' || _user_row.activation_code);
 
         return;
 
@@ -1974,7 +2006,7 @@ as $$
 
 
         -- 4. send email?
-        perform endpoint.email('user_mgmt@aquameta.com', array[_user_row.email], 'Account created successfully!', 'You have successfully created your account');
+        perform email.send('user_mgmt@aquameta.com', array[_user_row.email], 'Account created successfully!', 'You have successfully created your account');
 
         return;
     end
@@ -2041,30 +2073,6 @@ as $$
     insert into meta.role_inheritance (role_name, member_role_name) values ('aquameta', (select (role_id).name from endpoint."user" where email=_email));
     update meta.role set superuser=true where name=(select (role_id).name from endpoint."user" where email=_email);
 $$;
-
-
-/******************************************************************************
- * endpoint.email
- ******************************************************************************/
-
-create function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
-
-# -- Import smtplib for the actual sending function
-import smtplib
-from email.mime.text import MIMEText
-
-# -- Create the container (outer) email message.
-msg = MIMEText(body)
-msg['Subject'] = subject
-msg['From'] = from_email
-msg['To'] = ', '.join(to_email)
-
-# -- Send the email via our own SMTP server.
-s = smtplib.SMTP("localhost")
-s.sendmail(from_email, to_email, msg.as_string())
-s.quit()
-
-$$ language plpythonu;
 
 
 
