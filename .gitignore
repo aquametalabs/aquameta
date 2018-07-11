@@ -5,4 +5,4 @@
 *.pyc
 docs/build
 pg_log
-bundles-available/private
+bundles-available.private
