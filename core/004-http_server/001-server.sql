@@ -157,11 +157,11 @@ create table endpoint.site (
 	
     site_name text not null,
     site_url text not null,
-    site_host text not null
+    site_host text not null,
     
     -- who should send the register, confirm and reset password emails used in auth
     auth_name text not null,
-    auth_email text not null,
+    auth_email text not null
 );
 
 
