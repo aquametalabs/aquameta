@@ -31,7 +31,7 @@ BEGIN
       FROM   pg_catalog.pg_roles
       WHERE  rolname = 'anonymous') THEN
 
-      CREATE ROLE anonymous superuser login;
+      CREATE ROLE anonymous login;
    END IF;
 
    IF NOT EXISTS (
