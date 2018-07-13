@@ -82,6 +82,7 @@ pgxn install multicorn
 pgxn install pgtap
 # fix for pip 10
 echo 'export PATH="${HOME}/.local/bin:$PATH"' >> /etc/profile
+. /etc/profile
 pip install --upgrade pip
 pip install requests fusepy
 
