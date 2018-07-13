@@ -17,7 +17,7 @@ create table email.smtp_server (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text unique,
     hostname text default 'localhost',
-    port integer default 587,
+    port integer default 25,
     use_ttls boolean default false,
     ttl_username text,
     ttl_password text
