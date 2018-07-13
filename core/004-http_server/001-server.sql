@@ -4,7 +4,7 @@
  * HTTP arbitrary resource server
  * Join graph thing
  * Authentication handlers
- * 
+ *
  * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
@@ -25,10 +25,10 @@ set search_path = endpoint;
  *
  ******************************************************************************/
 
-create type endpoint.resource_bin as 
+create type endpoint.resource_bin as
 (mimetype text, content bytea);
 
-create type endpoint.resource_txt as 
+create type endpoint.resource_txt as
 (mimetype text, content text);
 
 create function endpoint.resource_bin(value json) returns endpoint.resource_bin as $$
@@ -165,40 +165,40 @@ begin
         select path, parent_id, 'directory' as type
         from filesystem.directory
         where id=_path
-    
+
         union
-    
+
         select path, directory_id as parent_id, 'file' as type
         from filesystem.file
         where id=_path;
     ) a;
-    
-    
+
+
     with recursive t as (
-    
+
         select indexes, path
         from endpoint.resource_directory
         where path = _path
-    
+
         union all
-    
+
         select t.indexes, d.parent_id as path from t
             join filesystem.directory d on d.path = t.path
-    
+
     )
     select indexes from t;
-   */ 
-    
+   */
+
     /*
-    
+
     select indexes from endpoint.resource_directory where directory_id=_path;
-    
+
     if indexes then
         return true;
     else
         select indexes from endpoint.resource_directory where directory_id=(select parent_id from filesystem.directory where path=_path);
     end if;
-    
+
     */
 
 
@@ -314,7 +314,7 @@ language sql security definer;
  *
  *
  * JOIN GRAPH
- * 
+ *
  * A multidimensional structure made up of rows from various tables connected
  * by their foreign keys, for non-tabular query results made up of rows, but
  * serialized into a table of type join_graph_row.
@@ -327,11 +327,11 @@ language sql security definer;
 
 /*******************************************************************************
  * TYPE join_graph_row
- * 
+ *
  * label - the table being joined on's label/alias -- customers c
  * row_id - the meta.row_id for this row
  * row - the jsonb serialized row, whatever row_to_json outputs
- * position - the order in which the rows are inserted, if applicable 
+ * position - the order in which the rows are inserted, if applicable
  * exclude - when true, these rows are excluded from the join graph
  *******************************************************************************/
 
@@ -347,7 +347,7 @@ create type join_graph_row as (
 /*******************************************************************************
  * FUNCTION endpoint.construct_join_graph
  *
- * constructs a join graph table containing any rows matching the specified 
+ * constructs a join graph table containing any rows matching the specified
  * JOIN pattern
  *******************************************************************************/
 
@@ -627,7 +627,7 @@ create or replace function endpoint.row_insert(
                 "result": [{ "row": '' || row_to_json(inserted_row.*, true) || '' }]
             }'')::json
             from inserted_row
-        '; 
+        ';
 
         -- raise notice 'ROW_INSERT ############: %', q;
         return query execute q
@@ -674,7 +674,7 @@ create or replace function endpoint.is_json_object(
         if value is null then return false; end if;
         perform json_object_keys(value::json);
         return true;
-    
+
         exception when invalid_parameter_value then
             return false;
         when invalid_text_representation then
@@ -695,7 +695,7 @@ create function endpoint.is_json_array(
     begin
         perform json_array_length(value::json);
         return true;
-    
+
         exception when invalid_parameter_value then
             return false;
         when invalid_text_representation then
@@ -813,7 +813,7 @@ create function endpoint.row_select(
 
 
         row_query := 'select ''[{"row": '' || row_to_json(t.*, true) || ''}]'' from ' ||
-                        '(select ' || column_list || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || 
+                        '(select ' || column_list || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) ||
                         ' where ' || quote_ident(pk_column_name) || '=' || quote_literal(pk) ||
                             (
                                 select '::' || c.type_name
@@ -924,7 +924,7 @@ language plpgsql;
 /****************************************************************************************************
  *
  * FUNCTION suffix_clause
- * 
+ *
  * Builds limit, offset, order by, and where clauses from json
  *
  ****************************************************************************************************/
@@ -964,9 +964,8 @@ create or replace function endpoint.suffix_clause(
             -- /endpoint?$order_by=city
             -- /endpoint?$order_by=[city,-state,-full_name]
             elsif r.key = 'order_by' then
-                
                 if pg_typeof(r.value) = 'json'::regtype then
-                    select ' order by ' || 
+                    select ' order by ' ||
                         string_agg(case substring(q.val from 1 for 1)
                                        when '-' then substring(q.val from 2) || ' desc'
                                        else q.val end,
@@ -1267,7 +1266,7 @@ create function endpoint.rows_select_function(
             select coalesce(
                 string_agg(quote_ident(r.key) || ':=' ||
                 case when -- pg_typeof(r.value) = 'json'::regtype and
-                    json_typeof(r.value) = 'object' then 
+                    json_typeof(r.value) = 'object' then
                     quote_literal(r.value) || '::json::'
                 else
                     quote_literal(btrim(r.value::text, '"')) || '::'
@@ -1704,7 +1703,7 @@ create or replace function endpoint.request(
 
                 end if;
 
-                -- Get rows 
+                -- Get rows
                 return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text, 'application/json'::text;
 
             elsif verb = 'POST' then
@@ -1721,7 +1720,7 @@ create or replace function endpoint.request(
 
                 end if;
 
-                -- Get rows 
+                -- Get rows
                 return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'PATCH' then
@@ -1736,7 +1735,7 @@ create or replace function endpoint.request(
 
             elsif verb = 'DELETE' then
 
-                -- Delete rows 
+                -- Delete rows
                 return query select 200, 'OK'::text, (select endpoint.rows_delete(relation_id, query_args))::text, 'application/json'::text;
 
             else
@@ -1848,10 +1847,10 @@ create or replace function endpoint.user_insert() returns trigger as $$
         if role_exists then
             raise exception 'Role already exists';
         end if;
-    
+
         -- Create a new role
         insert into meta.role(name, inherit) values((NEW.role_id).name, true);
-    
+
         return NEW;
     end;
 $$
@@ -1910,7 +1909,9 @@ create trigger endpoint_user_delete_trigger before delete on endpoint.user for e
  * endpoint.current_user
  ******************************************************************************/
 
-create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
+-- create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
+create view endpoint."current_user" as
+    SELECT id, role_id, email, name from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
 
 create function endpoint."current_user"() returns uuid as $$
     SELECT id from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
@@ -1998,7 +1999,7 @@ as $$
 
 
         -- 3. update role set login=true
-        update meta.role set can_login = true where id = _role_id; 
+        update meta.role set can_login = true where id = _role_id;
 
         -- 4. send email?
         perform email.send(
@@ -2065,7 +2066,7 @@ $$;
 
 
 /******************************************************************************
- * endpoint.logout
+ * endpoint.superuser
  ******************************************************************************/
 
 create function endpoint.superuser (_email text) returns void
