@@ -91,7 +91,7 @@ To setup a user, from a shell prompt, open up a database shell with:
 
 ```
 $ psql aquameta
-psql (9.6.0)
+psql (9.6.9)
 Type "help" for help.
 
 aquameta=# select endpoint.register('your_email@example.com');

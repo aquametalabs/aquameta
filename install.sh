@@ -51,9 +51,9 @@ apt-get update -y && apt-get install -y wget ca-certificates lsb-release git pyt
 #############################################################################
 
 cd /tmp
-wget https://ftp.postgresql.org/pub/source/v9.6.0/postgresql-9.6.0.tar.gz
-tar -zxvf postgresql-9.6.0.tar.gz
-cd postgresql-9.6.0
+wget https://ftp.postgresql.org/pub/source/v9.6.9/postgresql-9.6.9.tar.gz
+tar -zxvf postgresql-9.6.9.tar.gz
+cd postgresql-9.6.9
 ./configure --prefix=/usr/local --enable-nls --with-perl --with-python --with-openssl --with-ossp-uuid --with-libxml
 make world
 make install-world
