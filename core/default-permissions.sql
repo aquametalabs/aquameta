@@ -27,6 +27,8 @@ alter table endpoint.resource enable row level security;
 grant usage on schema widget to anonymous;
 grant usage on schema endpoint to anonymous;
 grant usage on schema meta to anonymous;
+grant usage on schema bundle to anonymous;
+grant usage on schema filesystem to anonymous; -- TODO: insecure
 
 
 -- table privileges
@@ -38,15 +40,24 @@ values  ('endpoint',    'mimetype',               'anonymous', 'select'),
         ('endpoint',    'resource_file',          'anonymous', 'select'),
         ('endpoint',    'resource_binary',        'anonymous', 'select'),
         ('endpoint',    'resource_directory',     'anonymous', 'select'),
+        ('endpoint',    'column_mimetype',        'anonymous', 'select'),
+        ('endpoint',    'current_user',           'anonymous', 'select'),
+        ('bundle',      'bundle',                 'anonymous', 'select'),
         ('filesystem',  'file',                   'anonymous', 'select'), -- TODO: insecure?
         ('filesystem',  'directory',              'anonymous', 'select'), -- TODO: insecure?
         ('widget',      'dependency_js',          'anonymous', 'select'),
+        ('widget',      'widget',                 'anonymous', 'select'),
+        ('widget',      'widget_dependency_js',   'anonymous', 'select'),
+        ('widget',      'widget_view',            'anonymous', 'select'),
+        ('widget',      'input',                  'anonymous', 'select'),
+        ('meta',        'column',                 'anonymous', 'select'),
         ('meta',        'function',               'anonymous', 'select');
 
 
 -- function privileges
 grant execute on function endpoint.login(text, text) to anonymous;
 grant execute on function endpoint.register(text, text) to anonymous;
+grant execute on function endpoint.register_confirm(text, text) to anonymous;
 grant execute on function endpoint.register_confirm(text, text) to anonymous;
 
 
@@ -56,8 +67,6 @@ grant execute on function endpoint.register_confirm(text, text) to anonymous;
 insert into meta.policy (name, schema_name, relation_name, command, "using")
     values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/'', ''/login'', ''/register'', ''/confirm'') or path like ''%.js''');
 insert into meta.policy_role (policy_name, schema_name, relation_name, role_name) values ('resource_anonymous', 'endpoint', 'resource', 'anonymous');
-
-
 
 ---------------------------
 -- Generic user permissions
