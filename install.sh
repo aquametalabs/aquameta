@@ -130,6 +130,8 @@ echo "create role root superuser login;" | psql -U postgres postgres
 createdb aquameta
 
 cd $DIR
+cd extensions/email && make && make install
+cd $DIR
 
 echo "Loading requirements ..."
 cat core/requirements.sql | psql aquameta
@@ -149,13 +151,15 @@ done
 echo "Checking out head commit of every bundle ..."
 echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" | psql aquameta
 
-echo "Loading default permissions..."
-cat core/default-permissions.sql  | psql aquameta
-
 # Install FS FDW
+echo "Installing filesystem foreign data wrapper..."
 cd $DIR/core/002-filesystem/fs_fdw
 pip install . --upgrade
 cat fs_fdw.sql | psql aquameta
+
+echo "Loading default permissions..."
+cd $DIR
+cat core/default-permissions.sql  | psql aquameta
 
 
 echo ""
