@@ -28,7 +28,7 @@ Core Modules
 Installation
 ------------
 
-Aquameta can be installed either via Docker (very easy) or from source (very difficult).
+Aquameta can be installed either via Docker, on an Amazon Ubuntu 16.04 EC2 instance, or from source on your local machine.
 
 ### Docker
 
@@ -69,6 +69,44 @@ PostgreSQL database, use `psql -p 5432 aquameta`.
 Aquameta uses the "long-running container" pattern instead of exporting volumes
 at this time, so if you stop the container, just restart it with `docker
 restart {container_id}`.
+
+
+### Amazon EC2
+
+To install Amazon on Amazon, follow these steps:
+
+1. Create a new EC2 instance, running Ubuntu 16.04
+2. ssh into your instance with `ssh -i {your_pem_file.pem} ubuntu@{your_ip}`
+3. `git clone https://github.com/aquametalabs/aquameta.git`
+4. `sudo mkdir /s`
+5. `mv ./aquameta /s/aquameta`
+6. `cd /s/aquameta`
+7. `./install.sh`
+
+From the installer, follow the instructions.  If prompted for any LOCALE settings, just hit OK.
+
+Once the installer completes, you'll have a instance of Aquameta running.  
+
+To setup a user, from a shell prompt, open up a database shell with:
+
+```
+$ psql aquameta
+psql (9.6.0)
+Type "help" for help.
+
+aquameta=# select endpoint.register('your_email@example.com');
+```
+
+You'll be sent a confirmation code to the email specified.  Check your email and copy the code.  CHECK YOUR SPAM FOLDER!
+
+Then confirm the user registration and make the user a PostgreSQL superuser:
+
+```
+aquameta=# select endpoint.register_confirm('your_email@example.com', '{your confirmation code}');
+aquameta=# select endpoint.superuser('your_email@example.com');
+```
+
+You now have a superuser.  Browse to http://{your_ip}/login to sign in.
 
 
 ### From Source (DIFFICULT)
