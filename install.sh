@@ -122,6 +122,7 @@ mkdir /mnt/aquameta
 # build aquameta
 #############################################################################
 echo "create role root superuser login;" | psql -U postgres postgres
+echo "create role ubuntu superuser login;" | psql -U postgres postgres
 
 createdb aquameta
 
