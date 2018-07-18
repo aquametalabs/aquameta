@@ -87,6 +87,20 @@ From the installer, follow the instructions.  If prompted for any LOCALE setting
 
 Once the installer completes, you'll have a instance of Aquameta running.  
 
+### From Source (Advanced)
+
+To install Aquameta from source, follow the steps in the
+[install.sh](https://github.com/aquametalabs/aquameta/blob/master/install.sh)
+script.  The script is designed to run on an Ubuntu 16.04 server, and will
+require some adaptation for different environments.
+
+Getting Started
+---------------
+
+Once you have Aquameta running, create a superuser and then you can start building applications.
+
+### Create a Superuser
+
 To setup a user, from a shell prompt, open up a database shell with:
 
 ```
@@ -108,13 +122,14 @@ aquameta=# select endpoint.superuser('your_email@example.com');
 
 You now have a superuser.  Browse to http://{your_ip}/login to sign in.
 
+### Starting Development
 
-### From Source (DIFFICULT)
+The primary development interface lives at http://{your_ip}/dev.  From here you can create bundles and edit their contents.  To find out more about how to develop apps in Aquameta, here are the available resources:
 
-To install Aquameta from source, follow the steps in the
-[install.sh](https://github.com/aquametalabs/aquameta/blob/master/install.sh)
-script.  The script is designed to run on an Ubuntu 16.04 server, and will
-require some adaptation for different environments.
+- [Quickstart](docs/quickstart.md)
+- [Cheat Sheet](docs/cheatsheet.md)
+
+
 
 Contribute
 ----------
