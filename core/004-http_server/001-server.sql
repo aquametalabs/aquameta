@@ -1831,7 +1831,8 @@ create table endpoint.user (
     email text not null unique,
     name text not null default '',
     active boolean not null default false,
-    activation_code uuid default public.uuid_generate_v4()
+    activation_code uuid default public.uuid_generate_v4(),
+    created_at timestamp not null default now()
 );
 
 
