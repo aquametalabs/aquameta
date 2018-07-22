@@ -131,6 +131,18 @@ $$ language sql;
 -- track a row
 create or replace function tracked_row_add (
     bundle_name text,
+    row_id meta.row_id
+) returns text
+as $$
+    insert into bundle.tracked_row_added (bundle_id, row_id) values (
+        (select id from bundle.bundle where name=bundle_name),
+        row_id
+    );
+    select bundle_name || ' - ' || (meta.row_id::meta.schema_id).name || '.' || (meta.row_id::meta.relation_id).name || '.' || row_id.pk_value;
+$$ language sql;
+
+create or replace function tracked_row_add (
+    bundle_name text,
     schema_name text,
     relation_name text,
     pk_column_name text,
@@ -144,6 +156,7 @@ as $$
     );
     select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
+
 
 
 
