@@ -83,19 +83,20 @@ $$ language plpgsql;
 
 
 
-create or replace function bundle_commits_hash( bundle_relation_id meta.relation_id )
+create or replace function bundle_commits_array( bundle_relation_id meta.relation_id )
 returns table (
-    id uuid, name text, head_commit_id uuid, commits_hash text[]
+    id uuid, name text, head_commit_id uuid, commits jsonb
 )
 as $$
 begin
     return query execute format('
         select
-            b.id, b.name, b.head_commit_id,
-            array_agg(c.id::text) as commits
+            b.id,
+            b.name,
+            b.head_commit_id,
+            jsonb_agg(row(c.*)) as commits
         from %I.%I b
             join %I.commit c on c.bundle_id=b.id
-        order by      
         group by b.id, b.name, b.head_commit_id
     ',
         (bundle_relation_id::meta.schema_id).name,
@@ -105,14 +106,21 @@ begin
 end;
 $$ language plpgsql;
 
-/*
 create or replace function diff_bundle_bundle_commits(
-    bundle_a meta.relation_id,
-    bundle_b meta.relation_id 
-) 
-as 
-
-*/
+    bundle_table_a meta.relation_id,
+    bundle_table_b meta.relation_id 
+) returns table ( 
+    a_bundle_id uuid, a_name text, a_head_commit_id uuid, a_commits json,
+    b_bundle_id uuid, b_name text, b_head_commit_id uuid, b_commits json
+)
+as $$
+select
+    a.id as a_bundle_id, a.name as a_name, a.head_commit_id as a_head_commit_id, a.commits as a_commits,
+    b.id as b_bundle_id, b.name as b_name, b.head_commit_id as b_head_commit_id, b.commits as b_commits
+    from bundle_commits_array( bundle_table_a ) a
+        full outer join bundle_commits_array( bundle_table_b ) b
+            on a.id = b.id
+$$ language sql; 
 
 
 -- remote_bundle_level_diff ()
