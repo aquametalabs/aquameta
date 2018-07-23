@@ -138,7 +138,7 @@ as $$
         (select id from bundle.bundle where name=bundle_name),
         row_id
     );
-    select bundle_name || ' - ' || (meta.row_id::meta.schema_id).name || '.' || (meta.row_id::meta.relation_id).name || '.' || row_id.pk_value;
+    select bundle_name || ' - ' || (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name || '.' || row_id.pk_value;
 $$ language sql;
 
 create or replace function tracked_row_add (
