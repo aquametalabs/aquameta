@@ -88,7 +88,7 @@ grant select on all tables in schema widget to "user";
 grant select on all tables in schema meta to "user";
 grant select on all tables in schema semantics to "user";
 grant select on all tables in schema bundle to "user";
-grant delete on session in schema endpoint to "user"; -- TODO: insecure
+grant delete on endpoint.session to "user"; -- TODO: insecure
 
 grant execute on all functions in schema widget to "user";
 
