@@ -83,113 +83,127 @@ $$ language plpgsql;
 
 
 
-
--- remote_diff ()
---
--- compare the bundles in two bundle schemas, typically a local one and a
--- remote one.  returns bundles present in the local but not the remote,
--- or visa versa.
-
-create or replace function remote_bundle_existence_diff( local meta.relation_id, remote meta.relation_id )
+create or replace function bundle_commits_hash( bundle_relation_id meta.relation_id )
 returns table (
-    local_id uuid, local_name text, local_head_commit_id uuid,
-    remote_id uuid, remote_name text, remote_head_commit_id uuid
+    id uuid, name text, head_commit_id uuid, commits_hash text[]
 )
 as $$
 begin
-    raise log 'local: %s', local::text;
     return query execute format('
         select
-            local.id as local_id, local.name as local_name, local.head_commit_id as local_head_commit_id,
-            remote.id as remote_id, remote.name as remote_name, remote.head_commit_id as remote_head_commit_id
-        from %I.%I local
-            full outer join %I.%I remote
-                using (id, name)
-        ',
-        (local::meta.schema_id).name, local.name,
-        (remote::meta.schema_id).name, remote.name
+            b.id, b.name, b.head_commit_id,
+            array_agg(c.id::text) as commits
+        from %I.%I b
+            join %I.commit c on c.bundle_id=b.id
+        order by      
+        group by b.id, b.name, b.head_commit_id
+    ',
+        (bundle_relation_id::meta.schema_id).name,
+        bundle_relation_id.name,
+        (bundle_relation_id::meta.schema_id).name
     );
 end;
-$$
-language plpgsql;
-
--- remote_diff_commits (schema1_name, schema2_name)
---
--- returns commits in schema1 but not in schema2, or visa versa
+$$ language plpgsql;
 
 /*
-we gonna deprecate this?
+create or replace function diff_bundle_bundle_commits(
+    bundle_a meta.relation_id,
+    bundle_b meta.relation_id 
+) 
+as 
 
-create or replace function remote_diff_commits( local meta.relation_id, remote meta.relation_id )
-returns table(
-    local_id uuid, local_bundle_id uuid, local_role_id meta.role_id, local_parent_id uuid, local_time timestamp, local_message text,
-    remote_id uuid, remote_bundle_id uuid, remote_role_id meta.role_id, remote_parent_id uuid, remote_time timestamp, remote_message text
+*/
+
+
+-- remote_bundle_level_diff ()
+--
+-- compare the bundles in two bundle schemas, typically a local one and a
+-- remote one.  returns all bundles present in either database.
+
+create or replace function remote_bundle_level_diff( local meta.relation_id, remote meta.relation_id )
+returns table (
+    local_id uuid, local_name text, local_head_commit_id uuid, local_commits_hash text[],
+    remote_id uuid, remote_name text, remote_head_commit_id uuid, remote_commits_hash text[]
 )
 as $$
 begin
     return query execute format('
         select
-            local.id as local_id, local.bundle_id as bundle_id, local.role_id as local_role_id, local.parent_id as local_parent_id, local.time as local_time, local.message as local_message,
-            remote.id as remote_id, remote.bundle_id as bundle_id, remote.role_id as remote_role_id, remote.parent_id as remote_parent_id, remote.time as remote_time, remote.message as remote_message
+            local.id as local_id,
+            local.name as local_name,
+            local.head_commit_id as local_head_commit_id,
+            array_agg(local_c.id::text) as local_commits_hash,
         from %I.%I local
-        full outer join %I.%I remote on local.id = remote.id
-        where local.id is null or remote.id is null
+            join %I.commit local_c 
+ 
+        
+            remote.id as remote_id,
+            remote.name as remote_name,
+            remote.head_commit_id as remote_head_commit_id,
+            array_agg(remote_c.id::text) as remote_commits_hash
+
+        from %I.%I local
+            full outer join %I.%I remote on remote.id = local.id
+            left join %I.commit local_c on local_c.bundle_id=local.id
+            left join %I.commit remote_c on remote_c.bundle_id=remote.id
+        group by local_id, local_name, local_head_commit_id, remote_id, remote_name, remote_head_commit_id
         ',
         (local::meta.schema_id).name, local.name,
-        (remote::meta.schema_id).name, remote.name
+        (remote::meta.schema_id).name, remote.name,
+        (local::meta.schema_id).name,
+        (remote::meta.schema_id).name
     );
 end;
 $$
 language plpgsql;
-*/
+
+-- remote_commit_level_diff(bundle_name, schema1_name, schema2_name)
+--
+-- returns commits in remote but not local
 
 create type commit_diff as (
     c1_id uuid,
+    c1_bundle_id uuid,
     c1_message text,
     c1_time timestamp,
     c1_parent_id uuid,
     c1_role_id meta.role_id,
+
     c2_id uuid,
+    c2_bundle_id uuid,
     c2_message text,
     c2_time timestamp,
     c2_parent_id uuid,
     c2_role_id meta.role_id
 );
 
--- remote_commits_existence_diff(bundle_name, schema1_name, schema2_name)
---
--- returns commits in remote but not local
-
-create or replace function remote_commits_existence_diff (
-    bundle_name text,
+create or replace function remote_commit_level_diff (
     schema1_name text,
     schema2_name text
 ) returns setof commit_diff
 as $$
 begin
     return query execute format('
-        select
+        select 
             c1.id as c1_id,
+            c1.bundle_id as c1_bundle_id,
             c1.message as c1_message,
             c1.time as c1_time,
             c1.parent_id as c1_parent_id,
             c1.role_id as c1_role_id,
 
             c2.id as c2_id,
+            c2.bundle_id as c2_bundle_id,
             c2.message as c2_message,
             c2.time as c2_time,
             c2.parent_id as c2_parent_id,
             c2.role_id as c2_role_id
 
-        from %I.bundle b
-            join %I.commit c1 on c1.bundle_id = b.id
-            full outer join %I.commit c2 on c2.id = c1.id
-        where b.name=%L
-        and (c1.id is null or c2.id is null)',
+        from %I.commit c1
+            full outer join %I.commit c2 on c1.id = c2.id and c1.bundle_id = c2.bundle_id
+        where c1.id is null or c2.id is null',
         schema1_name,
-        schema1_name,
-        schema2_name,
-        bundle_name
+        schema2_name
     );
 end;
 $$
@@ -246,6 +260,8 @@ begin
         insert into %2$I.commit
         select c.* from %1$I.commit c
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+
+    -- todo: ignored rows?
 
 	execute format ('update %2$I.bundle
 		set head_commit_id = (
