@@ -82,10 +82,14 @@ end;
 $$ language plpgsql;
 
 
+-- bundle_commits_array( bundle_relation_id )
+--
+-- contains a row for each bundle in a database, containing the "commit" row of each commit in the bundle
+
 
 create or replace function bundle_commits_array( bundle_relation_id meta.relation_id )
 returns table (
-    id uuid, name text, head_commit_id uuid, commits jsonb
+    id uuid, name text, head_commit_id uuid, commits json
 )
 as $$
 begin
@@ -94,7 +98,13 @@ begin
             b.id,
             b.name,
             b.head_commit_id,
-            jsonb_agg(row(c.*)) as commits
+            json_agg( json_build_object(
+                ''id'', c.id,
+                ''bundle_id'', c.bundle_id,
+                ''message'', c.message,
+                ''time'', c.time,
+                ''parent_id'', c.parent_id
+            )) as commits
         from %I.%I b
             join %I.commit c on c.bundle_id=b.id
         group by b.id, b.name, b.head_commit_id
@@ -105,6 +115,11 @@ begin
     );
 end;
 $$ language plpgsql;
+
+
+-- diff_bundle_bundle_commits( bundle_table_a, bundle_table_b )
+--
+-- outer-joins the bundle tables of databases, one row per bundle.  the row also contains a json aggregate of every commit in that bundle.
 
 create or replace function diff_bundle_bundle_commits(
     bundle_table_a meta.relation_id,
@@ -117,10 +132,16 @@ as $$
 select
     a.id as a_bundle_id, a.name as a_name, a.head_commit_id as a_head_commit_id, a.commits as a_commits,
     b.id as b_bundle_id, b.name as b_name, b.head_commit_id as b_head_commit_id, b.commits as b_commits
-    from bundle_commits_array( bundle_table_a ) a
-        full outer join bundle_commits_array( bundle_table_b ) b
+    from bundle.bundle_commits_array( bundle_table_a ) a
+        full outer join bundle.bundle_commits_array( bundle_table_b ) b
             on a.id = b.id
-$$ language sql; 
+$$ language sql;
+
+
+/*
+
+EARLIER ATTEMPTS AT GREATNESS:
+
 
 
 -- remote_bundle_level_diff ()
@@ -216,6 +237,8 @@ begin
 end;
 $$
 language plpgsql;
+
+*/
 
 -- remote_clone ()
 --
