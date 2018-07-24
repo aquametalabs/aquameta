@@ -1934,7 +1934,7 @@ create table endpoint.session (
  * endpoint.register
  ******************************************************************************/
 
-create function endpoint.register (_email text, _password text) returns void
+create function endpoint.register (_email text, _password text, send_email boolean default true) returns void
     language plpgsql strict security definer
 as $$
 
@@ -1955,13 +1955,15 @@ as $$
         insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
         -- Send email to {email}
-        perform email.send(
-            (select smtp_server_id from endpoint.site_settings where active=true),
-            (select auth_from_email from endpoint.site_settings where active=true),
-            array[_user_row.email],
-            'Activate your new account',
-            'Use this code to activate your account ' || _user_row.activation_code
-        );
+        if send_email = true then
+            perform email.send(
+                (select smtp_server_id from endpoint.site_settings where active=true),
+                (select auth_from_email from endpoint.site_settings where active=true),
+                array[_user_row.email],
+                'Activate your new account',
+                'Use this code to activate your account ' || _user_row.activation_code
+            );
+        end if;
 
         return;
 
