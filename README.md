@@ -6,12 +6,12 @@ files in the file system, everything is stored in PostgreSQL as relational
 data, including source code, html, css, javascript, images and other resources,
 system configurations, database schema, permissions and more.  It has a
 web-based IDE, and can be used to build web applications and much more.  For
-more info, see [aquameta.org](http://aquameta.org/).
+more info, see [blog.aquameta.com](http://blog.aquameta.com/), espcially the [introduction](http://blog.aquameta.com/2015/08/28/introducing-aquameta/).
 
 Status
 ------
 
-Aquameta is in early prototype stages, version 0.2.  Do not use it in a
+Aquameta is in early prototype stages, approaching version 0.2.  Do not use it in a
 production, or untrusted environment.
 
 Core Modules
