@@ -32,6 +32,7 @@
 \\xbc020a35b7f9cb1382e7b534c68e3c531d849b119bf14f75ddead6cc45c3ccc1	machine
 \\xbdcedb5d64c1b093ca02cf161a1e7177d2f3731ee27ea9363e5f75326d88ff23	.{{= name }} {\n    background-color: #777;\n    width: 500px;\n    color: black;\n    font-size: 50%;\n}\n\n
 \\xc3e2d78f3ff335724b4029f06505b511e4f8f01e258828de29849b36b40b55d0	button
+\\xcb218518c86e9538f54d6562b2d09a2e8a1fd11dbb99b21c08ab600688c10356	0e0f1e42-ad32-4018-b1ca-74cacb29fde4
 \\xd7424d569ef1fca0a1585314920dc09a966d2a3d4a37fd9a1baa89260aef6c9c	<a id="{{= id }}" href='#' class="{{= name }}">\n    {{= title }}\n</a>
 \\xda909434f875b09312331228676316b3bbbd61c669fc09fe3ad2ed836156b7b9	var w = $("#"+id);\n\npost_message('FSM DEBUGGER INITIALIZED');\n\nw.closest('.machine').bind('state_change', function(e,o) {\n\tpost_message('State changed to '+o.state);\n});\n\nw.closest('.machine').bind('invalid_state_change', function(e,o) {\n    post_error('No such state as '+e.state);\n});\n\nw.closest('.machine').bind('machine_error', function(e,o) {\n    post_error(o.message);\n});\n\n\nfunction post_message(message) {\n    w.append('<li>'+message+'</li>');\n}\n\n\nfunction post_error(message) {\n    w.append('<li class="error">'+message+'</li>');\n}
 \\xdd2741e2734916143a6dbf1d1939cbc04396f10356faf54aba282066cec41b5f	944b5a05-be70-45a1-a549-1301d38799e4
