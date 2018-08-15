@@ -2,5 +2,4 @@
 2fe58b79-4fc2-40bd-9a66-1c71451c1e95	13aa5018-d573-4e0c-97ca-7f9fffb6602e	f4192a34-24e4-4c9f-875c-25629bff2c56	\N	0adf8453-e011-4adc-891f-281d227142ab	2018-07-23 05:49:51.981727	bundle manager kinda shows commit diffs!
 3c46cd36-8ae1-467f-885c-573ad4914fd5	13aa5018-d573-4e0c-97ca-7f9fffb6602e	80b5775e-be97-4cb6-a7cd-2d9e5a84f266	\N	\N	2018-01-22 13:53:26.485194	start of bundle remote manager
 71a575ad-8eba-4a1a-a9d2-fe2f357ed721	13aa5018-d573-4e0c-97ca-7f9fffb6602e	8cf0518b-9643-407f-b103-20fc052c74c6	\N	2fe58b79-4fc2-40bd-9a66-1c71451c1e95	2018-07-23 06:10:24.67977	bundle manager showing commit diffs
-b5aa5d68-ca44-4c37-aa56-e54753daa9e7	13aa5018-d573-4e0c-97ca-7f9fffb6602e	3c168501-a53d-46ec-ac78-43b802fd0a6e	\N	71a575ad-8eba-4a1a-a9d2-fe2f357ed721	2018-07-23 20:22:57.3152	show remote commits diff
 eb68eace-96e2-4cb3-8ae7-de01ced6c77a	13aa5018-d573-4e0c-97ca-7f9fffb6602e	04f8c980-c0eb-4899-b7bc-7c79c392f0fe	\N	3c46cd36-8ae1-467f-885c-573ad4914fd5	2018-02-05 04:21:45.048264	switch bundle manager to use admin and layout bundles
