@@ -126,15 +126,17 @@ echo "create role ubuntu superuser login;" | psql -U postgres postgres
 
 createdb aquameta
 
+echo "Building Aquameta core extensions..."
+
 cd $DIR
-cd extensions/email && make && make install
+cd extensions && make && make install
 cd $DIR
 
-echo "Loading requirements ..."
-cat core/requirements.sql | psql aquameta
+echo "Installing required extensions..."
+cat extensions/requirements.sql | psql aquameta
 
-echo "Loading core/*.sql ..."
-cat core/0*/0*.sql  | psql aquameta
+# echo "Loading core/*.sql ..."
+# cat core/0*/0*.sql  | psql aquameta
 
 # echo "Loading bundles-enabled/*.sql ..."
 # cat bundles-enabled/*.sql | psql aquameta
@@ -156,7 +158,7 @@ cat fs_fdw.sql | psql aquameta
 
 echo "Loading default permissions..."
 cd $DIR
-cat core/default-permissions.sql  | psql aquameta
+cat extensions/default-permissions.sql  | psql aquameta
 
 
 echo ""

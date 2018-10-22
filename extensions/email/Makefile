@@ -3,7 +3,7 @@ EXTVERSION = 0.1.0
 DATA = email--0.1.0.sql
 PG_CONFIG = pg_config
 
-$(EXTENSION)--$(EXTVERSION).sql: $(filter-out $(wildcard *--*.sql),$(wildcard *.sql))
+$(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard *.sql)))
 # DATA = $(filter-out $(wildcard sql/*--*.sql),$(wildcard sql/*.sql))
 
 	cat $^ > $@

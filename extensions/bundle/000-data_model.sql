@@ -46,9 +46,6 @@ $$ language plpgsql volatile returns null on null input;
 
 -- hash table
 
-
-create extension if not exists pgcrypto schema public;
-
 create table blob (
     hash text unique,
     value text

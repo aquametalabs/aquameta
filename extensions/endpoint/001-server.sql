@@ -187,10 +187,10 @@ create table "resource" (
 );
 
 /******************************************************************************
- * endpoint.site_settings
+ * aquameta_endpoint.site_settings
  ******************************************************************************/
 
-create table endpoint.site_settings (
+create table aquameta_endpoint.site_settings (
     id uuid default public.uuid_generate_v4() primary key,
     name text,
     active boolean default false,
@@ -202,7 +202,7 @@ create table endpoint.site_settings (
     auth_from_email text
 );
 
-insert into endpoint.site_settings (name, active, site_title, site_url, smtp_server_id, auth_from_email)
+insert into aquameta_endpoint.site_settings (name, active, site_title, site_url, smtp_server_id, auth_from_email)
 values ('development', true, '[ default site title ]', 'http://localhost/','ffb6e431-daa7-4a87-b3c5-1566fe73177c', 'noreply@localhost');
 
 
@@ -1614,7 +1614,7 @@ language plpgsql;
  * FUNCTION rows_delete                                                                             *
  ****************************************************************************************************/
 
-create function endpoint.rows_delete(
+create function aquameta_endpoint.rows_delete(
     relation_id meta.relation_id,
     args json
 ) returns json as $$
@@ -1630,7 +1630,7 @@ create function endpoint.rows_delete(
         select (relation_id::meta.relation_id).name into _table_name;
 
         -- Suffix
-        select endpoint.suffix_clause(args) into suffix;
+        select aquameta_endpoint.suffix_clause(args) into suffix;
 
         execute 'delete from ' || quote_ident(_schema_name) || '.' || quote_ident(_table_name) || ' ' || suffix;
 
@@ -1788,7 +1788,7 @@ create or replace function aquameta_endpoint.request(
             elsif verb = 'DELETE' then
 
                 -- Delete rows
-                return query select 200, 'OK'::text, (select endpoint.rows_delete(relation_id, query_args))::text, 'application/json'::text;
+                return query select 200, 'OK'::text, (select aquameta_endpoint.rows_delete(relation_id, query_args))::text, 'application/json'::text;
 
             else
                 -- HTTP method not allowed for this resource: 405
@@ -1962,9 +1962,9 @@ create trigger aquameta_endpoint_user_delete_trigger before delete on aquameta_e
  * aquameta_endpoint.current_user
  ******************************************************************************/
 
--- create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
-create view endpoint."current_user" as
-    SELECT id, role_id, email, name from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
+-- create view aquameta_endpoint."current_user" AS SELECT "current_user"() AS "current_user";
+create view aquameta_endpoint."current_user" as
+    SELECT id, role_id, email, name from aquameta_endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
 
 create function aquameta_endpoint."current_user"() returns uuid as $$
     SELECT id from aquameta_endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
@@ -2009,8 +2009,8 @@ as $$
         -- Send email to {email}
         if send_email = true then
             perform email.send(
-                (select smtp_server_id from endpoint.site_settings where active=true),
-                (select auth_from_email from endpoint.site_settings where active=true),
+                (select smtp_server_id from aquameta_endpoint.site_settings where active=true),
+                (select auth_from_email from aquameta_endpoint.site_settings where active=true),
                 array[_user_row.email],
                 'Activate your new account',
                 'Use this code to activate your account ' || _user_row.activation_code
@@ -2058,8 +2058,8 @@ as $$
 
         -- 4. send email?
         perform email.send(
-            (select smtp_server_id from endpoint.site_settings where active=true),
-            (select auth_from_email from endpoint.site_settings where active=true),
+            (select smtp_server_id from aquameta_endpoint.site_settings where active=true),
+            (select auth_from_email from aquameta_endpoint.site_settings where active=true),
             array[_user_row.email],
             'Welcome!',
             'Your account is now active.'
