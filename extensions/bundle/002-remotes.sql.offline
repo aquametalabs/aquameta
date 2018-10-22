@@ -1,0 +1,216 @@
+/*******************************************************************************
+ * Bundle Remotes
+ *
+ * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
+ * Company: http://aquameta.com/
+ * Project: http://blog.aquameta.com/
+ ******************************************************************************/
+
+/*******************************************************************************
+*
+*
+* BUNDLE REMOTES
+*
+*
+*******************************************************************************/
+
+/*******************************************************************************
+* bundle.has_bundle
+* checks a remote to see if it also has a bundle with the same id installed
+*******************************************************************************/
+
+create or replace function bundle.remote_has_bundle(in _remote_id uuid, out has_bundle boolean)
+as $$
+declare
+    local_bundle_id uuid;
+    remote_endpoint_id uuid;
+begin
+    -- look up endpoint_id
+    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
+    select into local_bundle_id r.bundle_id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
+
+    raise notice '########### remote has bundle: % % %', _remote_id, remote_endpoint_id, local_bundle_id;
+    if _remote_id is null or remote_endpoint_id is null or local_bundle_id is null then 
+        has_bundle := false; 
+        return; 
+    end if;
+
+    -- 
+    select into has_bundle (count(*) = 1)::boolean from (
+        select 
+            (json_array_elements((rc.response_text::json)->'result')->'row'->>'id') as id
+            from endpoint.client_rows_select(
+                    remote_endpoint_id,
+                    meta.relation_id('bundle','bundle'),
+                    ARRAY['id'],
+                    ARRAY[local_bundle_id::text]
+            ) rc
+    ) has;
+end;
+$$ language plpgsql;
+
+
+
+
+
+/*******************************************************************************
+* bundle.remote_compare_commits
+* diffs the set of local commits with the set of remote commits
+*******************************************************************************/
+
+create or replace function bundle.remote_compare_commits(in _remote_id uuid)
+returns table(local_commit_id uuid, remote_commit_id uuid)
+as $$
+declare
+    local_bundle_id uuid;
+    remote_endpoint_id uuid;
+begin
+    select into local_bundle_id bundle_id from bundle.remote r where r.id = _remote_id;
+    select into remote_endpoint_id e.id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
+
+    raise notice '########## bundle compare: % % %', _remote_id, local_bundle_id, remote_endpoint_id;
+
+    return query
+        with remote_commit as (
+            select 
+                (json_array_elements((rc.response_text::json)->'result')->'row'->>'id')::uuid as id
+            from 
+                endpoint.client_rows_select(
+                    remote_endpoint_id,
+                    meta.relation_id('bundle','commit'),
+                    ARRAY['bundle_id'],
+                    ARRAY[local_bundle_id::text]
+            ) rc
+        )
+        select lc.id, rc.id
+        from remote_commit rc
+        full outer join bundle.commit lc on lc.id = rc.id
+        where lc.bundle_id = local_bundle_id or lc.bundle_id is null;
+end;
+$$ language plpgsql;
+
+
+
+
+
+
+
+/*******************************************************************************
+* bundle.construct_bundle_diff
+* fills a temporary table with the commits specified, but only including NEW blobs
+*******************************************************************************/
+
+create or replace function bundle.construct_bundle_diff(bundle_id uuid, new_commits uuid[], temp_table_name text, create_bundle boolean default false)
+returns setof endpoint.join_graph_row as $$
+declare
+    new_commits_str text;
+begin
+    select into new_commits_str string_agg(q,',') from (
+    select quote_literal(unnest(new_commits)) q) as quoted;
+    raise notice '######## CONSTRUCTING BUNDLE DIFF FOR COMMITS %', new_commits_str;
+
+    perform endpoint.construct_join_graph(
+            temp_table_name,
+            ('{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "pk_field": "id", "where_clause": "b.id = ''' || bundle_id::text || '''", "position": 1, "exclude": ' || (not create_bundle)::text || '}')::json,
+            ('[
+                {"schema_name": "bundle", "relation_name": "commit",           "label": "c",   "join_pk_field": "id", "join_local_field": "bundle_id",     "related_label": "b",   "related_field": "id",         "position": 6, "where_clause": "c.id in (' || new_commits_str || ')"},
+                {"schema_name": "bundle", "relation_name": "rowset",           "label": "r",   "join_pk_field": "id", "join_local_field": "id",            "related_label": "c",   "related_field": "rowset_id",  "position": 2},
+                {"schema_name": "bundle", "relation_name": "rowset_row",       "label": "rr",  "join_pk_field": "id", "join_local_field": "rowset_id",     "related_label": "r",   "related_field": "id",         "position": 3},
+                {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "join_pk_field": "id", "join_local_field": "rowset_row_id", "related_label": "rr",  "related_field": "id",         "position": 5},
+                {"schema_name": "bundle", "relation_name": "blob",             "label": "blb", "join_pk_field": "hash", "join_local_field": "hash",          "related_label": "rrf", "related_field": "value_hash", "position": 4}
+             ]')::json
+        );
+
+    return query execute format ('select label, row_id, row::jsonb, position, exclude from %I order by position', quote_ident(temp_table_name));
+
+end;
+$$ language plpgsql;
+
+
+
+
+/*******************************************************************************
+* bundle.push
+* transfer to a remote repository any local commits not present in the remote
+*
+* 1. run compare_commits() to create new_commits array, commits that shall be pushed
+* 2. construct_bundle_diff() to create a join_graph_row table containing new commit rows
+* 3. serialize this table to json via join_graph_to_json()
+* 4. ship the json via client_rows_insert to the remote's rows_insert method
+* 5. the remote deserializes and inserts the rows
+*******************************************************************************/
+
+create or replace function bundle.remote_push(in remote_id uuid, in create_bundle boolean default false)
+returns void -- table(_row_id meta.row_id)
+as $$
+declare
+    new_commits uuid[];
+    bundle_id uuid;
+    result jsonb;
+    endpoint_id uuid;
+begin
+    raise notice '################################### PUSH ##########################';
+    select into bundle_id r.bundle_id from bundle.remote r where r.id = remote_id;
+    select into endpoint_id e.id from bundle.remote r join endpoint.remote_endpoint e on r.endpoint_id = e.id where r.id = remote_id;
+
+    -- 1. get the array of new remote commits
+    select into new_commits array_agg(local_commit_id)
+        from bundle.remote_compare_commits(remote_id)
+        where remote_commit_id is null;
+    raise notice 'NEW COMMITS: %', new_commits::text;
+
+    -- 2. construct bundle diff
+    perform bundle.construct_bundle_diff(bundle_id, new_commits, 'bundle_push_1234', create_bundle);
+
+    -- 3. join_graph_to_json()
+    select into result endpoint.join_graph_to_json('bundle_push_1234');
+
+    -- raise notice 'PUUUUUUUUUSH result: %', result::text;
+
+    -- http://hashrocket.com/blog/posts/faster-json-generation-with-postgresql
+    perform endpoint.client_rows_insert (endpoint_id, result);
+    -- from (select * from bundle_push_1234 order by position) as b;
+
+    drop table bundle_push_1234;
+end;
+$$ language plpgsql;
+
+
+
+/*******************************************************************************
+* bundle.fetch
+* download from remote repository any commits not present in the local repository
+*******************************************************************************/
+
+create or replace function bundle.remote_fetch(in remote_id uuid, create_bundle boolean default false)
+returns void -- table(_row_id meta.row_id)
+as $$
+declare
+    bundle_id uuid;
+    endpoint_id uuid;
+    new_commits uuid[];
+    json_results jsonb;
+begin
+    raise notice '################################### FETCH ##########################';
+    select into bundle_id r.bundle_id from bundle.remote r where r.id = remote_id;
+    select into endpoint_id r.endpoint_id from bundle.remote r where r.id = remote_id;
+
+    -- get the array of new remote commits
+    select into new_commits array_agg(remote_commit_id)
+        from bundle.remote_compare_commits(remote_id)
+        where local_commit_id is null;
+
+    raise notice 'NEW COMMITS: %', new_commits::text;
+
+    -- create a join_graph on the remote via the construct_bundle_diff function
+    select into json_results response_text::jsonb from endpoint.client_rows_select_function(
+        endpoint_id,
+        meta.function_id('bundle','construct_bundle_diff', ARRAY['bundle_id','new_commits','temp_table_name','create_bundle']),
+        ARRAY[bundle_id::text, new_commits::text, 'bundle_diff_1234'::text, false::text]
+    );
+    -- raise notice '################# RESULTS: %', json_results;
+    perform endpoint.rows_insert(endpoint.endpoint_response_to_joingraph(json_results)::json);
+
+    -- drop table bundle_diff_1234;
+end;
+$$ language plpgsql;

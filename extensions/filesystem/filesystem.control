@@ -1,0 +1,4 @@
+comment = 'filesystem foreign data wrapper'
+default_version = '0.2.0'
+relocatable = false
+schema = 'filesystem'
