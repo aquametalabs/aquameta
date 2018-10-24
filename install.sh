@@ -97,15 +97,15 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 # uwsgi emperor
 #############################################################################
 # build the aquameta db python egg
-cd $DIR/core/004-http_server/servers/uwsgi
+cd $DIR/extensions/endpoint/servers/uwsgi
 pip install .
-uwsgi --die-on-term --emperor $DIR/core/004-http_server/servers/uwsgi/conf/uwsgi/aquameta_db.ini &
+uwsgi --die-on-term --emperor $DIR/extensions/endpoint/servers/uwsgi/conf/uwsgi/aquameta_db.ini &
 
 #############################################################################
 # nginx server
 #############################################################################
 # setup /etc/nginx settings
-cp $DIR/core/004-http_server/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
+cp $DIR/extensions/endpoint/servers/uwsgi/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
 cd /etc/nginx/sites-enabled
 rm ./default
 ln -s ../sites-available/aquameta_endpoint.conf
@@ -135,11 +135,8 @@ cd $DIR
 echo "Installing required extensions..."
 cat extensions/requirements.sql | psql aquameta
 
-# echo "Loading core/*.sql ..."
-# cat core/0*/0*.sql  | psql aquameta
-
-# echo "Loading bundles-enabled/*.sql ..."
-# cat bundles-enabled/*.sql | psql aquameta
+echo "Loading core/*.sql ..."
+cat core/0*/0*.sql  | psql aquameta
 
 echo "Loading bundles-enabled/*/*.csv ..."
 for D in `find $PWD/bundles-enabled/* \( -type l -o -type d \)`
@@ -152,7 +149,7 @@ echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on 
 
 # Install FS FDW
 echo "Installing filesystem foreign data wrapper..."
-cd $DIR/core/002-filesystem/fs_fdw
+cd $DIR/extensions/filesystem/fs_fdw
 pip install . --upgrade
 cat fs_fdw.sql | psql aquameta
 
