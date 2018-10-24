@@ -15,11 +15,11 @@ cd ..
 echo "Installing required extensions..."
 cat extensions/requirements.sql | psql aquameta
 
-# echo "Loading core/*.sql ..."
-# cat core/0*/0*.sql  | psql aquameta
+echo "Installing Aquameta core extensions..."
+cat extensions/install.sql | psql aquameta
 
-# echo "Loading bundles-enabled/*.sql ..."
-# cat bundles-enabled/*.sql | psql aquameta
+echo "Loading core/*.sql ..."
+cat core/0*/0*.sql  | psql aquameta
 
 echo "Loading bundles-enabled/*/*.csv ..."
 for D in `find /s/aquameta/bundles-enabled/* \( -type l -o -type d \)`
@@ -32,7 +32,7 @@ echo "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on 
 
 # Install FS FDW
 echo "Installing filesystem foreign data wrapper..."
-cd /s/aquameta/core/002-filesystem/fs_fdw
+cd /s/aquameta/extensions/filesystem/fs_fdw
 pip install . --upgrade
 cat fs_fdw.sql | psql aquameta
 

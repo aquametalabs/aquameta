@@ -60,7 +60,7 @@ create table dependency_css (
     unique(name, version)
 );
 
-select aquameta_endpoint.set_mimetype('widget', 'dependency_css', 'content', 'text/css');
+select endpoint.set_mimetype('widget', 'dependency_css', 'content', 'text/css');
 
 
 
@@ -77,7 +77,7 @@ create table dependency_js (
     unique(name, version)
 );
 
-select aquameta_endpoint.set_mimetype('widget', 'dependency_js', 'content', 'text/javascript');
+select endpoint.set_mimetype('widget', 'dependency_js', 'content', 'text/javascript');
 
 
 

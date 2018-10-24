@@ -1,4 +1,4 @@
-EXTENSION = aquameta_endpoint
+EXTENSION = endpoint
 EXTVERSION = 0.2.0
 DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
