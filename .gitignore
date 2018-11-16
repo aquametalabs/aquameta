@@ -6,4 +6,5 @@
 docs/build
 pg_log
 bundles-available.private
-extensions/*/*--*.sql
+pg-extensions/*/*--*.sql
+node_modules
