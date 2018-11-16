@@ -2,11 +2,11 @@
 *.swo
 *.pyc
 
-src/bundle/bundle--*.*.*.sql
-src/email/email--*.*.*.sql
-src/endpoint/endpoint--*.*.*.sql
-src/event/event--*.*.*.sql
-src/filesystem/filesystem--*.*.*.sql
-src/meta/meta--*.*.*.sql
-src/widget/widget--*.*.*.sql
+src/pg-extension/bundle/bundle--*.*.*.sql
+src/pg-extension/email/email--*.*.*.sql
+src/pg-extension/endpoint/endpoint--*.*.*.sql
+src/pg-extension/event/event--*.*.*.sql
+src/pg-extension/filesystem/filesystem--*.*.*.sql
+src/pg-extension/meta/meta--*.*.*.sql
+src/pg-extension/widget/widget--*.*.*.sql
 

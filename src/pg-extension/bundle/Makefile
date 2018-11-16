@@ -1,6 +1,6 @@
 EXTENSION = bundle
 EXTVERSION = 0.2.0
-DATA = bundle--0.2.0.sql
+DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
 
 $(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard *.sql)))

@@ -1,6 +1,6 @@
 EXTENSION = email
-EXTVERSION = 0.1.0
-DATA = email--0.1.0.sql
+EXTVERSION = 0.2.0
+DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
 
 $(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard *.sql)))
