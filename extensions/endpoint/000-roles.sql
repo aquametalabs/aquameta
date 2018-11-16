@@ -5,9 +5,6 @@
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
-begin;
-
-create schema endpoint;
 set search_path=endpoint;
 
 /******************************************************************************
@@ -66,5 +63,3 @@ then
     create role aquameta superuser login;
 end if;
 */
-
-commit;
