@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 
-setup(name='Aquameta-DB',
-      author='Aquameta',
+setup(name='aquameta-endpoint',
+      author='Aquameta Labs',
       author_email='eric@aquameta.com',
-      description='',
+      description='uWSGI service for the Aquameta endpoint',
       include_package_data=True,
       long_description=open('README.md', 'r').read(),
       packages=find_packages(),
