@@ -57,8 +57,8 @@ apt-get install postgresql-10 postgresql-10-python-multicorn postgresql-server-d
 # sendmail
 #############################################################################
 
-# locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
-# echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
+locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
+echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 
 
