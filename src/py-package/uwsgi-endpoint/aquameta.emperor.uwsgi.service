@@ -1,0 +1,16 @@
+[Unit]
+Description=uWSGI Emperor
+After=syslog.target
+
+[Service]
+ExecStart=/usr/local/bin/uwsgi --ini /etc/aquameta/uwsgi-emperor.ini
+# Requires systemd version 211 or newer
+RuntimeDirectory=uwsgi
+Restart=always
+KillSignal=SIGQUIT
+Type=notify
+StandardError=syslog
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
