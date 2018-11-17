@@ -142,6 +142,13 @@ sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join
 
 
 #############################################################################
+# copy static htdocs to $DEST/htdocs
+#############################################################################
+cp -R $SRC/src/htdocs $DEST/
+
+
+
+#############################################################################
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
