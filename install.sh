@@ -46,8 +46,8 @@ fi
 #############################################################################
 
 sudo add-apt-repository universe
-apt-get update 
-apt-get install postgresql-10 postgresql-10-python-multicorn postgresql-server-dev-10 postgresql-plpython-10 python-pip python-werkzeug python-psycopg2 sendmail nginx
+apt-get update -y
+apt-get install -y postgresql-10 postgresql-10-python-multicorn postgresql-server-dev-10 postgresql-plpython-10 python-pip python-werkzeug python-psycopg2 sendmail nginx
 
 # wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev pgxnclient fuse libfuse-dev sendmail supervisor
 
@@ -68,11 +68,11 @@ echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 # filesystem_fdw
 cd $SRC/src/py-package/filesystem_fdw
-pip install --upgrade .
+sudo -H pip install --upgrade .
 
 # aquameta-endpoint
 cd $SRC/src/py-package/uwsgi-endpoint
-pip install --upgrade .
+sudo -H pip install --upgrade .
 
 # pip install requests fusepy
 
