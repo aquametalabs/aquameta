@@ -29,8 +29,9 @@ then
     fi
 fi
 
-# set working directory
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# set working directory and destination directory
+SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DEST=/opt/aquameta
 
 # make sure we're running as root
 if [[ $EUID -ne 0 ]]; then
@@ -66,13 +67,14 @@ apt-get install postgresql-10 postgresql-10-python-multicorn postgresql-server-d
 #############################################################################
 
 # filesystem_fdw
-cd $DIR/src/py-package/filesystem_fdw
-pip install .
+cd $SRC/src/py-package/filesystem_fdw
+pip install --upgrade .
 
 # aquameta-endpoint
-cd $DIR/src/py-package/uwsgi-endpoint
-pip install .
+cd $SRC/src/py-package/uwsgi-endpoint
+pip install --upgrade .
 
+# pip install requests fusepy
 
 
 #############################################################################
@@ -80,13 +82,13 @@ pip install .
 #############################################################################
 
 # install extensions into PostgreSQL's extensions/ directory
-cd $DIR/src/pg-extension/meta && make && make install
-cd $DIR/src/pg-extension/bundle && make && make install
-cd $DIR/src/pg-extension/filesystem && make && make install
-cd $DIR/src/pg-extension/email && make && make install
-cd $DIR/src/pg-extension/event && make && make install
-cd $DIR/src/pg-extension/endpoint && make && make install
-cd $DIR/src/pg-extension/widget && make && make install
+cd $SRC/src/pg-extension/meta && make && make install
+cd $SRC/src/pg-extension/bundle && make && make install
+cd $SRC/src/pg-extension/filesystem && make && make install
+cd $SRC/src/pg-extension/email && make && make install
+cd $SRC/src/pg-extension/event && make && make install
+cd $SRC/src/pg-extension/endpoint && make && make install
+cd $SRC/src/pg-extension/widget && make && make install
 
 
 
@@ -123,8 +125,14 @@ sudo -u postgres psql -c "create extension widget" aquameta
 # install and checkout enabled bundles
 #############################################################################
 
+mkdir --parents $DEST
+cp -R $SRC/bundles-available $DEST
+cp -R $SRC/bundles-enabled $DEST
+chown -R postgres:postgres $DEST/bundles-available
+chown -R postgres:postgres $DEST/bundles-enabled
+
 echo "Loading bundles-enabled/*/*.csv ..."
-for D in `find $DIR/bundles-enabled/* \( -type l -o -type d \)`
+for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
 do
     sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
 done
@@ -136,19 +144,21 @@ sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join
 #############################################################################
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
-sudo -u postgres psql -f $DIR/permissions.sql aquameta
+
+sudo -u postgres psql -f $SRC/permissions.sql aquameta
 
 
 
 #############################################################################
 # configure uwsgi and start the service
 #############################################################################
+
 mkdir -p /etc/aquameta
 # copy service file into /etc/systemd/system
-cp $DIR/src/py-package/uwsgi-endpoint/aquameta.emperor.uwsgi.service /etc/systemd/system
+cp $SRC/src/py-package/uwsgi-endpoint/aquameta.emperor.uwsgi.service /etc/systemd/system
 
 # copy uwsgi .ini file into /etc/uwsgi/uwsgi-emperor.ini
-cp $DIR/src/py-package/uwsgi-endpoint/uwsgi-emperor.ini /etc/aquameta
+cp $SRC/src/py-package/uwsgi-endpoint/uwsgi-emperor.ini /etc/aquameta
 
 systemctl start aquameta.emperor.uwsgi.service
 
@@ -157,23 +167,33 @@ systemctl start aquameta.emperor.uwsgi.service
 #############################################################################
 # configure nginx and restart the service
 #############################################################################
-# setup /etc/nginx settings
-# cp $DIR/extensions/py-package/uwsgi-endpoint/conf/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
-# cd /etc/nginx/sites-enabled
+
+cp $SRC/src/py-package/uwsgi-endpoint/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
+cd /etc/nginx/sites-enabled
 # rm ./default
-# ln -s ../sites-available/aquameta_endpoint.conf
-# /etc/init.d/nginx restart
+ln -sf ../sites-available/aquameta_endpoint.conf
+systemctl restart nginx
 
 
-# uwsgi --die-on-term --emperor $DIR/extensions/endpoint/servers/uwsgi/conf/uwsgi/aquameta_db.ini &
+
+#############################################################################
+# setup aquameta superuser
+#############################################################################
+
+echo "Superuser Registration"
+echo "----------------------"
+echo "Enter the name, email and password of the user you'd like to setup as superuser:"
+read -p "Full Name: " NAME
+read -p "Email Address: " EMAIL
+read -s -p "Password: " PASSWORD
+
+REG_COMMAND="select endpoint.register('$EMAIL', '$PASSWORD', true)"
+sudo -u postgres psql -c "$REG_COMMAND" aquameta
 
 
-# chown -R postgres:postgres /s/aquameta/bundles-available/*.*.*
-
-
-# pgxn install pgtap
-# pip install requests fusepy
-
+#############################################################################
+# finished!
+#############################################################################
 
 echo ""
 echo ""
