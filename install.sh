@@ -57,8 +57,8 @@ apt-get install -y postgresql-10 postgresql-10-python-multicorn postgresql-serve
 # sendmail
 #############################################################################
 
-locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
-echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
+# locale-gen "en_US.UTF-8" && dpkg-reconfigure locales
+# echo `tail -1 /etc/hosts`.localdomain >> /etc/hosts
 
 
 
@@ -89,6 +89,7 @@ cd $SRC/src/pg-extension/email && make && make install
 cd $SRC/src/pg-extension/event && make && make install
 cd $SRC/src/pg-extension/endpoint && make && make install
 cd $SRC/src/pg-extension/widget && make && make install
+cd $SRC/src/pg-extension/semantics && make && make install
 
 
 
@@ -98,6 +99,10 @@ cd $SRC/src/pg-extension/widget && make && make install
 
 # create aquameta database
 sudo -u postgres createdb aquameta
+
+# enable peer authentication
+sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/10/main/pg_hba.conf
+systemctl restart postgresql.service
 
 # create dependency extensions required by aquameta
 echo "Installing dependencies..."
@@ -118,6 +123,8 @@ sudo -u postgres psql -c "create extension email" aquameta
 sudo -u postgres psql -c "create extension event" aquameta
 sudo -u postgres psql -c "create extension endpoint" aquameta
 sudo -u postgres psql -c "create extension widget" aquameta
+sudo -u postgres psql -c "create extension semantics" aquameta
+sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 
 
 
@@ -152,7 +159,7 @@ cp -R $SRC/src/htdocs $DEST/
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
-sudo -u postgres psql -f $SRC/permissions.sql aquameta
+sudo -u postgres psql -f $SRC/src/sql/permissions.sql aquameta
 
 
 
@@ -167,6 +174,7 @@ cp $SRC/src/py-package/uwsgi-endpoint/aquameta.emperor.uwsgi.service /etc/system
 # copy uwsgi .ini file into /etc/uwsgi/uwsgi-emperor.ini
 cp $SRC/src/py-package/uwsgi-endpoint/uwsgi-emperor.ini /etc/aquameta
 
+systemctl enable aquameta.emperor.uwsgi.service
 systemctl start aquameta.emperor.uwsgi.service
 
 
@@ -177,7 +185,7 @@ systemctl start aquameta.emperor.uwsgi.service
 
 cp $SRC/src/py-package/uwsgi-endpoint/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
 cd /etc/nginx/sites-enabled
-# rm ./default
+rm -f ./default
 ln -sf ../sites-available/aquameta_endpoint.conf
 systemctl restart nginx
 

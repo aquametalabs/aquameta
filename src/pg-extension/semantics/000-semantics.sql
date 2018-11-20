@@ -6,9 +6,7 @@
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
  ******************************************************************************/
-begin;
 
-create schema semantics;
 set search_path=semantics;
 
 create table semantics.relation_purpose (
@@ -148,7 +146,4 @@ begin
     limit 1';
 end;
 $$ language plpgsql;
-
-
-commit;
 
