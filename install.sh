@@ -45,11 +45,17 @@ fi
 # apt packages
 #############################################################################
 
-sudo add-apt-repository universe
+# update
 apt-get update -y
-apt-get install -y postgresql-10 postgresql-10-python-multicorn postgresql-server-dev-10 postgresql-plpython-10 python-pip python-werkzeug python-psycopg2 sendmail nginx
 
-# wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools sudo libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev pgxnclient fuse libfuse-dev sendmail supervisor
+# add the universe repository
+apt-get install -y software-properties-common
+add-apt-repository universe
+
+# install required packages
+apt-get install -y postgresql-10 postgresql-10-python-multicorn postgresql-server-dev-10 postgresql-plpython-10 python-pip python-werkzeug python-psycopg2 sendmail nginx sudo
+
+# wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev pgxnclient fuse libfuse-dev supervisor
 
 
 

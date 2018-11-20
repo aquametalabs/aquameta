@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:18.04
 MAINTAINER Eric Hanson <eric@aquameta.com>
 
 # to build:
@@ -13,22 +13,20 @@ MAINTAINER Eric Hanson <eric@aquameta.com>
 #
 # access the ide by browsing to port 80 of the host machine.
 
-ENV REFRESHED_AT 2018-01-02
+ENV REFRESHED_AT 2018-11-19
 
-# cp the repo to /s
-RUN mkdir -p /s/aquameta
-COPY . /s/aquameta/
+# copy the repo to /tmp
+RUN mkdir -p /tmp/aquameta
+COPY . /tmp/aquameta/
 
 
-#################### docker container ###############################
-# finally, setup our container
 USER root
-WORKDIR /s/aquameta
+WORKDIR /tmp/aquameta
 RUN ./install.sh --silent
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 
 EXPOSE 80 5432
 # VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
-ENTRYPOINT ["/usr/bin/supervisord"]
+# ENTRYPOINT ["/usr/bin/supervisord"]
 
