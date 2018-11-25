@@ -158,7 +158,8 @@ sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join
 # copy static htdocs to $DEST/htdocs
 #############################################################################
 cp -R $SRC/src/htdocs $DEST/
-cp $SRC/src/pg-extension/widget/js/* $DEST/
+cp $SRC/src/pg-extension/widget/js/* $DEST/htdocs/js
+sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id, path, indexes) values ('$DEST/htdocs/js', '', true)" aquameta #FIXME mount the whole htdocs directory
 
 
 

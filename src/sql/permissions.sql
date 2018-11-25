@@ -55,7 +55,7 @@ values  ('endpoint',    'mimetype',               'anonymous', 'select'),
 
 -- function privileges
 grant execute on function endpoint.register(text, text, boolean) to anonymous;
-grant execute on function endpoint.register_confirm(text, text) to anonymous;
+grant execute on function endpoint.register_confirm(text, text, boolean) to anonymous;
 grant execute on function endpoint.login(text, text) to anonymous;
 
 

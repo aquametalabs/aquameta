@@ -46,26 +46,6 @@ BEGIN
 END
 $body$;
 
-/*
-if not exists (select from pg_catalog.pg_roles where rolname = 'user')
-then
-    create role "user" nologin;
-end if;
-
--- anonymous (guest role)
-if not exists (select from pg_catalog.pg_roles where rolname = 'anonymous') 
-then
-    -- TODO: don't make anonymous a superuser -- enable security in 0.2
-    create role anonymous superuser login;
-end if;
-
-
--- aquameta
-if not exists (select from pg_catalog.pg_roles where rolname = 'aquameta') 
-then
-    create role aquameta superuser login;
-end if;
-*/
 
 /******************************************************************************
  *
@@ -1902,7 +1882,7 @@ create or replace function endpoint.user_insert() returns trigger as $$
         end if;
 
         -- Create a new role
-        insert into meta.role(name, login, inherit) values((NEW.role_id).name, true, true);
+        insert into meta.role(name, can_login, inherit) values((NEW.role_id).name, true, true);
 
         return NEW;
     end;
