@@ -34,3 +34,19 @@ Out
 * message
 * response
 * mimetype
+
+## How Aquameta processes a request
+
+1. Every request is first processed by the uWSGI server.  The uWSGI server
+   connects to PostgreSQL initially as the `anonymous` user, which has a
+   limited set of permissions for authenticating and not much else.  If the user
+   has a session cookie set, that cookie is checked to be valid and if it is, they
+   can keep being that user.  If not, there is no cookie so they are anonymous.
+
+2. Once authentication is handled, the request is routed to the appropriate
+   handler based on the requested path.  If the request begins with the base
+   endpoint URL (usually `/endpoint`), it is handled as a REST request.
+   Otherwise, it is handled by the uWSGI server.
+
+
+
