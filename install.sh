@@ -210,8 +210,10 @@ read -p "Full Name: " NAME
 read -p "Email Address: " EMAIL
 read -s -p "Password: " PASSWORD
 
-REG_COMMAND="select endpoint.register('$EMAIL', '$PASSWORD', true)"
+REG_COMMAND="select endpoint.register('$EMAIL', '$PASSWORD', '$NAME', false)"
+REG_CONFIRM_COMMAND="select endpoint.register_confirm('$EMAIL', activation_code::text, false) from endpoint.user where email='$EMAIL'"
 sudo -u postgres psql -c "$REG_COMMAND" aquameta
+sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
 
 
 #############################################################################
@@ -221,7 +223,7 @@ sudo -u postgres psql -c "$REG_COMMAND" aquameta
 echo ""
 echo ""
 echo ""
-echo "Aquameta was successfully installed.  Here are some starting places:"
+echo "Aquameta was successfully installed.  Next, login w"
 echo "    - IDE: http://localhost/dev"
 echo "    - Documentation: http://localhost/docs"
 echo ""

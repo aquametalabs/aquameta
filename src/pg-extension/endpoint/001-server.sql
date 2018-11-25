@@ -1966,7 +1966,7 @@ create table endpoint.session (
  * endpoint.register
  ******************************************************************************/
 
-create function endpoint.register (_email text, _password text, send_email boolean default true) returns void
+create function endpoint.register (_email text, _password text, fullname text default '', send_email boolean default true) returns void
     language plpgsql strict security definer
 as $$
 
@@ -1976,7 +1976,7 @@ as $$
 
     begin
         -- Create user
-        insert into endpoint.user (email, active) values (_email, false) returning * into _user_row;
+        insert into endpoint.user (email, name, active) values (_email, fullname, false) returning * into _user_row;
 
 	select (_user_row.role_id).name into _role_id;
 
