@@ -158,6 +158,7 @@ sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join
 # copy static htdocs to $DEST/htdocs
 #############################################################################
 cp -R $SRC/src/htdocs $DEST/
+cp $SRC/src/pg-extension/widget/js/* $DEST/
 
 
 
