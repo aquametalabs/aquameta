@@ -1902,7 +1902,7 @@ create or replace function endpoint.user_insert() returns trigger as $$
         end if;
 
         -- Create a new role
-        insert into meta.role(name, inherit) values((NEW.role_id).name, true);
+        insert into meta.role(name, login, inherit) values((NEW.role_id).name, true, true);
 
         return NEW;
     end;
@@ -2027,7 +2027,7 @@ $$;
  * endpoint.register_confirm
  ******************************************************************************/
 
-create function endpoint.register_confirm (_email text, _confirmation_code text) returns void
+create function endpoint.register_confirm (_email text, _confirmation_code text, send_email boolean default true) returns void
     language plpgsql strict security definer
 as $$
 
@@ -2057,13 +2057,15 @@ as $$
         update meta.role set can_login = true where id = _role_id;
 
         -- 4. send email?
-        perform email.send(
-            (select smtp_server_id from endpoint.site_settings where active=true),
-            (select auth_from_email from endpoint.site_settings where active=true),
-            array[_user_row.email],
-            'Welcome!',
-            'Your account is now active.'
-        );
+        if send_email then
+            perform email.send(
+                (select smtp_server_id from endpoint.site_settings where active=true),
+                (select auth_from_email from endpoint.site_settings where active=true),
+                array[_user_row.email],
+                'Welcome!',
+                'Your account is now active.'
+            );
+        end if;
 
         return;
     end
