@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
-from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, ENOENT, EROFS
+from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from errno import ENOENT, EROFS
 from os.path import normpath
 from psycopg2 import connect, ProgrammingError, DataError, InternalError
 from psycopg2.extensions import QuotedString
