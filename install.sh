@@ -11,7 +11,7 @@ set -o pipefail
 # - install apt packages
 # - install python packages
 # - install postgresql extensions
-# - 
+#
 #############################################################################
 
 # prompting and sanity checking
@@ -31,7 +31,6 @@ fi
 
 # set working directory and destination directory
 SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DEST=/opt/aquameta
 
 # make sure we're running as root
 if [[ $EUID -ne 0 ]]; then
@@ -39,6 +38,11 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+#############################################################################
+# prompt for $DEST location
+#############################################################################
+read -p "Installation directory [/opt/aquameta]: " DEST
+DEST=${DEST:-/opt/aquameta}
 
 
 #############################################################################
@@ -53,10 +57,10 @@ apt-get install -y software-properties-common
 add-apt-repository universe
 
 # install required packages
-apt-get install -y postgresql-10 postgresql-10-python-multicorn postgresql-server-dev-10 postgresql-plpython-10 python-pip python-werkzeug python-psycopg2 sendmail nginx sudo
-
-# wget ca-certificates lsb-release git python python-pip python-dev nginx python-setuptools libssl-dev libxml2-dev libossp-uuid-dev gettext libperl-dev libreadline-dev pgxnclient fuse libfuse-dev supervisor
-
+DEBIAN_FRONTEND=nointeractive \
+	apt-get install -y postgresql-10 postgresql-10-python-multicorn \
+	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
+	python-werkzeug python-psycopg2 sendmail nginx sudo fuse
 
 
 #############################################################################
@@ -80,7 +84,8 @@ sudo -H pip install --upgrade .
 cd $SRC/src/py-package/uwsgi-endpoint
 sudo -H pip install --upgrade .
 
-# pip install requests fusepy
+pip install requests fusepy
+
 
 
 #############################################################################
@@ -103,12 +108,12 @@ cd $SRC/src/pg-extension/semantics && make && make install
 # build the aquameta database
 #############################################################################
 
-# create aquameta database
-sudo -u postgres createdb aquameta
-
 # enable peer authentication
 sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/10/main/pg_hba.conf
 systemctl restart postgresql.service
+
+# create aquameta database
+sudo -u postgres createdb aquameta
 
 # create dependency extensions required by aquameta
 echo "Installing dependencies..."
@@ -210,8 +215,11 @@ read -p "Full Name: " NAME
 read -p "Email Address: " EMAIL
 read -s -p "Password: " PASSWORD
 
+echo ""
+echo "Creating superuser...."
 REG_COMMAND="select endpoint.register('$EMAIL', '$PASSWORD', '$NAME', false)"
 REG_CONFIRM_COMMAND="select endpoint.register_confirm('$EMAIL', activation_code::text, false) from endpoint.user where email='$EMAIL'"
+# REG_SUPERUSER_COMMAND="alter role $ROLE superuser"
 sudo -u postgres psql -c "$REG_COMMAND" aquameta
 sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
 
@@ -222,10 +230,8 @@ sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
 
 echo ""
 echo ""
+echo "Aquameta was successfully installed.  Next, configure your database:"
 echo ""
-echo "Aquameta was successfully installed.  Next, login w"
-echo "    - IDE: http://localhost/dev"
-echo "    - Documentation: http://localhost/docs"
-echo ""
+echo "    - http://localhost/setup"
 echo ""
 
