@@ -27,7 +27,7 @@ def request_method(cmd, cursor):
     post_data = json.dumps(cmd['data'])
 
     logging.info('websocket endpoint request: %s, %s, %s, %s, %s' % (
-        '0.1',          # API version               - 0.1, 0.2, etc.
+        '0.2',          # API version               - 0.1, 0.2, etc.
         cmd['verb'],    # HTTP method               - GET, POST, PATCH, DELETE
         cmd['uri'],     # selector                  - '/relation/widget/dependency_js'
         query_data,     # query string arguments    - including event.session id
@@ -120,7 +120,7 @@ def application(env, start_response):
                                         request_method(cmd, cursor)
 
                                     elif cmd['method'] == 'attach':
-                                        attach_method(cmd, cursor, db_connection)
+                                        attach_method(cmd, cursor, db_connection, env)
 
                                     elif cmd['method'] == 'detach':
                                         detach_method(cmd, cursor, db_connection, env)

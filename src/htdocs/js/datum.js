@@ -115,18 +115,18 @@ define(['/jQuery.min.js'], function($, undefined) {
         var socket_requests = {};
         var open_functions = [];
         var retries = 0;
-        var MAX_NUMBER_RETRIES = 20;
+        var MAX_NUMBER_RETRIES = 5;
 
         // this.settings.evented can be string or boolean
-        if(this.evented != 'no') {
+        if(this.evented != 'no' && !this.evented) {
 
             try {
                 //open_functions.push(connect_session);
-                connect_socket(this.evented == 'yes');
+                connect_socket(this.evented == 'yes' || this.evented == true);
             }
             catch(err) {
 
-                if(this.evented == 'yes') {
+                if(this.evented == 'yes' || this.evented == true) {
                     console.error('Websocket connection refused:', err);
                     throw 'Websocket connection refused';
                 }
@@ -344,7 +344,7 @@ define(['/jQuery.min.js'], function($, undefined) {
                 }
 
                 var request = socket_send({
-                    version: '0.1',
+                    version: '0.2',
                     method: 'request',
                     verb: method,
                     uri: id_url,

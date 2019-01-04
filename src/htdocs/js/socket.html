@@ -50,7 +50,7 @@
 
             var socket;
             document.getElementById('open').onclick = function() {
-                socket = new WebSocket('ws://master.com/endpoint/event');
+                socket = new WebSocket('ws://master.com/endpoint/0.2/event');
 
                 socket.onopen = function(event) {
                     console.log('opened', event);
