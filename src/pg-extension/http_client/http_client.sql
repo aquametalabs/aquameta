@@ -35,7 +35,7 @@ create table remote_endpoint (
 create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args text[] default '{}', arg_vals text[] default '{}', out response http_client.http_response)
 as $$
 
--- /endpoint/0.1/relation/widget/input?meta_data=true
+-- /endpoint/0.2/relation/widget/input?meta_data=true
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
         || '/relation'
@@ -51,7 +51,7 @@ $$ language sql;
 /*******************************************************************************
 * FUNCTION client_row_select
 *******************************************************************************/
--- endpoint/0.1/relation/widget/input?meta_data=true&where=%7B%22name%22%3A%22id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%2212345%22%7D
+-- endpoint/0.2/relation/widget/input?meta_data=true&where=%7B%22name%22%3A%22id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%2212345%22%7D
 create or replace function endpoint.client_row_select(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
 
