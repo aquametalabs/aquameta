@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:latest
 MAINTAINER Eric Hanson <eric@aquameta.com>
 
 # to build:
@@ -23,7 +23,6 @@ COPY . /tmp/aquameta/
 USER root
 WORKDIR /tmp/aquameta
 RUN ./install.sh --silent
-# COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 
 EXPOSE 80 5432
