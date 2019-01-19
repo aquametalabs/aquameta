@@ -61,8 +61,8 @@ DEBIAN_FRONTEND=nointeractive \
 	apt-get install -y postgresql-10 postgresql-10-python-multicorn \
 	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
-	fuse \ # used by pgfs.py
-	libssl-dev libpcre3 libpcre3-dev # required by uwsgi
+	fuse \
+	libssl-dev libpcre3 libpcre3-dev
 
 
 #############################################################################
@@ -229,12 +229,12 @@ sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
 #############################################################################
 # finished!
 #############################################################################
+MACHINE_IP=`hostname --ip-address|cut -d ' ' -f1`
+EXTERNAL_IP=`dig +short myip.opendns.com @resolver1.opendns.com`
 
 echo ""
+echo "Aquameta was successfully installed.  Next, login:"
 echo ""
-echo "Aquameta was successfully installed.  Next, configure your database:"
-echo ""
-echo "Local link: http://localhost/setup"
-echo "External link: http://localhost/setup"
-echo ""
-
+echo "Localhost link: http://localhost/login"
+echo "Machine link:   http://$MACHINE_IP/login"
+echo "External link:  http://$EXTERNAL_IP/login"
