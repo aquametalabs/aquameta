@@ -1,8 +1,12 @@
 0d06852c-82b8-410c-93bb-aa0c24ba16d9	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	2ca5f78b-7b00-42de-bded-df34e27b0f4d	\N	a8b8f6a1-089a-4361-89d0-ad4bdd635323	2017-12-29 13:54:07.081821	stub out the untracked row display
+6839c938-13ea-40c1-ab8a-ad3a061ab3cb	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	16cf434a-82c0-4bc6-9b13-0c51b7693222	\N	b8afcbf3-7d01-410c-a105-1187da5bfada	2019-01-19 16:07:26.482546	layout and styling
 8a855bb2-cd5d-4adf-aceb-630bbe8773cd	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	4e9b64d0-fba7-40b5-b9ce-6f3fd53844f8	\N	\N	2017-07-12 16:38:36.661328	initial import
 a8b8f6a1-089a-4361-89d0-ad4bdd635323	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	a590fbfa-3f8a-4ce4-90d1-1281c581bb10	\N	c3b17873-d0b9-4faf-a5f0-5a077e4ce903	2017-08-30 10:16:15.859504	remotes
 b204e9ce-4e4a-47f4-be26-9dcd837470ea	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	08648cc8-c840-44a7-81df-e01e5dd7ef51	\N	b3acd0c0-e4b1-46b6-9976-3867df608584	2017-08-23 20:13:33.228299	add some metadata to the widget dom element, for bundle awareness
+b386545c-dc39-4c68-8eb0-eb2b350820b5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	6dc587d2-b9fc-4f54-8484-aa696dee0334	\N	6839c938-13ea-40c1-ab8a-ad3a061ab3cb	2019-01-19 17:42:21.701579	move commit_dialog_*
 b3acd0c0-e4b1-46b6-9976-3867df608584	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	d80d560e-8cdc-420c-b972-c33c9071b8e6	\N	8a855bb2-cd5d-4adf-aceb-630bbe8773cd	2017-08-16 15:25:28.542818	move dev environment to /dev, and add a home page
 b8afcbf3-7d01-410c-a105-1187da5bfada	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	9163d660-52a4-417f-b4cb-f4de05902b85	\N	c52c87b9-b626-4e35-a601-6f74ab8963d3	2018-12-02 00:17:53.982915	stage all button, remove references to core:
+bbbcb497-b098-46d7-a3b9-746d54b32ae8	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	df72d8e0-386b-4f41-967d-892705c1ccf0	\N	b386545c-dc39-4c68-8eb0-eb2b350820b5	2019-01-19 17:54:43.059063	vim adds carraige returns at end of files -- pgfs does not like this
 c3b17873-d0b9-4faf-a5f0-5a077e4ce903	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	31e32dbc-af98-48f8-a42e-64bdc2ecf044	\N	b204e9ce-4e4a-47f4-be26-9dcd837470ea	2017-08-23 22:06:46.078115	fix debugger bugs
 c52c87b9-b626-4e35-a601-6f74ab8963d3	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	4b67fc33-f022-42b4-80f1-12136a0c2d18	\N	0d06852c-82b8-410c-93bb-aa0c24ba16d9	2018-01-14 19:10:23.920661	hideable debugger
+ea88a679-30ce-40d6-8d80-bce37568b49c	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	efca24d0-29dc-4c6b-bd6e-09e382d26e85	\N	bbbcb497-b098-46d7-a3b9-746d54b32ae8	2019-01-19 19:47:22.685364	remove references to http:// for SSL support, misc IDE fixes
