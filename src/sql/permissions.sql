@@ -7,20 +7,19 @@
  ******************************************************************************/
 set search_path=meta;
 
-/*
-Tables with RLS enabled
--- These tables need to have a policy defined for the user group that wants to use them, unless the user group is set to bypass RLS
-
-- endpoint.resource 
-*/
-
+-- row level security permissions
 alter table endpoint.resource enable row level security;
 
+insert into meta.policy (name, schema_name, relation_name, command, "using")
+    values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/'', ''/login'', ''/register'', ''/confirm'') or path like ''%.js''');
+insert into meta.policy_role (policy_name, schema_name, relation_name, role_name) values ('resource_anonymous', 'endpoint', 'resource', 'anonymous');
 
 
 ------------------------
 -- Anonymous permissions
 ------------------------
+
+-- TODO: I think remove all of these??  Use RLS instead.
 
 -- schema privileges
 grant usage on schema widget to anonymous;
@@ -41,7 +40,9 @@ values  ('endpoint',    'mimetype',               'anonymous', 'select'),
         ('endpoint',    'resource_directory',     'anonymous', 'select'),
         ('endpoint',    'column_mimetype',        'anonymous', 'select'),
         ('endpoint',    'current_user',           'anonymous', 'select'),
+	('endpoint',    'user',                   'anonymous', 'select'), -- TODO: insecure! -- do we need this?  endpoint.current_user gets permission denied when anon hits it but does so silently so hmmm.... we def don't want this turned on.
         ('bundle',      'bundle',                 'anonymous', 'select'),
+        ('bundle',      'tracked_row',            'anonymous', 'select'),
         ('filesystem',  'file',                   'anonymous', 'select'), -- TODO: insecure?
         ('filesystem',  'directory',              'anonymous', 'select'), -- TODO: insecure?
         ('widget',      'dependency_js',          'anonymous', 'select'),
@@ -57,14 +58,9 @@ values  ('endpoint',    'mimetype',               'anonymous', 'select'),
 grant execute on function endpoint.register(text, text, text, boolean) to anonymous;
 grant execute on function endpoint.register_confirm(text, text, boolean) to anonymous;
 grant execute on function endpoint.login(text, text) to anonymous;
+grant execute on function widget.bundled_widget(text, text) to anonymous;
 
 
--- row level security permissions
-
--- endpoint.resource - RLS
-insert into meta.policy (name, schema_name, relation_name, command, "using")
-    values ( 'resource_anonymous', 'endpoint', 'resource', 'select', 'path in (''/'', ''/login'', ''/register'', ''/confirm'') or path like ''%.js''');
-insert into meta.policy_role (policy_name, schema_name, relation_name, role_name) values ('resource_anonymous', 'endpoint', 'resource', 'anonymous');
 
 ---------------------------
 -- Generic user permissions
@@ -95,6 +91,6 @@ grant execute on all functions in schema widget to "user";
 
 -- endpoint.resource - RLS
 insert into meta.policy (name, schema_name, relation_name, command, "using")
-values ( 'resource_user', 'endpoint', 'resource', 'select', 'true');
-
+    values ( 'resource_user', 'endpoint', 'resource', 'select', 'true');
 insert into meta.policy_role (policy_name, schema_name, relation_name, role_name) values ('resource_user', 'endpoint', 'resource', 'user');
+
