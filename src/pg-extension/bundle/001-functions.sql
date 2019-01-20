@@ -363,12 +363,12 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
         query_str text;
     begin
         -- raise log '------------ checkout_row % ----------',
-            (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
+        --    (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
         set search_path=bundle,meta,public;
 
         if meta.row_exists(row_id) then
             -- raise log '---------------------- row % already exists.... overwriting.',
-            (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
+            -- (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
 
             -- check to see if this row which is being merged is going to overwrite a row that is
             -- different from the head commit
