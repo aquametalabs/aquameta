@@ -362,12 +362,12 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
     declare
         query_str text;
     begin
-        raise log '------------ checkout_row % ----------',
+        -- raise log '------------ checkout_row % ----------',
             (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
         set search_path=bundle,meta,public;
 
         if meta.row_exists(row_id) then
-            raise log '---------------------- row % already exists.... overwriting.',
+            -- raise log '---------------------- row % already exists.... overwriting.',
             (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
 
             -- check to see if this row which is being merged is going to overwrite a row that is
@@ -425,7 +425,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
             execute query_str;
 
         else
-            raise log '---------------------- row doesn''t exists.... INSERT:';
+            -- raise log '---------------------- row doesn''t exists.... INSERT:';
             query_str := 'insert into '
                 || quote_ident((row_id::meta.schema_id).name)
                 || '.'
@@ -485,7 +485,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
     begin
         set local search_path=bundle,meta,public;
 
-        raise notice 'CHECKOUT SCHEMA %', commit_id;
+        raise notice 'bundle: Checking out bundle %', commit_id;
         -- insert the meta-rows in this commit to the database
         for commit_row in
             select
@@ -554,7 +554,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
 
 
-        raise notice 'CHECKOUT DATA %', commit_id;
+        -- raise notice 'CHECKOUT DATA %', commit_id;
         -- insert the non-meta rows
         for commit_row in
             select

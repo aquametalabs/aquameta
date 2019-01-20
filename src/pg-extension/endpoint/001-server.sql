@@ -418,7 +418,7 @@ as $$
         q text;
         ct integer;
     begin
-        raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
+        -- raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
         -- create temp table
         tmp := quote_ident(temp_table_name);
         execute 'create temp table '
@@ -565,8 +565,8 @@ create or replace function endpoint.rows_insert(
         --q text;
 
     begin
-        raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
-        raise notice 'TOTAL ROWS: %', json_array_length(args);
+        -- raise notice 'ROWS INSERT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!';
+        -- raise notice 'TOTAL ROWS: %', json_array_length(args);
         -- raise notice 'da json: %', args;
 
         -- insert rows
@@ -1944,7 +1944,7 @@ create trigger endpoint_user_delete_trigger before delete on endpoint.user for e
 
 -- create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
 create view endpoint."current_user" as
-    SELECT id, role_id, email, name from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
+    SELECT id, role_id, email, name from endpoint."user" where role_id=current_user::text::meta.role_id;
 
 create function endpoint."current_user"() returns uuid as $$
     SELECT id from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
