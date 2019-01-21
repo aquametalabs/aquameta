@@ -316,12 +316,17 @@ $$ language plpgsql;
  * meta.table
  *****************************************************************************/
 create view meta.table as
-    select row(row(table_schema), table_name)::meta.relation_id as id,
-           row(table_schema)::meta.schema_id as schema_id,
-           table_schema as schema_name,
-           table_name as name
+    select row(row(schemaname), tablename)::meta.relation_id as id,
+           row(schemaname)::meta.schema_id as schema_id,
+           schemaname as schema_name,
+           tablename as name,
+           rowsecurity as rowsecurity
+    /*
+    -- going from pg_catalog.pg_tables instead, so we can get rowsecurity 
     from information_schema.tables
     where table_type = 'BASE TABLE';
+    */
+    from pg_catalog.pg_tables;
 
 
 create function meta.stmt_table_create(schema_name text, table_name text) returns text as $$
@@ -333,6 +338,13 @@ create function meta.stmt_table_set_schema(schema_name text, table_name text, ne
     select 'alter table ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' set schema ' || quote_ident(new_schema_name);
 $$ language sql;
 
+create function meta.stmt_table_enable_rowsecurity(schema_name text, table_name text) returns text as $$
+    select 'alter table ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' enable row level security'
+$$ language sql;
+
+create function meta.stmt_table_disable_rowsecurity(schema_name text, table_name text) returns text as $$
+    select 'alter table ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' disable row level security'
+$$ language sql;
 
 create function meta.stmt_table_rename(schema_name text, table_name text, new_table_name text) returns text as $$
     select 'alter table ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' rename to ' || quote_ident(new_table_name);
@@ -349,6 +361,10 @@ create function meta.table_insert() returns trigger as $$
         perform meta.require_all(public.hstore(NEW), array['name']);
         perform meta.require_one(public.hstore(NEW), array['schema_id', 'schema_name']);
         execute meta.stmt_table_create(coalesce(NEW.schema_name, (NEW.schema_id).name),  NEW.name);
+        if NEW.rowsecurity = true then
+            execute meta.stmt_table_enable_rowsecurity(NEW.schema_name, NEW.name);
+        end if;
+        
         NEW.id := row(row(coalesce(NEW.schema_name, (NEW.schema_id).name)), NEW.name)::meta.relation_id;
         return NEW;
     end;
@@ -368,6 +384,13 @@ create function meta.table_update() returns trigger as $$
             execute meta.stmt_table_rename(coalesce(nullif(NEW.schema_name, OLD.schema_name), (NEW.schema_id).name), OLD.name, NEW.name);
         end if;
 
+        if NEW.rowsecurity != OLD.rowsecurity then
+            if NEW.rowsecurity = true then
+                execute meta.stmt_table_enable_rowsecurity(NEW.schema_name, NEW.name);
+            else
+                execute meta.stmt_table_disable_rowsecurity(NEW.schema_name, NEW.name);
+            end if;
+        end if;
         return NEW;
     end;
 $$ language plpgsql;
