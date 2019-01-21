@@ -171,14 +171,6 @@ sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id,
 
 
 #############################################################################
-# grant default permissions for 'anonymous' and 'user' roles
-#############################################################################
-
-sudo -u postgres psql -f $SRC/src/sql/permissions.sql aquameta
-
-
-
-#############################################################################
 # configure uwsgi and start the service
 #############################################################################
 
@@ -224,6 +216,17 @@ REG_CONFIRM_COMMAND="select endpoint.register_confirm('$EMAIL', activation_code:
 # REG_SUPERUSER_COMMAND="alter role $ROLE superuser"
 sudo -u postgres psql -c "$REG_COMMAND" aquameta
 sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
+
+
+
+#############################################################################
+# grant default permissions for 'anonymous' and 'user' roles
+#############################################################################
+
+sudo -u postgres psql -f $SRC/src/privileges/000-general.sql aquameta
+sudo -u postgres psql -f $SRC/src/privileges/001-anonymous.sql aquameta
+sudo -u postgres psql -f $SRC/src/privileges/002-user.sql aquameta
+
 
 
 #############################################################################
