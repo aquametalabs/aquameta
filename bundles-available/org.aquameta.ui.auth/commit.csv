@@ -1,3 +1,4 @@
+0e18a4c6-c06e-40df-b7dc-ff4f909a0edc	2f63de35-de26-4cb7-9e7c-afae1257f9ce	80215a90-429e-4e09-a723-0a5ff1904b36	\N	e635eb15-c115-45dd-97a9-eba7068de4f5	2019-01-21 01:50:32.035097	remove another reference to /js/widget.js
 40ed7c74-241a-49a2-ad12-e99e964ba325	2f63de35-de26-4cb7-9e7c-afae1257f9ce	e8758b2a-11d6-486d-94ef-18304a7f941a	\N	cf62bb5f-4275-4bf1-a668-e38f240e4127	2018-07-22 17:48:55.124922	tuning up the widgets.  switch login to the POST form method
 42452b83-4f0f-4ead-9df3-79c8c1cb43b6	2f63de35-de26-4cb7-9e7c-afae1257f9ce	5c09a8ee-917a-494e-b8de-e3358fda6300	\N	a489dd93-085e-4199-80e6-1f1bd0ad61fe	2019-01-20 12:39:04.179076	stub out account page, fix auth_manager
 5787eacc-f0fe-48c2-8e7f-6743bac72e63	2f63de35-de26-4cb7-9e7c-afae1257f9ce	43b5aae7-4754-4b81-ba20-029a9ad0017d	\N	c284072e-1393-4f42-87e6-bfaab4520bb6	2018-07-02 20:21:40.743826	getting closer
@@ -9,4 +10,5 @@ a489dd93-085e-4199-80e6-1f1bd0ad61fe	2f63de35-de26-4cb7-9e7c-afae1257f9ce	1008f2
 c284072e-1393-4f42-87e6-bfaab4520bb6	2f63de35-de26-4cb7-9e7c-afae1257f9ce	c6c05374-5f1c-45f6-9d9b-569c60a7a3a0	\N	690bc8c4-21b7-4994-a6be-761dea7953ce	2018-07-02 18:49:06.874243	kinda works?
 cf62bb5f-4275-4bf1-a668-e38f240e4127	2f63de35-de26-4cb7-9e7c-afae1257f9ce	24fac00c-0336-47de-923f-b02cdee27748	\N	fdeae389-06b9-4acd-8ae4-e5239211f5df	2018-07-13 20:13:07.871659	auth manager tweaks
 e635eb15-c115-45dd-97a9-eba7068de4f5	2f63de35-de26-4cb7-9e7c-afae1257f9ce	6f78af30-c405-4838-8732-5edf5909b23a	\N	42452b83-4f0f-4ead-9df3-79c8c1cb43b6	2019-01-20 18:20:51.123068	fix references to /js/system.js, now at just /system.js
+ed90c17a-9128-47ac-8241-ede040b1029c	2f63de35-de26-4cb7-9e7c-afae1257f9ce	6621dd0a-aafd-4ca1-9021-fda29a01e5b2	\N	0e18a4c6-c06e-40df-b7dc-ff4f909a0edc	2019-01-21 16:38:53.808285	refactor auth resources -- no styling, no widgets
 fdeae389-06b9-4acd-8ae4-e5239211f5df	2f63de35-de26-4cb7-9e7c-afae1257f9ce	ff6f101f-9793-4b01-b0a5-431e71ee5223	\N	6b4a9be9-4818-4e18-a1b4-154c95f22fd7	2018-07-13 03:31:28.026217	oops no stage
