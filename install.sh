@@ -49,6 +49,7 @@ DEST=${DEST:-/opt/aquameta}
 # apt packages
 #############################################################################
 
+echo "Installing dependencies via apt..."
 # update
 apt-get update -y
 
@@ -78,6 +79,10 @@ DEBIAN_FRONTEND=nointeractive \
 # python packages
 #############################################################################
 
+echo "Installing core python packages..."
+
+pip install requests fusepy
+
 # filesystem_fdw
 cd $SRC/src/py-package/filesystem_fdw
 sudo -H pip install --upgrade .
@@ -86,8 +91,6 @@ sudo -H pip install --upgrade .
 cd $SRC/src/py-package/uwsgi-endpoint
 sudo -H pip install --upgrade .
 
-pip install requests fusepy
-
 
 
 #############################################################################
@@ -95,6 +98,7 @@ pip install requests fusepy
 #############################################################################
 
 # install extensions into PostgreSQL's extensions/ directory
+echo "Building core PostgreSQL extensions..."
 cd $SRC/src/pg-extension/meta && make && make install
 cd $SRC/src/pg-extension/bundle && make && make install
 cd $SRC/src/pg-extension/filesystem && make && make install
@@ -110,6 +114,7 @@ cd $SRC/src/pg-extension/semantics && make && make install
 # build the aquameta database
 #############################################################################
 
+echo "Configuring PostgreSQL..."
 # enable peer authentication
 sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/10/main/pg_hba.conf
 systemctl restart postgresql.service
@@ -118,7 +123,7 @@ systemctl restart postgresql.service
 sudo -u postgres createdb aquameta
 
 # create dependency extensions required by aquameta
-echo "Installing dependencies..."
+echo "Installing dependency extensions..."
 sudo -u postgres psql -c "create extension if not exists plpythonu" aquameta
 sudo -u postgres psql -c "create extension if not exists multicorn schema public" aquameta
 sudo -u postgres psql -c "create extension if not exists hstore schema public" aquameta
@@ -145,6 +150,7 @@ sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 # install and checkout enabled bundles
 #############################################################################
 
+echo "Setting up $DEST/..."
 mkdir --parents $DEST
 cp -R $SRC/bundles-available $DEST
 cp -R $SRC/bundles-enabled $DEST
@@ -164,9 +170,11 @@ sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join
 #############################################################################
 # copy static htdocs to $DEST/htdocs
 #############################################################################
-cp -R $SRC/src/htdocs $DEST/
-cp $SRC/src/pg-extension/widget/js/* $DEST/htdocs/js
-sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id, path, indexes) values ('$DEST/htdocs/js', '', true)" aquameta #FIXME mount the whole htdocs directory
+
+# echo "Configuring $DEST/htdocs..."
+# cp -R $SRC/src/htdocs $DEST/
+# cp $SRC/src/pg-extension/widget/js/* $DEST/htdocs/js
+# sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id, path, indexes) values ('$DEST/htdocs/js', '', true)" aquameta
 
 
 
@@ -174,6 +182,7 @@ sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id,
 # configure uwsgi and start the service
 #############################################################################
 
+echo "Setting up uWSGI service..."
 mkdir -p /etc/aquameta
 # copy service file into /etc/systemd/system
 cp $SRC/src/py-package/uwsgi-endpoint/aquameta.emperor.uwsgi.service /etc/systemd/system
@@ -190,6 +199,7 @@ systemctl start aquameta.emperor.uwsgi.service
 # configure nginx and restart the service
 #############################################################################
 
+echo "Setting up nginx..."
 cp $SRC/src/py-package/uwsgi-endpoint/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
 cd /etc/nginx/sites-enabled
 rm -f ./default
@@ -223,6 +233,7 @@ sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
+echo "Setting up default privileges..."
 sudo -u postgres psql -f $SRC/src/privileges/000-general.sql aquameta
 sudo -u postgres psql -f $SRC/src/privileges/001-anonymous.sql aquameta
 sudo -u postgres psql -f $SRC/src/privileges/002-user.sql aquameta

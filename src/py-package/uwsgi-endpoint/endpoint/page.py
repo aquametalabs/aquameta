@@ -57,51 +57,52 @@ def application(env, start_response):
                 ''', (request.path,))
                 row = cursor.fetchone()
 
-            # File resource
-            if row is None:
-                cursor.execute('''
-                    select f.content, m.mimetype
-                    from filesystem.file f
-                        left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
-                        left join endpoint.mimetype m on m.id = e.mimetype_id
-                    where f.path = (select file_id from endpoint.resource_file where path=%s and active=true)
-                ''', (request.path,))
-                row = cursor.fetchone()
-
-
-            # Directory resource
-            # Question: only directories where indexes = true?
-            if row is None:
-                cursor.execute('''
-                    with dir as (
-                        select directory_id as dir_id
-                        from endpoint.resource_directory
-                        where path=%s and indexes=true
-                    )
-                    select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.directory where parent_id=(select dir_id from dir)
-                    union
-                    select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.file where directory_id=(select dir_id from dir)
-                ''', (request.path,))
-                rows = cursor.fetchall()
-
-                if len(rows):
-                    return Response(build_directory_index(request.path, rows), content_type='text/html')
-
-            # File-in-Directory resource
-            if row is None:
-                cursor.execute('''
-                    with dir as (
-                        select directory_id as dir_id, path, char_length(path) as path_length
-                        from endpoint.resource_directory
-                        where %s like path || '%%'
-                    )
-                    select f.content, m.mimetype
-                        from filesystem.file f
-                        left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
-                        left join endpoint.mimetype m on m.id = e.mimetype_id
-                        where path = (select dir_id from dir) || substring(%s from (select path_length + 1 from dir))
-                ''', (request.path,request.path))
-                row = cursor.fetchone()
+### Commenting out until security can be audited...
+###            # File resource
+###            if row is None:
+###                cursor.execute('''
+###                    select f.content, m.mimetype
+###                    from filesystem.file f
+###                        left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
+###                        left join endpoint.mimetype m on m.id = e.mimetype_id
+###                    where f.path = (select file_id from endpoint.resource_file where path=%s and active=true)
+###                ''', (request.path,))
+###                row = cursor.fetchone()
+###
+###
+###            # Directory resource
+###            # Question: only directories where indexes = true?
+###            if row is None:
+###                cursor.execute('''
+###                    with dir as (
+###                        select directory_id as dir_id
+###                        from endpoint.resource_directory
+###                        where path=%s and indexes=true
+###                    )
+###                    select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.directory where parent_id=(select dir_id from dir)
+###                    union
+###                    select path, name, last_mod, size, endpoint.is_indexed(path) as show from filesystem.file where directory_id=(select dir_id from dir)
+###                ''', (request.path,))
+###                rows = cursor.fetchall()
+###
+###                if len(rows):
+###                    return Response(build_directory_index(request.path, rows), content_type='text/html')
+###
+###            # File-in-Directory resource
+###            if row is None:
+###                cursor.execute('''
+###                    with dir as (
+###                        select directory_id as dir_id, path, char_length(path) as path_length
+###                        from endpoint.resource_directory
+###                        where %s like path || '%%'
+###                    )
+###                    select f.content, m.mimetype
+###                        from filesystem.file f
+###                        left join endpoint.mimetype_extension e on e.extension = regexp_replace(f.name, '^.*\.', '')
+###                        left join endpoint.mimetype m on m.id = e.mimetype_id
+###                        where path = (select dir_id from dir) || substring(%s from (select path_length + 1 from dir))
+###                ''', (request.path,request.path))
+###                row = cursor.fetchone()
 
             # Should this redirect to /login?
             # That would mean: Resource Not Found = Resource Not Authorized

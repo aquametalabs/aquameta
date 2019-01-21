@@ -7,6 +7,7 @@
 -- that user.
 
 -- core modules
+select bundle.bundle_export_csv('org.aquameta.core.endpoint','/home/eric/aquameta/bundles-available/org.aquameta.core.endpoint');
 select bundle.bundle_export_csv('org.aquameta.core.mimetypes','/home/eric/aquameta/bundles-available/org.aquameta.core.mimetypes');
 select bundle.bundle_export_csv('org.aquameta.core.semantics','/home/eric/aquameta/bundles-available/org.aquameta.core.semantics');
 select bundle.bundle_export_csv('org.aquameta.core.docs','/home/eric/aquameta/bundles-available/org.aquameta.core.docs');
