@@ -15,13 +15,24 @@ set -o pipefail
 #############################################################################
 
 # prompting and sanity checking
-echo "Aquameta 0.2 Installer Script"
-echo "WARNING:"
-echo "This code is highly experimental and should NOT be run in a production environment."
+echo "                                           __          "
+echo "_____    ________ _______    _____   _____/  |______   "
+echo "\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  "
+echo " / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_"
+echo "(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /"
+echo "     \/    |__|          \/      \/     \/          \/ "
+echo "            [ version 0.2.0 - base install ]"
+echo ""
+echo "                 OBLIGATORY WARNING:"
+echo ""
+echo "    This code is highly experimental and should "
+echo "       NOT be run in a production environment."
+echo "              You have been warned."
+echo "                     ❤ MGMT."
 
 if [ "$1" != "--silent" ]
 then
-    read -p "Are you sure? " -n 1 -r
+    read -p "Continue? [y/N]" -n 1 -r
     echo    # (optional) move to a new line
     if ! [[ $REPLY =~ ^[Yy]$ ]]
     then
