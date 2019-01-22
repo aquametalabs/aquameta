@@ -9,4 +9,4 @@ src/pg-extension/event/event--*.*.*.sql
 src/pg-extension/filesystem/filesystem--*.*.*.sql
 src/pg-extension/meta/meta--*.*.*.sql
 src/pg-extension/widget/widget--*.*.*.sql
-
+src/pg-extension/semantics/semantics--*.*.*.sql
