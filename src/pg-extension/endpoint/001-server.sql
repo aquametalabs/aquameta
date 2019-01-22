@@ -11,43 +11,6 @@
  ******************************************************************************/
 
 /******************************************************************************
- * auth roles
- ******************************************************************************/
-
--- User-defined roles inherit from "user" role
-DO
-$body$
-BEGIN
-   IF NOT EXISTS (
-      SELECT                       -- SELECT list can stay empty for this
-      FROM   pg_catalog.pg_roles
-      WHERE  rolname = 'user') THEN
-
-      CREATE ROLE "user" nologin;
-   END IF;
-
-   IF NOT EXISTS (
-      SELECT                       -- SELECT list can stay empty for this
-      FROM   pg_catalog.pg_roles
-      WHERE  rolname = 'anonymous') THEN
-
-      CREATE ROLE anonymous superuser login;
-   END IF;
-
-   IF NOT EXISTS (
-      SELECT                       -- SELECT list can stay empty for this
-      FROM   pg_catalog.pg_roles
-      WHERE  rolname = 'aquameta') THEN
-
-      CREATE ROLE aquameta LOGIN;
-   END IF;
-
-
-END
-$body$;
-
-
-/******************************************************************************
  *
  *
  * MIMETYPED RESOURCE TYPES
@@ -1966,8 +1929,14 @@ create table endpoint.session (
  * endpoint.register
  ******************************************************************************/
 
-create function endpoint.register (_email text, _password text, fullname text default '', send_email boolean default true) returns void
-    language plpgsql strict security definer
+create function endpoint.register (_email text,
+    _password text,
+    fullname text default '',
+    send_email boolean default true,
+    out code integer,
+    out message text,
+    out role_name text
+) returns record language plpgsql strict security definer
 as $$
 
     declare
@@ -1975,10 +1944,16 @@ as $$
         _role_id meta.role_id;
 
     begin
-        -- Create user
-        insert into endpoint.user (email, name, active) values (_email, fullname, false) returning * into _user_row;
+        begin
+            insert into endpoint.user (email, name, active) values (_email, fullname, false) returning * into _user_row;
+        exception when others then
+            code := 1;
+            message := 'A user with this email address already exists';
+            role_name := null;
+            return;
+        end;
 
-	select (_user_row.role_id).name into _role_id;
+        select (_user_row.role_id).name into _role_id;
 
         -- Set role password
         update meta.role set password = _password where id = _role_id;
@@ -1997,8 +1972,9 @@ as $$
             );
         end if;
 
-        return;
-
+        code := 0;
+        role_name := (_role_id).name;
+        message := 'Success';
     end
 $$;
 
