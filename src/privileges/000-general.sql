@@ -7,5 +7,5 @@
  ******************************************************************************/
 
 -- enable RLS on every table
-update meta.table set rowsecurity = true where schema_name not in ('pg_catalog','information_schema');
+-- update meta.table set rowsecurity = true where schema_name not in ('pg_catalog','information_schema');
 

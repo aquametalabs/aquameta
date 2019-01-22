@@ -19,6 +19,7 @@ grant select on endpoint.mimetype to anonymous;
 grant select on endpoint.mimetype_extension to anonymous;
 grant select on endpoint.current_user to anonymous;
 grant select on endpoint.resource to anonymous;
+grant select on endpoint.resource_binary to anonymous;
 grant select on endpoint.session to anonymous; -- TODO: needs RLS
 
 -- function privileges
