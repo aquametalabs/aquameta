@@ -232,11 +232,14 @@ read -s -p "Password: " PASSWORD
 
 echo ""
 echo "Creating superuser...."
-REG_COMMAND="select endpoint.register('$EMAIL', '$PASSWORD', '$NAME', false)"
+REG_COMMAND="select role_name from endpoint.register('$EMAIL', '$PASSWORD', '$NAME', false)"
 REG_CONFIRM_COMMAND="select endpoint.register_confirm('$EMAIL', activation_code::text, false) from endpoint.user where email='$EMAIL'"
-# REG_SUPERUSER_COMMAND="alter role $ROLE superuser"
-sudo -u postgres psql -c "$REG_COMMAND" aquameta
+ROLE=(`psql -t -U postgres -d aquameta -c "$REG_COMMAND"`)
+echo "Creating superuser $ROLE";
+
 sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
+REG_SUPERUSER_COMMAND="alter role \"$ROLE\" superuser"
+sudo -u postgres psql -c "$REG_SUPERUSER_COMMAND" aquameta
 
 
 
@@ -258,8 +261,8 @@ MACHINE_IP=`hostname --ip-address|cut -d ' ' -f1`
 EXTERNAL_IP=`dig +short myip.opendns.com @resolver1.opendns.com`
 
 echo ""
-echo "Aquameta was successfully installed.  Next, login:"
+echo "Aquameta was successfully installed.  Next, login and configure your installation:"
 echo ""
-echo "Localhost link: http://localhost/login"
-echo "Machine link:   http://$MACHINE_IP/login"
-echo "External link:  http://$EXTERNAL_IP/login"
+echo "Localhost link: http://localhost/setup"
+echo "Machine link:   http://$MACHINE_IP/setup"
+echo "External link:  http://$EXTERNAL_IP/setup"
