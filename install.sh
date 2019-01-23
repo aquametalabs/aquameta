@@ -70,7 +70,7 @@ add-apt-repository universe
 
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt-get install -y postgresql-10 postgresql-10-python-multicorn \
+	apt-get install -y postgresql-10 postgresql-10-plv8 postgresql-10-python-multicorn \
 	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
 	fuse \
@@ -176,16 +176,6 @@ done
 
 echo "Checking out head commit of every bundle ..."
 sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
-
-
-#############################################################################
-# copy static htdocs to $DEST/htdocs
-#############################################################################
-
-# echo "Configuring $DEST/htdocs..."
-# cp -R $SRC/src/htdocs $DEST/
-# cp $SRC/src/pg-extension/widget/js/* $DEST/htdocs/js
-# sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id, path, indexes) values ('$DEST/htdocs/js', '', true)" aquameta
 
 
 
