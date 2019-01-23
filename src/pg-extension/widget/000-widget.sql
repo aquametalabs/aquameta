@@ -20,6 +20,7 @@ create table widget (
     html text default '<div id="{{= id }}" class="{{= name }}">
 </div>'::text not null,
     post_js text default 'var w = $("#"+id);'::text not null,
+    server_js text default '',
     help text
 );
 
@@ -177,3 +178,60 @@ language sql stable rows 1;
 *******************************************************************************/
 create view widget_name as
 select id, name from widget.widget;
+
+
+
+/*******************************************************************************
+* FUNCTION render
+*******************************************************************************/
+
+create or replace function widget.render(
+    widget_id uuid,
+    args json
+) returns text as $$
+    // fetch the widget
+    try {
+        var widget_rows = plv8.execute('select * from widget.widget where id=$1', [ widget_id ]);
+        var widget = widget_rows[0];
+    }
+    catch( e ) {
+        plv8.elog( ERROR, e, e)
+        return false;
+    }
+
+    // setup javascript scope
+    var context = {};
+
+    // generate a unique id for this widget
+    var id_rows = plv8.execute('select uuid_generate_v4() as id');
+    context.id = id_rows[0].id;
+    context.name = widget.name;
+
+    // run server_js
+    var server_js = widget.server_js;
+    var datums = {};
+    eval(server_js);
+    for(var key in datums){
+        context[key] = datums[key];
+    }
+
+    // grab doT.js
+    var doT_rows = plv8.execute("select * from endpoint.resource where path='/doT.min.js'");
+    eval(doT_rows[0].content);
+
+    // render the template
+    var htmlTemplate = doT.template(widget.html);
+    var html = htmlTemplate(context);
+
+    // add post_js
+    html += '<script type="application/javascript">var id=' + context.id + '; var name = '+context.name+';\n'+widget.post_js+'</script>';
+
+    // add css
+    var cssTemplate = doT.template(widget.css);
+    var css = cssTemplate(context);
+    html += '<link rel="stylesheet">'+css+'</link>';
+
+    return html;
+    
+$$ language plv8;
+
