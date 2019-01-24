@@ -18,6 +18,7 @@
 \\x227ae55bd869eedf9afbc17dfc4aa0e4722725413ae5f3fd6ad8644f8e1de4f6	c7e98fc9-4324-4006-9738-ac3d869201ba
 \\x23ad909a8dddae23b68766c5c9646c69e6d1e5cb2adc1c3884a024052adbe793	127fe8b9-7429-475f-a062-20bbe09b1280
 \\x255f77d2f1800b1af58e5f202e94f031c8507aa97c4a85d3fdbf5f06b9c327fa	("(meta)",role_id)
+\\x25c653995f157721ebb109afde90327fc97e2473e672d72d6ea7c784e960a6e2	("(""(widget)"",widget)",server_js)
 \\x27564f2066a531bd639714e2489f68d5092b2800f8696f7348d2c8dcc1d97e31	df6d1b09-280a-436e-8b89-8d41feb95173
 \\x28dbe35bcede4020d09f28d7c4742576ce4ac8172660ce2aca044e65fb53499e	f67acea7-d3d4-427b-8749-973c6664ce9a
 \\x30286044eb812d9d6da3261d9adbe8e51500d0e4ac95f6c67af23c12836a7894	e55de128-dac3-4e87-be70-3665fb49a96e
@@ -106,6 +107,7 @@
 \\xd42bf06032932bb5b2e147f8a4baf75fe319b5abec16194bf8fc133501a0b72f	grid_row
 \\xd7d37b84fbcddc7c73deeb04ed0bdd8b33bc2fb4068a261b1c36db41c72a532e	if (typeof click_handler != 'undefined') \n    $('#'+id).click(click_handler);
 \\xdc514bfe618591b14aba4e6069de12537fb3cd0991ac60fc58ae915fd8d4f057	.{{= name }} {\n    position: relative;\n\tcursor: pointer;\n    padding-left: .5em;\n    padding-right: .5em;\n}\n\n.{{= name }}:hover {\n    background-color: #222;\n}\n\n\n.{{= name }}.selected {\n    background-color: #333;\n}\n\n\n.{{= name }} a {\n    text-decoration: none;\n    display: block;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}
+\\xdd880e5144a1af9f78fe7f11a5ec9723f517ca45c1b3aa731a0b86c86b679944	2766f45b-c89f-45c5-bbb2-ea1106bc96d7
 \\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382	return {};
 \\xe6a57205bbdb80db3ba8ae4c064cb1951fbbef0f92e928392c8afbb3bda1854f	grid_display
 \\xe720a1abb1b786bf08e43c5bbe861915676e69db72a0f21cb2d15e04f8baf073	.{{= name }} {\n} \n\n.{{= name }}:not(.displaying) > .display {\n    display: none;\n}\n\n.{{= name }} > .display:hover {\n    text-decoration: underline;\n    cursor: hand;\n    cursor: pointer;\n}\n\n.{{= name }}:not(.editing) > .edit {\n    display: none;\n}\n\n.{{= name }}:not(.saving) > .save {\n    display: none;\n}\n
