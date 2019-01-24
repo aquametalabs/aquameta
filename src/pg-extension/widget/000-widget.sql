@@ -20,7 +20,7 @@ create table widget (
     html text default '<div id="{{= id }}" class="{{= name }}">
 </div>'::text not null,
     post_js text default 'var w = $("#"+id);'::text not null,
-    server_js text default '',
+    server_js text default null,
     help text
 );
 
@@ -28,6 +28,7 @@ create table widget (
 create or replace function widget.bundled_widget (
 	bundle_name text,
 	widget_name text
+    -- args json optional default '{}'
 ) returns setof widget.widget as $$
         select w.*
         from bundle.bundle b
@@ -185,6 +186,7 @@ select id, name from widget.widget;
 * FUNCTION render
 *******************************************************************************/
 
+create extension if not exists plv8;
 create or replace function widget.render(
     widget_id uuid,
     args json
@@ -203,7 +205,7 @@ create or replace function widget.render(
     var context = {};
 
     // generate a unique id for this widget
-    var id_rows = plv8.execute('select uuid_generate_v4() as id');
+    var id_rows = plv8.execute('select public.uuid_generate_v4() as id');
     context.id = id_rows[0].id;
     context.name = widget.name;
 
@@ -235,3 +237,9 @@ create or replace function widget.render(
     
 $$ language plv8;
 
+
+create table endpoint.resource_widget (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    path text not null default '',
+    widget_id uuid references widget.widget(id)
+);

@@ -142,6 +142,7 @@ sudo -u postgres psql -c "create extension if not exists hstore_plpythonu schema
 sudo -u postgres psql -c "create extension if not exists dblink schema public" aquameta
 sudo -u postgres psql -c "create extension if not exists \"uuid-ossp\"" aquameta
 sudo -u postgres psql -c "create extension if not exists pgcrypto schema public" aquameta
+sudo -u postgres psql -c "create extension if not exists plv8" aquameta
 
 # create aquameta core extensions
 echo "Installing core Aquameta extensions..."
