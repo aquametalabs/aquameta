@@ -65,6 +65,7 @@
 \\x728b4a0becf0db1cbd1732bdccf3239b327a63b9c8233c84cd4b983103c1f94b	122b29f3-4029-4065-a0b4-465bac4be286
 \\x7329622881a8cd75cf7a9f4d3bc8f6df0f74d794095fc8b6b750e4a85943c90b	widget/widget
 \\x74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b	null
+\\x748212ef60de2d4a77b73108d91102355890ba62c569c2cb917096646bd3b6f0	8e90a3d1-a547-4e40-bcec-11359a7b0a94
 \\x789e00419b9f9532c2bf1cb4552b115b51bf5b17ffb763535c808024a3882caa	250ac742-3a66-47e2-a173-0ec9090061f5
 \\x7a9e3c6e54179f8954a4fb92e4cfb4c21eacd2e9ee79988d30f59eb732e136b8	grid_edit
 \\x7b8b04e09847b289dc47dcb21a5c7fef4df885b7df5e26ceef3766a74e45a087	new_field
@@ -83,6 +84,7 @@
 \\x9d991f99aeceacca9394dfd59a1ee1f95c9a41e753be75b070923d5318f25297	340ef112-9934-4c65-9027-37f9a5aea110
 \\x9e43cc6a827b137d2a2d7c9a2b4e9266b688a1455d9da164751c1a09cf5a42b2	c2e6b45c-d4eb-4134-b246-84c542718717
 \\x9e673b3685596f3be6b21152ccc470f023731999f965c1c3cd4c5ae4bef3c94c	f071b1ed-df9d-4279-ae2d-218b2bfffc14
+\\x9e9acb304b964eb671ed80f751f6b4e6ca15dec811fe739c19c26aeafae5f49d	("(""(widget)"",widget)",common_js)
 \\x9eafee1e08374527aebde72bea79db9aae7687bbaca274b008220c4986360984	row_detail
 \\x9f8b34ca44375804f83809efc28df32e207bc0be9633f114bbbd987d99247507	f32898b2-412a-41ce-a610-39e756db0321
 \\x9fc9de9b85b1961f2df700048f6c3d5ea6a8c2c11a96f06c8d3cafbd7318aeab	("(""(endpoint)"",resource)",content)
@@ -118,6 +120,7 @@
 \\xefd014e3d8f8c8fd618c89a16fdf14766c5d8ddfb18902c0ceef2ed074d1f435	var w = $("#"+id);\n\nvar rel_name = datum.schema.name + '.' + datum.name;\nw.find('.rel_name').text(rel_name);\n\ncontext = typeof context != 'undefined' ? context : {};\n\nendpoint.schema('meta').table('column').rows({\n    where: [{\n        name: 'relation_id',\n        op: '=',\n        value: datum.id\n    }, {\n        name: 'primary_key',\n        op: '=',\n        value: false\n    }],\n    include: ['id', 'name']\n})\n.then(function(columns) {\n    \n    if (!columns.length) {\n        w.text('Inserting defaults...');\n        return setTimeout(insert, 2000);\n    }\n    \n    widget.sync(columns, w.find('.fields'), function(c) {\n        if (Object.keys(context).indexOf(c.get('name')) == -1) {\n            return widget('semantics/new_field', datum.column(c.get('name')));\n        }\n    });\n});\n\n\nw.find('.save').on('click', save);\nw.on('save', save);\n\nfunction save(e) {\n    e.stopPropagation();\n    \n    var new_fields = w.find('> .fields > *');\n    var args = {};\n    var invalid;\n    \n    for (var i = 0, f; i < new_fields.length; i++) {\n        f = $(new_fields[i]);\n        //console.log(f.data('valid'), f.data('name'), f.data('value'));\n        \n        if (!f.data('valid')) {\n            f.addClass('invalid');\n            invalid = true;\n        }\n        if (typeof f.data('value') == 'undefined') {\n            continue;\n        }\n        args[f.data('name')] = f.data('value');\n    }\n\n    if (!invalid) {\n        insert(args);\n    }\n}\n\nfunction insert(args) {\n    \n    args = Object.assign(args || {}, context);\n    \n    datum.insert(args)\n    .then(function() {\n        w.trigger('status', ['New row on ' + rel_name, 'success']);\n        w.trigger('done');\n    }).catch(function() {\n        w.trigger('status', ['Failed insert on ' + rel_name, 'fail']);\n    });\n}\n\n
 \\xefd4771d5cd85cf73d5f141b7804a27b10332a904a6377b90da1ade93745618d	3da8b760-d32d-4472-bdc0-8e93ea8c53ac
 \\xf075419c90a9c9e126173bf4bd1d45890c1118c0171aa72f4784965bd38e9d7c	cafc69ba-e748-4695-a5be-b9dfe803aff5
+\\xf11dfa429c3275044630b356148ccef903f554b97a4f38b885aeb7f9e0321e30	form_field_WEIRD_DUPLICATE
 \\xf3498573b89bfc70aefc01efb96fbae34cdc097e0669c98777f900478813626d	486d1939-8093-40b9-b790-a6d1675727c8
 \\xf358a3f117d35711acacade4bc2fa86714a2195d427dffea9629b8897308f915	<tr id="{{= id }}" class="{{= name }}">\n    <td class='label'></td>\n    <td class='field_container'></td>\n</tr>
 \\xf3d156e7070072c44cec83eb6247b507bd0c6ff920d39d23b34764739122d67b	d1f29c6b-b861-40de-be53-a8ee785b1cfc

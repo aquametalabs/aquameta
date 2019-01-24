@@ -19,8 +19,9 @@ create table widget (
 }'::text not null,
     html text default '<div id="{{= id }}" class="{{= name }}">
 </div>'::text not null,
+    server_js text not null default '', -- TODO default NULL on these?
+    common_js text not null default '',
     post_js text default 'var w = $("#"+id);'::text not null,
-    server_js text default null,
     help text
 );
 
@@ -184,9 +185,9 @@ select id, name from widget.widget;
 
 /*******************************************************************************
 * FUNCTION render
+* Renders a widget server-side.
 *******************************************************************************/
 
-create extension if not exists plv8;
 create or replace function widget.render(
     widget_id uuid,
     args json
@@ -209,15 +210,17 @@ create or replace function widget.render(
     context.id = id_rows[0].id;
     context.name = widget.name;
 
-    // run server_js
-    var server_js = widget.server_js;
-    var datums = {};
-    eval(server_js);
-    for(var key in datums){
-        context[key] = datums[key];
-    }
+    // variable that gets added to by server_js and common_js
+    var context = {};
 
-    // grab doT.js
+    // run server_js
+    // vars args and context should be in scope
+    eval(widget.server_js);
+
+    // run common_js
+    eval(widget.common_js);
+
+    // eval doT.js
     var doT_rows = plv8.execute("select * from endpoint.resource where path='/doT.min.js'");
     eval(doT_rows[0].content);
 
@@ -237,9 +240,8 @@ create or replace function widget.render(
     
 $$ language plv8;
 
-
-create table endpoint.resource_widget (
+create table widget.widget_route (
     id uuid not null default public.uuid_generate_v4() primary key,
-    path text not null default '',
-    widget_id uuid references widget.widget(id)
+    widget_id uuid references widget.widget(id),
+    path text not null default ''
 );
