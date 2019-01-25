@@ -28,8 +28,8 @@ create table widget (
 
 create or replace function widget.bundled_widget (
 	bundle_name text,
-	widget_name text
-    -- args json optional default '{}'
+	widget_name text,
+    args json default '{}'
 ) returns setof widget.widget as $$
         select w.*
         from bundle.bundle b
@@ -190,7 +190,7 @@ select id, name from widget.widget;
 
 create or replace function widget.render(
     widget_id uuid,
-    args json
+    args json default '{}'
 ) returns text as $$
     // fetch the widget
     try {
@@ -201,6 +201,7 @@ create or replace function widget.render(
         plv8.elog( ERROR, e, e)
         return false;
     }
+    plv8.elog(NOTICE, 'widget '+widget.name+' called with args '+args.toString());
 
     // setup javascript scope
     var context = {};
@@ -209,9 +210,6 @@ create or replace function widget.render(
     var id_rows = plv8.execute('select public.uuid_generate_v4() as id');
     context.id = id_rows[0].id;
     context.name = widget.name;
-
-    // variable that gets added to by server_js and common_js
-    var context = {};
 
     // run server_js
     // vars args and context should be in scope
@@ -228,6 +226,7 @@ create or replace function widget.render(
     var htmlTemplate = doT.template(widget.html);
     var html = htmlTemplate(context);
 
+/*
     // add post_js
     html += '<script type="application/javascript">var id=' + context.id + '; var name = '+context.name+';\n'+widget.post_js+'</script>';
 
@@ -235,6 +234,7 @@ create or replace function widget.render(
     var cssTemplate = doT.template(widget.css);
     var css = cssTemplate(context);
     html += '<link rel="stylesheet">'+css+'</link>';
+*/
 
     return html;
     
@@ -243,5 +243,6 @@ $$ language plv8;
 create table widget.widget_route (
     id uuid not null default public.uuid_generate_v4() primary key,
     widget_id uuid references widget.widget(id),
-    path text not null default ''
+    path text not null default '',
+    args json not null default '{}'
 );
