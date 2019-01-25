@@ -28,8 +28,8 @@ create table widget (
 
 create or replace function widget.bundled_widget (
 	bundle_name text,
-	widget_name text,
-    args json default '{}'
+	widget_name text /*,
+    args json default '{}' */
 ) returns setof widget.widget as $$
         select w.*
         from bundle.bundle b
