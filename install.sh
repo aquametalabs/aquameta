@@ -193,7 +193,7 @@ cp $SRC/src/py-package/uwsgi-endpoint/aquameta.emperor.uwsgi.service /etc/system
 cp $SRC/src/py-package/uwsgi-endpoint/uwsgi-emperor.ini /etc/aquameta
 
 systemctl enable aquameta.emperor.uwsgi.service
-systemctl start aquameta.emperor.uwsgi.service
+systemctl restart aquameta.emperor.uwsgi.service
 
 
 

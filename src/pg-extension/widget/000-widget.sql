@@ -214,6 +214,10 @@ create or replace function widget.render(
     context.id = id_rows[0].id;
     context.name = widget.name;
 
+    // eval datum-plv8
+    var datum_rows = plv8.execute("select * from widget.dependency_js where name='datum-plv8'");
+    eval( datum_rows[0].content )
+
     // run server_js
     // vars args and context should be in scope
     eval(widget.server_js);
