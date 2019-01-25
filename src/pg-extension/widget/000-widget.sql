@@ -201,7 +201,7 @@ create or replace function widget.render(
         plv8.elog( ERROR, e, e)
         return false;
     }
-    plv8.elog(NOTICE, 'widget '+widget.name+' called with args '+args.toString());
+    plv8.elog(WARNING, 'widget '+widget.name+' called with args '+args.toString());
 
     // setup javascript scope
     var context = {};
