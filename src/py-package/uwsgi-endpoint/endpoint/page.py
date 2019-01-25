@@ -61,7 +61,7 @@ def application(env, start_response):
             # widget route
             if row is None:
                 cursor.execute('''
-                    select widget.render(w.id, r.args) as content, 'text/html' as mimetype, r.args
+                    select widget.render(w.id, r.args::json) as content, 'text/html' as mimetype, r.args
                     from widget.widget w
                         join widget.widget_route r on r.widget_id = w.id
                     where r.path = %s

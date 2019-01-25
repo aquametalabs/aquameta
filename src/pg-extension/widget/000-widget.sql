@@ -247,5 +247,5 @@ create table widget.widget_route (
     id uuid not null default public.uuid_generate_v4() primary key,
     widget_id uuid references widget.widget(id),
     path text not null default '',
-    args json not null default '{}'
+    args text not null default '{}'
 );
