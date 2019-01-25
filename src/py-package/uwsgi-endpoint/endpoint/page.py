@@ -3,6 +3,7 @@ from json import loads
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.wrappers import Request, Response
 from werkzeug.wsgi import responder
+import logging
 
 
 def build_directory_index(path, rows):
@@ -60,12 +61,13 @@ def application(env, start_response):
             # widget route
             if row is None:
                 cursor.execute('''
-                    select widget.render(w.id, r.args) as content, 'text/html' as mimetype
+                    select widget.render(w.id, r.args) as content, 'text/html' as mimetype, r.args
                     from widget.widget w
                         join widget.widget_route r on r.widget_id = w.id
                     where r.path = %s
                 ''', (request.path,))
                 row = cursor.fetchone()
+                logging.info('widget.render called with args %s' % row.args)
 
 
 ### Commenting out until security can be audited...

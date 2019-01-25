@@ -201,10 +201,13 @@ create or replace function widget.render(
         plv8.elog( ERROR, e, e)
         return false;
     }
-    plv8.elog(WARNING, 'widget '+widget.name+' called with args '+args.toString());
+    plv8.elog(WARNING, 'widget '+widget.name+' called with args '+JSON.stringify(args));
 
     // setup javascript scope
     var context = {};
+    for (var key in args) {
+        context[key] = args[key];
+    }
 
     // generate a unique id for this widget
     var id_rows = plv8.execute('select public.uuid_generate_v4() as id');
