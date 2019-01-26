@@ -5,6 +5,10 @@ from werkzeug.wrappers import Request, Response
 from werkzeug.wsgi import responder
 import logging
 
+class MultipleChoices(HTTPException):
+    code = 300
+    description = 'Multiple choices.'
+
 
 def build_directory_index(path, rows):
     return '''
@@ -37,6 +41,8 @@ def application(env, start_response):
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
 
+            rowcount = 0
+
             # Text resource
             cursor.execute('''
                 select r.content, m.mimetype
@@ -45,29 +51,42 @@ def application(env, start_response):
                 where path = %s
                 and active = true
             ''', (request.path,))
-            row = cursor.fetchone()
+            text_resources = cursor.fetchall()
+            rowcount += cursor.rowcount
 
             # Binary resource
-            if row is None:
-                cursor.execute('''
-                    select r.content, m.mimetype
-                    from endpoint.resource_binary r
-                        join endpoint.mimetype m on r.mimetype_id = m.id
-                    where path = %s
-                    and active = true
-                ''', (request.path,))
-                row = cursor.fetchone()
+            cursor.execute('''
+                select r.content, m.mimetype
+                from endpoint.resource_binary r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
+                where path = %s
+                and active = true
+            ''', (request.path,))
+            binary_resources = cursor.fetchall()
+            rowcount += cursor.rowcount
 
             # widget route
-            if row is None:
-                cursor.execute('''
-                    select widget.render(w.id, r.args::json) as content, 'text/html' as mimetype, r.args
-                    from widget.widget w
-                        join widget.widget_route r on r.widget_id = w.id
-                    where r.path = %s
-                ''', (request.path,))
-                row = cursor.fetchone()
-                logging.info('widget.render called with args %s' % row.args)
+            cursor.execute('''
+                select widget.render(w.id, r.args::json) as content, 'text/html' as mimetype, r.args
+                from widget.widget w
+                    join widget.widget_route r on r.widget_id = w.id
+                where r.path = %s
+            ''', (request.path,))
+            widget_resources = cursor.fetchall()
+            rowcount += cursor.rowcount
+
+            # detect path collisions
+            if rowcount > 1:
+                raise MultipleChoices
+
+            row = None
+
+            if len(text_resources) == 1:
+                row = text_resources[0]
+            if len(binary_resources) == 1:
+                row = binary_resources[0]
+            if len(widget_resources) == 1:
+                row = widget_resources[0]
 
 
 ### Commenting out until security can be audited...
