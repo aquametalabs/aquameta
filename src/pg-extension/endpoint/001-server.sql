@@ -121,13 +121,25 @@ create table endpoint.resource_directory (
     indexes boolean
 );
 
-create table "resource" (
+create table endpoint.resource (
     id uuid default public.uuid_generate_v4() primary key,
-    path text not null /* unique */,
+    path text not null,
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
     active boolean default true,
-    content text not null
+    content text not null default ''
 );
+
+create table endpoint.template (
+    id uuid default public.uuid_generate_v4() primary key,
+    content text not null default ''
+)
+
+create table endpoint.template_route (
+    id uuid default public.uuid_generate_v4() primary key,
+    template_id uuid not null references endpoint.template(id)
+    pattern text not null default ''
+)
+
 
 /******************************************************************************
  * endpoint.site_settings
@@ -1804,12 +1816,12 @@ create or replace function endpoint.request(
 
         else
             -- Resource not found: 404
-            return query select 404, 'Bad Request'::text, ('{"status_code": 404, "title": "Not Found"}')::text, 'application/json'::text;
+            return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found"}')::text, 'application/json'::text;
 
         end case;
 
         exception when undefined_table then
-        return query select 404, 'Bad Request'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
+        return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
 
     end;
 $$
