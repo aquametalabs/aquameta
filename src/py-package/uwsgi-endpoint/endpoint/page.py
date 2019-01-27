@@ -65,15 +65,23 @@ def application(env, start_response):
             binary_resources = cursor.fetchall()
             rowcount += cursor.rowcount
 
-            # widget route
+            # template route
             cursor.execute('''
-                select widget.render(w.id, r.args::json) as content, 'text/html' as mimetype, r.args
-                from widget.widget w
-                    join widget.widget_route r on r.widget_id = w.id
-                where r.path = %s
+                select
+                    id, array_to_json(regexp_matches(%s, r.url_pattern)), endpoint.render_template(t.id, r.args::json) as content
+                from endpoint.template_route r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
             ''', (request.path,))
-            widget_resources = cursor.fetchall()
-            rowcount += cursor.rowcount
+
+#            cursor.execute('''
+#                select
+#                    id, regex_matches(%s, r.url_pattern),
+#                    endpoint.render_template(t.id, r.args::json) as content, 'text/html' as mimetype, r.args
+#                from template.template t
+#                    join template.template_route r on r.template_id = t.id
+#                where             ''', (request.path,))
+#            template_resources = cursor.fetchall()
+#            rowcount += cursor.rowcount
 
             # detect path collisions
             if rowcount > 1:
@@ -85,8 +93,8 @@ def application(env, start_response):
                 row = text_resources[0]
             if len(binary_resources) == 1:
                 row = binary_resources[0]
-            if len(widget_resources) == 1:
-                row = widget_resources[0]
+#            if len(widget_resources) == 1:
+#                row = widget_resources[0]
 
 
 ### Commenting out until security can be audited...

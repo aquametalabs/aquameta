@@ -131,14 +131,16 @@ create table endpoint.resource (
 
 create table endpoint.template (
     id uuid default public.uuid_generate_v4() primary key,
+    mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade, -- why on update cascade??
     content text not null default ''
-)
+);
 
 create table endpoint.template_route (
     id uuid default public.uuid_generate_v4() primary key,
-    template_id uuid not null references endpoint.template(id)
-    pattern text not null default ''
-)
+    template_id uuid not null references endpoint.template(id),
+    url_pattern text not null default '',
+    args text not null default '{}' -- json?
+);
 
 
 /******************************************************************************
@@ -2124,3 +2126,77 @@ s.sendmail(from_email, to_email, msg.as_string())
 s.quit()
 
 $$ language plpythonu;
+
+
+
+/*******************************************************************************
+* FUNCTION template_render
+* Renders a template
+*******************************************************************************/
+
+create or replace function endpoint.template_render(
+    template_id uuid,
+    route_args json default '{}',
+    url_args json default '{}'
+) returns text as $$
+    // fetch the template
+    try {
+        var template_rows = plv8.execute('select * from endpoint.template where id=$1', [ template_id ]);
+        var template = template_rows[0];
+    }
+    catch( e ) {
+        plv8.elog( ERROR, e, e)
+        return false;
+    }
+    plv8.elog(NOTICE, 'template '+template.name+' called with args '+JSON.stringify(args));
+
+    // setup javascript scope
+    var context = {};
+    for (var key in args) {
+        context[key] = args[key];
+    }
+
+    // generate a unique id for this template
+    var id_rows = plv8.execute('select public.uuid_generate_v4() as id');
+    context.id = id_rows[0].id;
+    context.name = template.name;
+
+    // eval datum-plv8
+    var datum_rows = plv8.execute("select * from template.dependency_js where name='datum-plv8'");
+    eval( datum_rows[0].content )
+
+    // run server_js
+    // vars args and context should be in scope
+    eval(template.server_js);
+
+    // run common_js
+    eval(template.common_js);
+
+    // eval doT.js
+    var doT_rows = plv8.execute("select * from endpoint.resource where path='/doT.min.js'");
+    eval(doT_rows[0].content);
+
+    // render the template
+    var htmlTemplate = doT.template(template.html);
+    var html = htmlTemplate(context);
+
+/*
+    // add post_js
+    html += '<script type="application/javascript">var id=' + context.id + '; var name = '+context.name+';\n'+template.post_js+'</script>';
+
+    // add css
+    var cssTemplate = doT.template(template.css);
+    var css = cssTemplate(context);
+    html += '<link rel="stylesheet">'+css+'</link>';
+*/
+
+    return html;
+    
+$$ language plv8;
+
+create table template.template_route (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    template_id uuid references template.template(id),
+    path text not null default '',
+    args text not null default '{}'
+);

@@ -27,4 +27,4 @@ select bundle.bundle_export_csv('org.aquameta.ui.event','/home/eric/aquameta/bun
 select bundle.bundle_export_csv('org.aquameta.ui.fsm','/home/eric/aquameta/bundles-available/org.aquameta.ui.fsm');
 select bundle.bundle_export_csv('org.aquameta.ui.layout','/home/eric/aquameta/bundles-available/org.aquameta.ui.layout');
 select bundle.bundle_export_csv('org.aquameta.ui.tags','/home/eric/aquameta/bundles-available/org.aquameta.ui.tags');
-select bundle.bundle_export_csv('org.aquameta.ui.template','/home/eric/aquameta/bundles-available/org.aquameta.ui.template');
+select bundle.bundle_export_csv('org.aquameta.templates.simple','/home/eric/aquameta/bundles-available/org.aquameta.templates.simple');
