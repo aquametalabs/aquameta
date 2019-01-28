@@ -70,7 +70,7 @@ add-apt-repository universe
 
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt-get install -y postgresql-10 postgresql-10-python-multicorn \
+	apt-get install -y postgresql-10 postgresql-10-plv8 postgresql-10-python-multicorn \
 	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
 	fuse \
@@ -142,6 +142,7 @@ sudo -u postgres psql -c "create extension if not exists hstore_plpythonu schema
 sudo -u postgres psql -c "create extension if not exists dblink schema public" aquameta
 sudo -u postgres psql -c "create extension if not exists \"uuid-ossp\"" aquameta
 sudo -u postgres psql -c "create extension if not exists pgcrypto schema public" aquameta
+sudo -u postgres psql -c "create extension if not exists plv8" aquameta
 
 # create aquameta core extensions
 echo "Installing core Aquameta extensions..."
@@ -178,16 +179,6 @@ echo "Checking out head commit of every bundle ..."
 sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
 
 
-#############################################################################
-# copy static htdocs to $DEST/htdocs
-#############################################################################
-
-# echo "Configuring $DEST/htdocs..."
-# cp -R $SRC/src/htdocs $DEST/
-# cp $SRC/src/pg-extension/widget/js/* $DEST/htdocs/js
-# sudo -u postgres psql -c "insert into endpoint.resource_directory (directory_id, path, indexes) values ('$DEST/htdocs/js', '', true)" aquameta
-
-
 
 #############################################################################
 # configure uwsgi and start the service
@@ -202,7 +193,7 @@ cp $SRC/src/py-package/uwsgi-endpoint/aquameta.emperor.uwsgi.service /etc/system
 cp $SRC/src/py-package/uwsgi-endpoint/uwsgi-emperor.ini /etc/aquameta
 
 systemctl enable aquameta.emperor.uwsgi.service
-systemctl start aquameta.emperor.uwsgi.service
+systemctl restart aquameta.emperor.uwsgi.service
 
 
 

@@ -1,2 +1,5 @@
+6a54fe52-c9de-43ee-bb11-e94433a05c25	8b6f6555-0da1-4936-a113-87afa2d3a457	130ab52f-b76a-4254-a244-a605dc6d6180	\N	d5f5bcc0-e4f9-4a10-b9e1-dd23f16b5edc	2019-01-25 01:19:15.448552	semantic column for widget.widget_route.args
+7076664a-101b-4a46-a7c4-a8bdb4366696	8b6f6555-0da1-4936-a113-87afa2d3a457	2768eac2-a214-4e01-8ec3-3a3e3727fac8	\N	cae82f20-d71d-41bb-8e4e-1c23b2d2f9d0	2019-01-24 20:00:03.879333	semantics.column for widget.server_js
 b917c4e2-28bd-41c0-a4fe-39ffc97e55db	8b6f6555-0da1-4936-a113-87afa2d3a457	ce6ec5db-ac9e-4605-aeae-cb5c2b5ec12b	\N	\N	2017-07-12 16:38:36.661328	initial import
 cae82f20-d71d-41bb-8e4e-1c23b2d2f9d0	8b6f6555-0da1-4936-a113-87afa2d3a457	4255cd2a-3712-4e15-9f76-dd1700ccd6fb	\N	b917c4e2-28bd-41c0-a4fe-39ffc97e55db	2017-08-23 22:08:00.24743	save button in row_detail
+d5f5bcc0-e4f9-4a10-b9e1-dd23f16b5edc	8b6f6555-0da1-4936-a113-87afa2d3a457	d7edc5b4-be19-4b94-b686-c051485c9f6d	\N	7076664a-101b-4a46-a7c4-a8bdb4366696	2019-01-24 23:12:01.428563	column for widget.server_js and widget.common_js

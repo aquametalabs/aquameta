@@ -19,6 +19,8 @@ create table widget (
 }'::text not null,
     html text default '<div id="{{= id }}" class="{{= name }}">
 </div>'::text not null,
+    server_js text not null default '', -- TODO default NULL on these?
+    common_js text not null default '',
     post_js text default 'var w = $("#"+id);'::text not null,
     help text
 );
@@ -26,7 +28,8 @@ create table widget (
 
 create or replace function widget.bundled_widget (
 	bundle_name text,
-	widget_name text
+	widget_name text /*,
+    args json default '{}' */
 ) returns setof widget.widget as $$
         select w.*
         from bundle.bundle b

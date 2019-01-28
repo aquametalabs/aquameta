@@ -12,6 +12,7 @@ select bundle.bundle_export_csv('org.aquameta.core.mimetypes','/home/eric/aquame
 select bundle.bundle_export_csv('org.aquameta.core.semantics','/home/eric/aquameta/bundles-available/org.aquameta.core.semantics');
 select bundle.bundle_export_csv('org.aquameta.core.docs','/home/eric/aquameta/bundles-available/org.aquameta.core.docs');
 select bundle.bundle_export_csv('org.aquameta.core.ide','/home/eric/aquameta/bundles-available/org.aquameta.core.ide');
+select bundle.bundle_export_csv('org.aquameta.core.widget','/home/eric/aquameta/bundles-available/org.aquameta.core.widget');
 
 
 -- example modules
@@ -26,3 +27,4 @@ select bundle.bundle_export_csv('org.aquameta.ui.event','/home/eric/aquameta/bun
 select bundle.bundle_export_csv('org.aquameta.ui.fsm','/home/eric/aquameta/bundles-available/org.aquameta.ui.fsm');
 select bundle.bundle_export_csv('org.aquameta.ui.layout','/home/eric/aquameta/bundles-available/org.aquameta.ui.layout');
 select bundle.bundle_export_csv('org.aquameta.ui.tags','/home/eric/aquameta/bundles-available/org.aquameta.ui.tags');
+select bundle.bundle_export_csv('org.aquameta.templates.simple','/home/eric/aquameta/bundles-available/org.aquameta.templates.simple');

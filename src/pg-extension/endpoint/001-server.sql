@@ -121,13 +121,27 @@ create table endpoint.resource_directory (
     indexes boolean
 );
 
-create table "resource" (
+create table endpoint.resource (
     id uuid default public.uuid_generate_v4() primary key,
-    path text not null /* unique */,
+    path text not null,
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
     active boolean default true,
-    content text not null
+    content text not null default ''
 );
+
+create table endpoint.template (
+    id uuid default public.uuid_generate_v4() primary key,
+    mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade, -- why on update cascade??
+    content text not null default ''
+);
+
+create table endpoint.template_route (
+    id uuid default public.uuid_generate_v4() primary key,
+    template_id uuid not null references endpoint.template(id),
+    url_pattern text not null default '', -- matching paths may contain arguments from the url to be passed into the template
+    args text not null default '{}' -- this route's static arguments to be passed into the template
+);
+
 
 /******************************************************************************
  * endpoint.site_settings
@@ -1804,12 +1818,12 @@ create or replace function endpoint.request(
 
         else
             -- Resource not found: 404
-            return query select 404, 'Bad Request'::text, ('{"status_code": 404, "title": "Not Found"}')::text, 'application/json'::text;
+            return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found"}')::text, 'application/json'::text;
 
         end case;
 
         exception when undefined_table then
-        return query select 404, 'Bad Request'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
+        return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
 
     end;
 $$
@@ -2112,3 +2126,48 @@ s.sendmail(from_email, to_email, msg.as_string())
 s.quit()
 
 $$ language plpythonu;
+
+
+
+/*******************************************************************************
+* FUNCTION template_render
+* Renders a template
+*******************************************************************************/
+
+create or replace function endpoint.template_render(
+    template_id uuid,
+    route_args json default '{}',
+    url_args json default '{}'
+) returns text as $$
+    // fetch the template
+    var template;
+    try {
+        var template_rows = plv8.execute('select * from endpoint.template where id=$1', [ template_id ]);
+        template = template_rows[0];
+        plv8.elog(NOTICE, ' template is ' + template.id);
+    }
+    catch( e ) {
+        plv8.elog( ERROR, e, e)
+        return false;
+    }
+    plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
+
+    // setup javascript scope
+    var context = {};
+    for (var key in route_args) { context[key] = route_args[key]; }
+    for (var key in url_args) { context[key] = url_args[key]; }
+
+    // eval datum-plv8
+    var datum_rows = plv8.execute("select * from widget.dependency_js where name='datum-plv8'");
+    eval( datum_rows[0].content )
+
+    // eval doT.js
+    var doT_rows = plv8.execute("select * from endpoint.resource where path='/doT.min.js'");
+    eval(doT_rows[0].content);
+
+    // render the template
+    var htmlTemplate = doT.template(template.content);
+    var html = htmlTemplate(context);
+
+    return html;
+$$ language plv8;
