@@ -57,6 +57,7 @@
 \\xc1f026582fe6e8cb620d0c85a72fe421ddded756662a8ec00ed4c297ad10676b	food
 \\xc2e464697bc0384335dff62d78b559e4f14549ed0ce814ee2eced17e43e356b7	94438cca-7073-4440-85d4-7a28576d7ed1
 \\xc5f0ceb4a5d3eb7418400573ea8b58f545c32023ed1ba23353fcce7bc36ff258	/snake_route
+\\xd0ce8d1950f84fa2ba045783ed9f318cf9dff1543985b3fcbb2f530760327265	{\n    "title": "Snake!",\n    "bundles": [\n        { "name": "org.aquameta.core.ide", "alias": "ide" },\n        { "name": "org.aquameta.games.snake", "alias": "s" }\n    ],\n    "widgets": [ "s:game", "ide:debugger3_manager" ]\n}
 \\xd20bfd51ea0f486e6b853e469e38d67a165bc994a64d02c1b794123726a713dc	var w = $("#"+id);\n\n// constants\nvar config = {\n    'BOARD_WIDTH': 20,\n    'BOARD_HEIGHT': 20,\n    'PIECE_SIZE': 20,\n    'SPEED': 100\n}\n\nw.append(widget('s:board', { config: config }));\n
 \\xdd2741e2734916143a6dbf1d1939cbc04396f10356faf54aba282066cec41b5f	944b5a05-be70-45a1-a549-1301d38799e4
 \\xdd3ddbe7ca2177f03d25b99b7e8359f52048dd59637c343cd1d3ef6d4e91cb32	{\n    title: "Snake!",\n    bundles: {},\n    widgets: {}\n}
