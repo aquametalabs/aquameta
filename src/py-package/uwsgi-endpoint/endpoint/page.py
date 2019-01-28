@@ -40,9 +40,7 @@ def application(env, start_response):
 
     try:
         with map_errors_to_http(), cursor_for_request(request) as cursor:
-
             rowcount = 0
-
             # Text resource
             cursor.execute('''
                 select r.content, m.mimetype
@@ -65,14 +63,29 @@ def application(env, start_response):
             binary_resources = cursor.fetchall()
             rowcount += cursor.rowcount
 
-            # template route
+            # Template resource
+            # check for matching route
             cursor.execute('''
-                select
-                    id, array_to_json(regexp_matches(%s, r.url_pattern)), endpoint.render_template(t.id, r.args::json) as content
-                from endpoint.template_route r
-                    join endpoint.mimetype m on r.mimetype_id = m.id
-            ''', (request.path,))
+                select array_to_json(regexp_matches(%s, r.url_pattern)) as match from endpoint.template_route r
+                ''', (request.path,))
+            routes = cursor.fetchall()
+            logging.info('HEYYYYYY routes: %s' % (routes))
+            rowcount += cursor.rowcount
 
+            # render template only if we don't have other rows
+            template_resources = None
+            if routes != None:
+                cursor.execute('''
+                    select
+                        array_to_json(regexp_matches(%s, r.url_pattern)), endpoint.template_render(t.id, r.args::json, '{}'::json) as content, m.mimetype
+                    from endpoint.template_route r
+                        join endpoint.template t on r.template_id = t.id
+                        join endpoint.mimetype m on t.mimetype_id = m.id
+                ''', (request.path,))
+                template_resources = cursor.fetchall()
+                logging.info('HEEEEYYYYYYYY we got a template row. %s' % (template_resources))
+            else:
+                logging.info('HEEEEYYYYYYYY NO WE DID NOT GET a row')
 #            cursor.execute('''
 #                select
 #                    id, regex_matches(%s, r.url_pattern),
@@ -93,8 +106,8 @@ def application(env, start_response):
                 row = text_resources[0]
             if len(binary_resources) == 1:
                 row = binary_resources[0]
-#            if len(widget_resources) == 1:
-#                row = widget_resources[0]
+            if len(template_resources) == 1:
+                row = template_resources[0]
 
 
 ### Commenting out until security can be audited...
