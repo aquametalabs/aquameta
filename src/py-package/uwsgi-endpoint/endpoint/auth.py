@@ -6,7 +6,7 @@ from werkzeug.utils import redirect
 class AuthMiddleware(object):
     def __init__(self, app):
         self.app = app
-        self.login_path = '/login' # TODO remove this hardcoded login path when row-level permissions lands; should just react to db causing 401
+        self.login_path = '/login'
         self.session_cookie = 'SESSION'
 
     def do_auth(self, request, environ, start_response):
@@ -55,7 +55,7 @@ class AuthMiddleware(object):
 
             with cursor_for_request(request) as cursor:
                 try:
-                    cursor.execute("select (role_id).name as role_name from endpoint.session where id = %s::uuid", (session_id,))
+                    cursor.execute("select (role_id).name as role_name from endpoint.session(%s::uuid)", (session_id,))
                     row = cursor.fetchone()
                 except:
                     pass
