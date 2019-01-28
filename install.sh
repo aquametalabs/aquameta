@@ -238,10 +238,32 @@ sudo -u postgres psql -c "$REG_SUPERUSER_COMMAND" aquameta
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
-echo "Setting up default privileges..."
+echo "New User Privileges"
+echo "-------------------"
+echo "Please select a security schema:"
+echo "a) CLOSED REGISTRATION - No public registration, users must be manually created."
+echo "b) OPEN REGISTRATION - Pubic users may register for an account"
+
+until [[ $REPLY =~ ^[AaBb]$ ]]; do
+	read -p "Chioce? [a/B]" -n 1 -r
+done
+
 sudo -u postgres psql -f $SRC/src/privileges/000-general.sql aquameta
-sudo -u postgres psql -f $SRC/src/privileges/001-anonymous.sql aquameta
+
+if [[ $REPLY =~ ^[Aa]$ ]];
+then
+	echo "Installing CLOSED registration scheme..."
+	sudo -u postgres psql -f $SRC/src/privileges/001-anonymous.sql aquameta
+else 
+    if [[ $REPLY =~ ^[Bb]$ ]];
+    then
+        echo "Installing OPEN registration scheme..."
+        sudo -u postgres psql -f $SRC/src/privileges/001-anonymous-register.sql aquameta
+    fi
+fi
+
 sudo -u postgres psql -f $SRC/src/privileges/002-user.sql aquameta
+
 
 
 
