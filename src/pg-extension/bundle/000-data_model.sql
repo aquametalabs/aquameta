@@ -554,8 +554,8 @@ create or replace view not_ignored_relation as
     -- combined with every view in the meta schema
     UNION
     select v.id as relation_id, v.schema_id, meta.column_id('meta',v.name,'id') as primary_key_column_id
-    from meta.view v
-    where v.schema_name = 'meta'
+        from meta.view v
+        where v.schema_name = 'meta'
 ) r
 
     -- ...that is not ignored
@@ -574,7 +574,7 @@ ignored by schema- or relation-ignores.  NOTE: We haven't pulled out
 specifically ignored rows yet.
 */
 
-create or replace view not_ignored_row_stmt as
+create or replace view bundle.not_ignored_row_stmt as
 select *, 'select meta.row_id(' ||
     quote_literal((r.schema_id).name) || ', ' ||
     quote_literal((r.relation_id).name) || ', ' ||
@@ -582,17 +582,31 @@ select *, 'select meta.row_id(' ||
     quote_ident((r.primary_key_column_id).name) || '::text ' ||
     ') as row_id from ' ||
     quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) ||
+    -- special case meta rows so that ignored_* cascades down to all objects in it's scope
     case
+        -- schemas
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'schema' then
            ' where id not in (select schema_id from bundle.ignored_schema)'
-        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'table' then
+        -- relations
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('table', 'view', 'relation') then
            ' where id not in (select relation_id from bundle.ignored_relation) and schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- functions
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'function' then
+           ' where schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- columns
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'column' then
            ' where id not in (select column_id from bundle.ignored_column) and id::meta.relation_id not in (select relation_id from bundle.ignored_relation) and id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- objects that exist in schema scope
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('type', 'operator') then
+           ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema)'
+        -- objects that exist in table scope
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('constraint_check','constraint_unique','table_privilege') then
+           ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema) and table_id not in (select relation_id from bundle.ignored_relation)'
         else ''
     end
     as stmt
 from bundle.not_ignored_relation r;
+
 
 create or replace view untracked_row as
 select r.row_id /*, r.row_id::meta.relation_id as relation_id */
