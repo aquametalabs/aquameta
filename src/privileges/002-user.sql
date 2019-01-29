@@ -19,7 +19,7 @@ grant usage on schema semantics to "user";
 
 
 -- table privileges
-insert into meta.table_privilege (schema_name, relation_name, role_name, type)
+insert into meta.table_privilege (schema_name, table_name, role_name, type)
 select schema_name, name, 'user', 'select'
     from meta.relation
     where schema_name != 'pg_catalog' and schema_name != 'information_schema';

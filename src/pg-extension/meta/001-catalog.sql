@@ -1360,11 +1360,11 @@ $$ language plpgsql;
 /******************************************************************************
  * meta.table_privilege
  *****************************************************************************/
-create view meta.table_privilege as
-select meta.table_privilege_id(schema_name, relation_name, (role_id).name, type) as id,
-    meta.relation_id(schema_name, relation_name) as relation_id,
+create or replace view meta.table_privilege as
+select meta.table_privilege_id(schema_name, table_name, (role_id).name, type) as id,
+    meta.relation_id(schema_name, table_name) as table_id,
     schema_name,
-    relation_name,
+    table_name,
     role_id,
     (role_id).name as role_name,
     type,
@@ -1379,7 +1379,7 @@ from (
                 grantee::text::meta.role_id
         end as role_id,
         table_schema as schema_name,
-        table_name as relation_name,
+        table_name,
         privilege_type as type,
         is_grantable,
         with_hierarchy
@@ -1388,28 +1388,28 @@ from (
 ) a;
 
 
-create function meta.stmt_table_privilege_create(schema_name text, relation_name text, role_name text, type text) returns text as $$
+create function meta.stmt_table_privilege_create(schema_name text, table_name text, role_name text, type text) returns text as $$
     -- TODO: create privilege_type so that "type" can be escaped here
-    select 'grant ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' to ' || quote_ident(role_name);
+    select 'grant ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' to ' || quote_ident(role_name);
 $$ language sql;
 
 
-create function meta.stmt_table_privilege_drop(schema_name text, relation_name text, role_name text, type text) returns text as $$
+create function meta.stmt_table_privilege_drop(schema_name text, table_name text, role_name text, type text) returns text as $$
     -- TODO: create privilege_type so that "type" can be escaped here
-    select 'revoke ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' from ' || quote_ident(role_name);
+    select 'revoke ' || type || ' on ' || quote_ident(schema_name) || '.' || quote_ident(table_name) || ' from ' || quote_ident(role_name);
 $$ language sql;
 
 
 create function meta.table_privilege_insert() returns trigger as $$
     begin
         perform meta.require_one(public.hstore(NEW), array['role_id', 'role_name']);
-        perform meta.require_one(public.hstore(NEW), array['relation_id', 'schema_name']);
-        perform meta.require_one(public.hstore(NEW), array['relation_id', 'relation_name']);
+        perform meta.require_one(public.hstore(NEW), array['table_id', 'schema_name']);
+        perform meta.require_one(public.hstore(NEW), array['table_id', 'table_name']);
         perform meta.require_all(public.hstore(NEW), array['type']);
 
         execute meta.stmt_table_privilege_create(
-        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
-        coalesce(NEW.relation_name, (NEW.relation_id).name),
+        coalesce(NEW.schema_name, ((NEW.table_id).schema_id).name),
+        coalesce(NEW.table_name, (NEW.table_id).name),
         coalesce(NEW.role_name, (NEW.role_id).name),
         NEW.type);
 
@@ -1421,15 +1421,15 @@ $$ language plpgsql;
 create function meta.table_privilege_update() returns trigger as $$
     begin
         perform meta.require_one(public.hstore(NEW), array['role_id', 'role_name']);
-        perform meta.require_one(public.hstore(NEW), array['relation_id', 'schema_name']);
-        perform meta.require_one(public.hstore(NEW), array['relation_id', 'relation_name']);
+        perform meta.require_one(public.hstore(NEW), array['table_id', 'schema_name']);
+        perform meta.require_one(public.hstore(NEW), array['table_id', 'table_name']);
         perform meta.require_all(public.hstore(NEW), array['type']);
 
-        execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.relation_name, OLD.role_name, OLD.type);
+        execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.table_name, OLD.role_name, OLD.type);
 
         execute meta.stmt_table_privilege_create(
-        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name),
-        coalesce(NEW.relation_name, (NEW.relation_id).name),
+        coalesce(NEW.schema_name, ((NEW.table_id).schema_id).name),
+        coalesce(NEW.table_name, (NEW.table_id).name),
         coalesce(NEW.role_name, (NEW.role_id).name),
         NEW.type);
 
@@ -1440,7 +1440,7 @@ $$ language plpgsql;
 
 create function meta.table_privilege_delete() returns trigger as $$
     begin
-        execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.relation_name, OLD.role_name, OLD.type);
+        execute meta.stmt_table_privilege_drop(OLD.schema_name, OLD.table_name, OLD.role_name, OLD.type);
         return OLD;
     end;
 $$ language plpgsql;
