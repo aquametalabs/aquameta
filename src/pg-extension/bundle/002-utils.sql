@@ -46,10 +46,6 @@ begin
         join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id 
         join bundle.blob on rrf.value_hash=blob.hash 
         where b.name=%L order by blob.hash) to ''%s/blob.csv''', bundle_name, directory);
-
-    execute format('copy (select distinct ir.* from bundle.bundle b
-        join bundle.ignored_row ir on ir.bundle_id=b.id
-        where b.name=%L order by ir.id) to ''%s/ignored_row.csv''', bundle_name, directory);
 end
 $$;
 
@@ -67,7 +63,6 @@ begin
     execute format('copy bundle.rowset_row from ''%s/rowset_row.csv''', directory);
     execute format('copy bundle.blob from ''%s/blob.csv''', directory);
     execute format('copy bundle.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
-    execute format('copy bundle.ignored_row from ''%s/ignored_row.csv''', directory);
     execute format('alter table bundle.bundle enable trigger all');
     execute format('alter table bundle.commit enable trigger all');
 end
