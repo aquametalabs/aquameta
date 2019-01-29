@@ -30,14 +30,11 @@ echo "       NOT be run in a production environment."
 echo "              You have been warned."
 echo "                     ❤ MGMT."
 
-if [ "$1" != "--silent" ]
+read -p "Continue? [y/N]" -n 1 -r
+echo    # (optional) move to a new line
+if ! [[ $REPLY =~ ^[Yy]$ ]]
 then
-    read -p "Continue? [y/N]" -n 1 -r
-    echo    # (optional) move to a new line
-    if ! [[ $REPLY =~ ^[Yy]$ ]]
-    then
-        exit 1
-    fi
+    exit 1
 fi
 
 # set working directory and destination directory
@@ -241,8 +238,8 @@ sudo -u postgres psql -c "$REG_SUPERUSER_COMMAND" aquameta
 echo "New User Registration Scheme"
 echo "----------------------------"
 echo "Please select a security scheme:"
-echo "a) CLOSED REGISTRATION - No public registration, users must be manually created."
-echo "b) OPEN REGISTRATION - Pubic users may register for an account"
+echo "a) PRIVATE - No anonymous access, no anonymous user registration"
+echo "b) OPEN REGISTRATION - Anonymous users may register for an account and read limited data"
 
 until [[ $REPLY =~ ^[AaBb]$ ]]; do
 	read -p "Choice? [a/B] " -n 1 -r
@@ -251,14 +248,11 @@ done
 
 sudo -u postgres psql -f $SRC/src/privileges/000-general.sql aquameta
 
-if [[ $REPLY =~ ^[Aa]$ ]];
-then
-	echo "Installing CLOSED registration scheme..."
+if [[ $REPLY =~ ^[Aa]$ ]]; then
+	echo "Installing PRIVATE security scheme..."
 	sudo -u postgres psql -f $SRC/src/privileges/001-anonymous.sql aquameta
-else 
-    if [[ $REPLY =~ ^[Bb]$ ]];
-    then
-        echo "Installing OPEN registration scheme..."
+else if [[ $REPLY =~ ^[Bb]$ ]]; then
+        echo "Installing OPEN REGISTRATION scheme..."
         sudo -u postgres psql -f $SRC/src/privileges/001-anonymous-register.sql aquameta
     fi
 fi
