@@ -191,29 +191,21 @@ from bundle.bundle bundle
 ------------------------------------------------------------------------------
 create table ignored_row (
     id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle(id) on delete cascade,
-    row_id meta.row_id,
-    unique (row_id) --TOO RESTRICTIVE?
+    row_id meta.row_id
 );
 
--- ignored_schema:  ignore all rows in this schema
 create table ignored_schema (
     id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle(id) on delete cascade,
     schema_id meta.schema_id not null
 );
 
--- ignored_relation:  ignore all rows in this table
 create table ignored_relation (
     id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle(id) on delete cascade,
     relation_id meta.relation_id not null
 );
 
--- ignored_relation:  ignore all rows in this table
 create table ignored_column (
     id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle(id) on delete cascade,
     column_id meta.column_id not null
 );
 
@@ -603,7 +595,7 @@ select *, 'select meta.row_id(' ||
 from bundle.not_ignored_relation r;
 
 create or replace view untracked_row as
-select r.row_id, r.row_id::meta.relation_id as relation_id
+select r.row_id /*, r.row_id::meta.relation_id as relation_id */
     from bundle.exec((
         select array_agg (stmt) from bundle.not_ignored_row_stmt
     )) r(
