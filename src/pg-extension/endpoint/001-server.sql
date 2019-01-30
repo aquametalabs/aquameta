@@ -159,8 +159,10 @@ create table endpoint.site_settings (
     auth_from_email text
 );
 
+/*
 insert into endpoint.site_settings (name, active, site_title, site_url, smtp_server_id, auth_from_email)
 values ('development', true, '[ default site title ]', 'http://localhost/','ffb6e431-daa7-4a87-b3c5-1566fe73177c', 'noreply@localhost');
+*/
 
 
 create function endpoint.is_indexed(_path text) returns boolean as $$
