@@ -482,10 +482,26 @@ $$ language plpgsql;
 create or replace function checkout (in commit_id uuid) returns void as $$
     declare
         commit_row record;
+        bundle_name text;
+        commit_message text;
+        _commit_id uuid;
+        commit_role text;
+        commit_time timestamp;
     begin
         set local search_path=bundle,meta,public;
 
-        raise notice 'bundle: Checking out bundle %', commit_id;
+        select b.name, c.id, c.message, c.time, (c.role_id).name
+        into bundle_name, _commit_id, commit_message, commit_time, commit_role
+        from bundle.bundle b
+            join bundle.commit c on c.bundle_id = b.id
+        where c.id = commit_id;
+
+        if _commit_id is null then
+            raise exception 'bundle.checkout() commit with id % does not exist', commit_id;
+        end if;
+
+        raise notice 'bundle.checkout(): % / % @ % by %: "%"', bundle_name, commit_id, commit_time, commit_role, commit_message;
+        -- raise notice 'bundle: Checking out bundle %', commit_id;
         -- insert the meta-rows in this commit to the database
         for commit_row in
             select
