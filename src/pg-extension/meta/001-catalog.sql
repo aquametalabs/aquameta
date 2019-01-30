@@ -483,7 +483,7 @@ $$ language plpgsql;
 /******************************************************************************
  * meta.column
  *****************************************************************************/
-create view meta.column as
+create view meta.relation_column as
     select meta.column_id(c.table_schema, c.table_name, c.column_name) as id,
            meta.relation_id(c.table_schema, c.table_name) as relation_id,
            c.table_schema as schema_name,
@@ -509,6 +509,11 @@ create view meta.column as
              k.constraint_schema = t.constraint_schema and
              k.constraint_name = t.constraint_name and
              k.column_name = c.column_name;
+
+create view meta.column as
+    select c.*
+    from meta.table t
+        join meta.relation_column c on c.relation_id = t.id;
 
 
 create function meta.stmt_column_create(schema_name text, relation_name text, column_name text, type_name text, nullable boolean, "default" text, primary_key boolean) returns text as $$
