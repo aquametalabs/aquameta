@@ -18,6 +18,7 @@ set search_path=bundle;
 -- non-versioned meta relations
 insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','function_parameter'));
 insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','connection'));
+insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','relation_column'));
 
 -- TODO: what do we do with these??  database-wide
 insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','cast'));
@@ -62,7 +63,7 @@ insert into bundle.bundle (name) values ('org.aquameta.core.email');
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'email';
 -- table
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'email';
--- table
+-- view
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='view' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'email';
 -- column
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='column' and ((((row_id).pk_value)::meta.column_id)::meta.schema_id).name = 'email';
@@ -73,17 +74,15 @@ select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.unt
 -- foreign_key
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='foreign_key' and (((((row_id).pk_value)::meta.constraint_id).table_id)::meta.schema_id).name = 'email';
 
-/*
-select bundle.tracked_row_add('org.aquameta.core.email', meta.row_id('meta','function','id',meta.function_id('email','template_render','{text,public.hstore}')::text));
-*/
-
 select bundle.stage_row_add('org.aquameta.core.email', (row_id::meta.schema_id).name, (row_id::meta.relation_id).name, 'id', (row_id).pk_value) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name='org.aquameta.core.email');
+
 
 select bundle.commit('org.aquameta.core.email','initial import');
 
 drop extension email;
 drop schema email;
 
+/*
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.email'));
 
 
@@ -116,3 +115,4 @@ drop schema endpoint;
 
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.endpoint'));
 
+*/

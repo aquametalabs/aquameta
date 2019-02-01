@@ -518,7 +518,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
                 join bundle.blob b on f.value_hash=b.hash
-                join meta.column col on (f.field_id).column_id = col.id
+                join meta.relation_column col on (f.field_id).column_id = col.id
             where c.id=commit_id
             and (rr.row_id::meta.schema_id).name = 'meta'
             group by rr.id

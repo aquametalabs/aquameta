@@ -390,7 +390,7 @@ select
 
 from bundle.stage_row sr
     join meta.relation re on sr.row_id::meta.relation_id = re.id
-    join meta.column c on c.relation_id=re.id
+    join meta.relation_column c on c.relation_id=re.id
 where sr.new_row=true
 
 union all
