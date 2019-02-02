@@ -61,6 +61,8 @@ insert into bundle.bundle (name) values ('org.aquameta.core.email');
 
 -- schema
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'email';
+-- type
+select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type' and (((row_id).pk_value)::meta.schema_id).name = 'endpoint';
 -- table
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'email';
 -- view
@@ -82,7 +84,6 @@ select bundle.commit('org.aquameta.core.email','initial import');
 drop extension email;
 drop schema email;
 
-/*
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.email'));
 
 
@@ -98,6 +99,7 @@ create extension endpoint;
 insert into bundle.bundle (name) values ('org.aquameta.core.endpoint');
 
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'endpoint';
+select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type' and (((row_id).pk_value)::meta.schema_id).name = 'endpoint';
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'endpoint';
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='view' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'endpoint';
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='column' and ((((row_id).pk_value)::meta.column_id)::meta.schema_id).name = 'endpoint';
@@ -109,6 +111,7 @@ select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.
 select bundle.stage_row_add('org.aquameta.core.endpoint', (row_id::meta.schema_id).name, (row_id::meta.relation_id).name, 'id', (row_id).pk_value) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name='org.aquameta.core.endpoint');
 
 select bundle.commit('org.aquameta.core.endpoint','initial import');
+/*
 
 drop extension endpoint;
 drop schema endpoint;

@@ -534,6 +534,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
             order by
                 case
                     when row_id::meta.relation_id = meta.relation_id('meta','schema') then 0
+                    when row_id::meta.relation_id = meta.relation_id('meta','type') then 1
                     when row_id::meta.relation_id = meta.relation_id('meta','table') then 2
                     when row_id::meta.relation_id = meta.relation_id('meta','column') then 3
                     when row_id::meta.relation_id = meta.relation_id('meta','sequence') then 4

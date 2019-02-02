@@ -25,5 +25,5 @@ insert into bundle.trackable_nontable_relation (pk_column_id) values
 (meta.column_id('meta','table','id')),
 -- (meta.column_id('meta','table_privilege','id')),
 (meta.column_id('meta','trigger','id')),
--- (meta.column_id('meta','type','id')),
+(meta.column_id('meta','type','id')),
 (meta.column_id('meta','view','id'));

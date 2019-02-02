@@ -235,7 +235,7 @@ create function endpoint.set_mimetype(
 ) returns void as $$
     insert into endpoint.column_mimetype (column_id, mimetype_id)
     select c.id, m.id
-    from meta.column c
+    from meta.relation_column c
     cross join endpoint.mimetype m
     where c.schema_name   = _schema and
           c.relation_name = _table and
@@ -265,7 +265,7 @@ create function endpoint.columns_json(
     begin
         execute
             'select (''['' || string_agg(row_to_json(row(c2.name, c2.type_name)::endpoint.column_type, true)::text, '','') || '']'')::json
-            from (select * from meta.column c
+            from (select * from meta.relation_column c
             where c.schema_name = ' || quote_literal(_schema_name) || ' and
                 c.relation_name = ' || quote_literal(_relation_name) ||
                 case when include is not null then
@@ -294,7 +294,7 @@ create function pk(
     out pk_type text
 ) returns record as $$
     select c.name, c.type_name
-    from meta.column c
+    from meta.relation_column c --TODO: either use relation_column maybe?  Or go look up the pk of a view somewhere else if we ever add that
     where c.schema_name = _schema_name and
           c.relation_name = _relation_name and
           c.primary_key
@@ -311,7 +311,7 @@ create function pk_name(
     _relation_name name
 ) returns text as $$
     select c.name
-    from meta.column c
+    from meta.relation_column c --TODO: either use relation_column maybe?  Or go look up the pk of a view somewhere else if we ever add that
     where c.schema_name = _schema_name and
           c.relation_name = _relation_name and
           c.primary_key
@@ -621,7 +621,7 @@ create or replace function endpoint.row_insert(
                                    '
                                    order by json_object_keys
                            ) from json_object_keys(args)
-                           inner join meta.column c
+                           inner join meta.relation_column c
                                    on c.schema_name = _schema_name and
                                       c.relation_name = _relation_name and
                                       c.name = json_object_keys
@@ -749,7 +749,7 @@ create or replace function endpoint.row_update(
                                          end || c.type_name, ',
                            '
                        ) from json_object_keys(args)
-                       inner join meta.column c
+                       inner join meta.relation_column c
                                on c.schema_name = _schema_name and
                                   c.relation_name = _relation_name and
                                   c.name = json_object_keys
@@ -826,10 +826,10 @@ create function endpoint.row_select(
                         ' where ' || quote_ident(pk_column_name) || '=' || quote_literal(pk) ||
                             (
                                 select '::' || c.type_name
-                                from meta.column c
+                                from meta.relation_column c
                                 where c.schema_name = _schema_name and
                                    c.relation_name = _relation_name and
-                                   c.name = pk_column_name
+                                   c.name = pk_column_name -- FIXME column integration
                             ) ||
                     ') t';
 /*
@@ -1557,7 +1557,7 @@ create function endpoint.row_delete(
         execute 'delete from ' || quote_ident(_schema_name) || '.' || quote_ident(_table_name) ||
                 ' where ' || (
                     select quote_ident(c.name) || ' = ' || quote_literal(pk) || '::' || c.type_name
-                    from meta.column c
+                    from meta.relation_column c
                     where schema_name = _schema_name
                        and relation_name = _table_name
                        and name = (row_id).pk_column_id.name
