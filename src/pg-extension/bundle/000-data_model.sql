@@ -388,7 +388,7 @@ select
         )
     )::text as value
 
-from bundle.stage_row sr
+from bundle.stage_row sr -- this should be trackable_row or something
     join meta.relation re on sr.row_id::meta.relation_id = re.id
     join meta.relation_column c on c.relation_id=re.id
 where sr.new_row=true
@@ -539,10 +539,15 @@ where change_type != 'same'
 -- stage_row_added [or stage_row_deleted?].
 ------------------------------------------------------------------------------
 
+create table trackable_nontable_relation (
+    id uuid default public.uuid_generate_v4() primary key,
+    pk_column_id meta.column_id not null
+);
+
 
 -- Relations that are not specifically ignored, and not in a ignored schema
 -- TODO: why does this have schema_id and pk_column_id?  should just be a realtion_id no?
-create or replace view not_ignored_relation as
+create or replace view trackable_relation as
     select relation_id, schema_id, primary_key_column_id from (
        -- every single table
     select t.id as relation_id, s.id as schema_id, r.primary_key_column_ids[1] as primary_key_column_id --TODO audit column
@@ -553,9 +558,8 @@ create or replace view not_ignored_relation as
 
     -- combined with every view in the meta schema
     UNION
-    select v.id as relation_id, v.schema_id, meta.column_id('meta',v.name,'id') as primary_key_column_id
-        from meta.view v
-        where v.schema_name = 'meta'
+    select pk_column_id::meta.relation_id as relation_id, pk_column_id::meta.schema_id as schema_id, pk_column_id as primary_key_column_id
+    from bundle.trackable_nontable_relation
 ) r
 
     -- ...that is not ignored
@@ -605,7 +609,7 @@ select *, 'select meta.row_id(' ||
         else ''
     end
     as stmt
-from bundle.not_ignored_relation r;
+from bundle.trackable_relation r;
 
 
 create or replace view untracked_row as

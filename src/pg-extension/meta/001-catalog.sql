@@ -511,6 +511,7 @@ create view meta.relation_column as
              k.column_name = c.column_name;
 
 create view meta.column as
+    -- select c.id, c.relation_id as table_id, c.schema_name, c.relation_name, c.name, c.position, c.type_name, c.type_id, c.nullable, c.column_default, c.primary_key
     select c.*
     from meta.table t
         join meta.relation_column c on c.relation_id = t.id;
@@ -677,7 +678,7 @@ create view meta.relation as
 
     from information_schema.tables t
    
-    left join meta.column c
+    left join meta.relation_column c
            on c.relation_id = row(row(t.table_schema), t.table_name)::meta.relation_id and c.primary_key             
 
     group by t.table_schema, t.table_name, t.table_type;

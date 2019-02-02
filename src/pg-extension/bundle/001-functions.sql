@@ -24,6 +24,8 @@ create or replace function commit (bundle_name text, message text) returns void 
         new_commit_id uuid;
     begin
 
+    raise notice 'bundle: Committing to %', bundle_name;
+
     select id
     into _bundle_id
     from bundle.bundle
@@ -34,11 +36,13 @@ create or replace function commit (bundle_name text, message text) returns void 
     returning id into new_rowset_id;
 
     -- STAGE
+    raise notice 'bundle: Committing rowset_rows...';
     -- ROWS: copy everything in stage_row to the new rowset
     insert into bundle.rowset_row (rowset_id, row_id)
     select new_rowset_id, row_id from bundle.stage_row where bundle_id=_bundle_id;
 
 
+    raise notice 'bundle: Committing blobs...';
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
     insert into bundle.blob (value)
     select f.value
@@ -46,6 +50,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
     join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
 
+    raise notice 'bundle: Committing stage_row_fields...';
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
     insert into bundle.rowset_row_field (rowset_row_id, field_id, value_hash)
     select rr.id, f.field_id, public.digest(value, 'sha256')
@@ -62,14 +67,17 @@ create or replace function commit (bundle_name text, message text) returns void 
     join bundle.blob b on (f.field_id).row_id = rr.row_id;
     */
 
+    raise notice 'bundle: Creating the commit...';
     -- create the commit
     insert into bundle.commit (bundle_id, parent_id, rowset_id, message)
     values (_bundle_id, (select head_commit_id from bundle.bundle b where b.id=_bundle_id), new_rowset_id, message)
     returning id into new_commit_id;
 
+    raise notice 'bundle: Updating bundle.head_commit_id...';
     -- point HEAD at new commit
     update bundle.bundle bundle set head_commit_id=new_commit_id where bundle.id=_bundle_id;
 
+    raise notice 'bundle: Cleaning up after commit...';
     -- clear the stage
     delete from bundle.stage_row_added where bundle_id=_bundle_id;
     delete from bundle.stage_row_deleted where bundle_id=_bundle_id;
