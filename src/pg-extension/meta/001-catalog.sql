@@ -802,6 +802,29 @@ $$ language plpgsql;
  -- not sure this is a good idea.
 
 /******************************************************************************
+ * meta.function_definition
+ *
+ * A view that contains the function_id and it's definition statement unparsed
+ * and without any kind of metadata -- Built because meta.function was having
+ * some problems, namely that argument names were not present, and are required
+ * to recreate the function on an INSERT.  meta.function needs an entire
+ * rewrite and potentially rethink, and ramifications on
+ * endpoint.rows_select_function would be far-reaching and likely highly
+ * disruptive.  Long term, function handling in both meta and endpoint need a
+ * complete rewrite.  However, for bundle IO on meta.function rows, this might
+ * actually be the simplest solution anyway.
+ *****************************************************************************/
+
+create or replace view meta.function_definition as
+select
+    meta.function_id( pronamespace::pg_catalog.regnamespace::text, proname::text, regexp_split_to_array(pg_catalog.pg_get_function_arguments(p.oid),', ')) as function_id,
+    pg_catalog.pg_get_functiondef(p.oid) as definition
+from pg_catalog.pg_proc p
+where proisagg is false; -- why??  otherwise I get "ERROR:  "sum" is an aggregate function"
+
+
+
+/******************************************************************************
  * meta.function
  *****************************************************************************/
 create view meta.function as
@@ -916,6 +939,7 @@ create view meta.function as
         return_type,
         return_type_id,
         language;
+
 
 
 create view meta.function_parameter as
