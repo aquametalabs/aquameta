@@ -23,7 +23,7 @@ Core Modules
 - www - Maps PostgreSQL permissions and data acccess to the web, as well as allowing resource hosting and a web socket event server
 - bundle - A version control system similar to git but for database rows intead of files
 - widget - Modular web components that can be reused
-- p2p - peer-to-peer communication between Aquameta nodes
+- semantics - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
 
 Installation
 ------------
