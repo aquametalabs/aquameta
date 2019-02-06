@@ -540,6 +540,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                     when row_id::meta.relation_id = meta.relation_id('meta','sequence') then 4
                     when row_id::meta.relation_id = meta.relation_id('meta','constraint_check') then 4
                     when row_id::meta.relation_id = meta.relation_id('meta','constraint_unique') then 4
+                    when row_id::meta.relation_id = meta.relation_id('meta','function_definition') then 5
                     else 100
                 end asc /*,
                 case
