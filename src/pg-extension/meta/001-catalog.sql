@@ -817,10 +817,53 @@ $$ language plpgsql;
 
 create or replace view meta.function_definition as
 select
-    meta.function_id( pronamespace::pg_catalog.regnamespace::text, proname::text, regexp_split_to_array(pg_catalog.pg_get_function_arguments(p.oid),', ')) as function_id,
+    meta.function_id( pronamespace::pg_catalog.regnamespace::text, proname::text, regexp_split_to_array(pg_catalog.pg_get_function_arguments(p.oid),', ')) as id,
     pg_catalog.pg_get_functiondef(p.oid) as definition
 from pg_catalog.pg_proc p
 where proisagg is false; -- why??  otherwise I get "ERROR:  "sum" is an aggregate function"
+
+
+create function meta.stmt_function_definition_create(definition text) returns text as $$
+    select definition;
+$$ language sql;
+
+
+create function meta.stmt_function_definition_drop(function_id meta.function_id) returns text as $$
+    select 'drop function ' || quote_ident((function_id::meta.schema_id).name) || '.' || quote_ident(function_id.name) || '(' ||
+               array_to_string(function_id.parameters, ',') ||
+           ');';
+$$ language sql;
+
+
+create function meta.function_definition_insert() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['definition']);
+
+        execute meta.stmt_function_definition_create(NEW.definition);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.function_definition_update() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['definition']);
+
+        execute meta.stmt_function_definition_drop(OLD.id);
+        execute meta.stmt_function_definition_create(NEW.definition);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.function_definition_delete() returns trigger as $$
+    begin
+        execute meta.stmt_function_definition_drop(OLD.id);
+        return OLD;
+    end;
+$$ language plpgsql;
 
 
 
@@ -2695,6 +2738,11 @@ create trigger meta_column_delete_trigger instead of delete on meta.column for e
 create trigger meta_foreign_key_insert_trigger instead of insert on meta.foreign_key for each row execute procedure meta.foreign_key_insert();
 create trigger meta_foreign_key_update_trigger instead of update on meta.foreign_key for each row execute procedure meta.foreign_key_update();
 create trigger meta_foreign_key_delete_trigger instead of delete on meta.foreign_key for each row execute procedure meta.foreign_key_delete();
+
+-- FUNCTION_DEFINITION
+create trigger meta_function_definition_insert_trigger instead of insert on meta.function_definition for each row execute procedure meta.function_definition_insert();
+create trigger meta_function_definition_trigger instead of update on meta.function_definition for each row execute procedure meta.function_definition_update();
+create trigger meta_function_definition_delete_trigger instead of delete on meta.function_definition for each row execute procedure meta.function_definition_delete();
 
 -- FUNCTION
 create trigger meta_function_insert_trigger instead of insert on meta.function for each row execute procedure meta.function_insert();
