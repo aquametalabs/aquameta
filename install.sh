@@ -107,6 +107,7 @@ sudo -H pip install --upgrade .
 
 # install extensions into PostgreSQL's extensions/ directory
 echo "Building core PostgreSQL extensions..."
+cd $SRC/src/pg-extension/pg_catalog_get_defs && make && make install
 cd $SRC/src/pg-extension/meta && make && make install
 cd $SRC/src/pg-extension/bundle && make && make install
 cd $SRC/src/pg-extension/filesystem && make && make install

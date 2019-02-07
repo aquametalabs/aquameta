@@ -5,6 +5,7 @@ create extension if not exists hstore_plpythonu schema public;
 create extension if not exists dblink schema public;
 create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto schema public;
+create extension if not exists pg_catalog_get_defs schema pg_catalog;
 create extension if not exists plv8;
 
 create extension meta;
