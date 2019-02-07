@@ -1113,6 +1113,16 @@ create cast (relation_id as schema_id)
     with function relation_id_to_schema_id(relation_id) as assignment;
 
 
+-- typ to schema
+create function meta.type_id_to_schema_id(in meta.type_id, out meta.schema_id) as $$
+    select $1.schema_id
+$$
+language sql;
+
+create cast (type_id as schema_id)
+    with function type_id_to_schema_id(type_id) as assignment;
+
+
 -- column to relation
 create function column_id_to_relation_id(in meta.column_id, out meta.relation_id) as $$
     select $1.relation_id

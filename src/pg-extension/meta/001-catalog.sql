@@ -117,6 +117,64 @@ where (t.typrelid = 0 or c.relkind = 'c')
   and pg_catalog.pg_type_is_visible(t.oid)
 order by 1, 2;
 
+
+create view meta.type_definition as 
+select
+    meta.type_id(typnamespace::regnamespace::text, typname::text) as id,
+    pg_catalog.get_typedef(t.oid)
+from pg_catalog.pg_type t
+where t.typtype not in ('p');
+
+create function meta.stmt_type_definition_create(definition text) returns text as $$
+    select definition;
+$$ language sql;
+
+
+create function meta.stmt_type_definition_drop(type_id meta.type_id) returns text as $$
+    select 'drop type ' || 
+        quote_ident((type_id::meta.schema_id).name) || '.' || 
+        quote_ident(type_id.name) || ';';
+$$ language sql;
+
+
+create function meta.type_definition_insert() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['definition']);
+
+        execute meta.stmt_type_definition_create(NEW.definition);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.type_definition_update() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['definition']);
+
+        execute meta.stmt_type_definition_drop(OLD.id);
+        execute meta.stmt_type_definition_create(NEW.definition);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.type_definition_delete() returns trigger as $$
+    begin
+        execute meta.stmt_type_definition_drop(OLD.id);
+        return OLD;
+    end;
+$$ language plpgsql;
+
+
+
+
+
+
+
+
+
 /******************************************************************************
  * meta.cast
  *****************************************************************************/
@@ -2781,6 +2839,12 @@ create trigger meta_connection_delete_trigger instead of delete on meta.connecti
 create trigger meta_constraint_unique_insert_trigger instead of insert on meta.constraint_unique for each row execute procedure meta.constraint_unique_insert();
 create trigger meta_constraint_unique_update_trigger instead of update on meta.constraint_unique for each row execute procedure meta.constraint_unique_update();
 create trigger meta_constraint_unique_delete_trigger instead of delete on meta.constraint_unique for each row execute procedure meta.constraint_unique_delete();
+
+-- TYPE
+create trigger meta_type_definition_insert_trigger instead of insert on meta.type_definition for each row execute procedure meta.type_definition_insert();
+create trigger meta_type_definition_trigger instead of update on meta.type_definition for each row execute procedure meta.type_definition_update();
+create trigger meta_type_definition_delete_trigger instead of delete on meta.type_definition for each row execute procedure meta.type_definition_delete();
+
 
 -- CONSTRAINT CHECK
 create trigger meta_constraint_check_insert_trigger instead of insert on meta.constraint_check for each row execute procedure meta.constraint_check_insert();
