@@ -144,6 +144,7 @@ sudo -u postgres psql -c "create extension if not exists plv8" aquameta
 
 # create aquameta core extensions
 echo "Installing core Aquameta extensions..."
+sudo -u postgres psql -c "create extension pg_catalog_get_defs schema pg_catalog" aquameta
 sudo -u postgres psql -c "create extension meta" aquameta
 sudo -u postgres psql -c "create extension bundle" aquameta
 sudo -u postgres psql -c "create extension filesystem" aquameta

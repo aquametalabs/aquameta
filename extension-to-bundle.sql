@@ -97,6 +97,7 @@ select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.
 
 select bundle.stage_row_add('org.aquameta.core.endpoint', (row_id::meta.schema_id).name, (row_id::meta.relation_id).name, 'id', (row_id).pk_value) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name='org.aquameta.core.endpoint');
 
+/*
 select bundle.commit('org.aquameta.core.endpoint','initial import');
 
 drop extension endpoint;
@@ -104,3 +105,4 @@ drop schema endpoint;
 
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.endpoint'));
 
+*/
