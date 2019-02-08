@@ -822,7 +822,7 @@ $$ language plpgsql;
 create or replace view meta.function_definition as
 select
     meta.function_id( pronamespace::pg_catalog.regnamespace::text, proname::text, regexp_split_to_array(pg_catalog.pg_get_function_arguments(p.oid),', ')) as id,
-    pg_catalog.pg_get_functiondef(p.oid) as definition
+    pg_catalog.pg_get_functiondef_no_searchpath(p.oid) as definition
 from pg_catalog.pg_proc p
 where proisagg is false; -- why??  otherwise I get "ERROR:  "sum" is an aggregate function"
 
