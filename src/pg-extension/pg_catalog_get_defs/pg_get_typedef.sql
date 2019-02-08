@@ -1,3 +1,24 @@
+/*
+ * pg_catalog.pg_get_functiondef_no_searchpath(oid) 
+ *
+ * wraps the pg_get_functiondef() function, eliminating the search path so that
+ * fully schema-qualified names are used on types, tables, views, etc.
+ */
+
+create or replace function pg_catalog.pg_get_functiondef_no_searchpath(oid) returns text
+    language plpgsql
+    as $$
+    declare
+        defn text;
+    begin
+        set local search_path=pg_catalog;
+        select into defn pg_catalog.pg_get_functiondef($1);
+        return defn;
+    end;
+    $$;
+
+
+
 -- written by RhodiumToad on IRC in one hour :)
 
 create or replace function get_typedef_enum(oid) returns text
@@ -6,6 +27,7 @@ create or replace function get_typedef_enum(oid) returns text
   declare
     defn text;
   begin
+	set local search_path=pg_catalog;
     select into defn
            format('CREATE TYPE %s AS ENUM (%s)',
                   $1::regtype,
@@ -23,6 +45,7 @@ create or replace function get_typedef_composite(oid) returns text
   declare
     defn text;
   begin
+	set local search_path=pg_catalog;
     select into defn
            format('CREATE TYPE %s AS (%s)',
                   $1::regtype,
@@ -52,6 +75,7 @@ create or replace function get_typedef_domain(oid) returns text
   declare
     defn text;
   begin
+	set local search_path=pg_catalog;
     select into defn
            format('CREATE DOMAIN %s AS %s%s%s',
                   $1::regtype,
@@ -72,6 +96,7 @@ create or replace function get_typedef_range(oid) returns text
   declare
     defn text;
   begin
+	set local search_path=pg_catalog;
     select into defn
            format('CREATE TYPE %s AS RANGE (%s)',
                   $1::regtype,
@@ -109,6 +134,7 @@ create or replace function get_typedef_base(oid) returns text
   declare
     defn text;
   begin
+	set local search_path=pg_catalog;
     select into defn
            format('CREATE TYPE %s AS (%s)',
                   $1::regtype,
@@ -164,6 +190,7 @@ create function get_typedef(typid oid) returns text
   declare
     r record;
   begin
+	set local search_path=pg_catalog;
     select into r * from pg_type where oid = typid;
     if not found then
       raise exception 'unknown type oid %', typid;

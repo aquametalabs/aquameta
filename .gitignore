@@ -1,7 +1,6 @@
 *.swp
 *.swo
 *.pyc
-
 src/pg-extension/bundle/bundle--*.*.*.sql
 src/pg-extension/email/email--*.*.*.sql
 src/pg-extension/endpoint/endpoint--*.*.*.sql
@@ -10,3 +9,4 @@ src/pg-extension/filesystem/filesystem--*.*.*.sql
 src/pg-extension/meta/meta--*.*.*.sql
 src/pg-extension/widget/widget--*.*.*.sql
 src/pg-extension/semantics/semantics--*.*.*.sql
+src/pg-extension/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
