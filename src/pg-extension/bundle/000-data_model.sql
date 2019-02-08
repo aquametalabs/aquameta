@@ -595,13 +595,13 @@ select *, 'select meta.row_id(' ||
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('table', 'view', 'relation') then
            ' where id not in (select relation_id from bundle.ignored_relation) and schema_id not in (select schema_id from bundle.ignored_schema)'
         -- functions
-        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'function' then
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'function_definition' then
            ' where schema_id not in (select schema_id from bundle.ignored_schema)'
         -- columns
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'column' then
            ' where id not in (select column_id from bundle.ignored_column) and id::meta.relation_id not in (select relation_id from bundle.ignored_relation) and id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
         -- objects that exist in schema scope
-        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('type', 'operator') then
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('type_definition', 'operator') then
            ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema)'
         -- objects that exist in table scope
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('constraint_check','constraint_unique','table_privilege') then
