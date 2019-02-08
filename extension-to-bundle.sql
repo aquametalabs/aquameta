@@ -16,15 +16,6 @@ create extension bundle;
 ------------------------------------------------------------------------
 set search_path=bundle;
 
--- bundle internal tables
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','commit'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','rowset'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','rowset_row'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','rowset_row_field'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','blob'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','tracked_row_added'));
-
 insert into bundle.bundle (name) values ('org.aquameta.core.bundle');
 
 -- TODO: track the ignored_rows
