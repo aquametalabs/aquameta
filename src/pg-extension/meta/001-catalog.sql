@@ -118,60 +118,6 @@ where (t.typrelid = 0 or c.relkind = 'c')
 order by 1, 2;
 
 
-create view meta.type_definition as 
-select
-    meta.type_id(typnamespace::regnamespace::text, typname::text) as id,
-    pg_catalog.get_typedef(t.oid)
-from pg_catalog.pg_type t
-where t.typtype not in ('p');
-
-create function meta.stmt_type_definition_create(definition text) returns text as $$
-    select definition;
-$$ language sql;
-
-
-create function meta.stmt_type_definition_drop(type_id meta.type_id) returns text as $$
-    select 'drop type ' || 
-        quote_ident((type_id::meta.schema_id).name) || '.' || 
-        quote_ident(type_id.name) || ';';
-$$ language sql;
-
-
-create function meta.type_definition_insert() returns trigger as $$
-    begin
-        perform meta.require_all(public.hstore(NEW), array['definition']);
-
-        execute meta.stmt_type_definition_create(NEW.definition);
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-
-create function meta.type_definition_update() returns trigger as $$
-    begin
-        perform meta.require_all(public.hstore(NEW), array['definition']);
-
-        execute meta.stmt_type_definition_drop(OLD.id);
-        execute meta.stmt_type_definition_create(NEW.definition);
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-
-create function meta.type_definition_delete() returns trigger as $$
-    begin
-        execute meta.stmt_type_definition_drop(OLD.id);
-        return OLD;
-    end;
-$$ language plpgsql;
-
-
-
-
-
-
 
 
 
@@ -1153,6 +1099,69 @@ create function meta.function_delete() returns trigger as $$
         return OLD;
     end;
 $$ language plpgsql;
+
+
+
+
+/******************************************************************************
+ * meta.type_definition
+ *****************************************************************************/
+create view meta.type_definition as 
+select
+    meta.type_id(typnamespace::regnamespace::text, typname::text) as id,
+    pg_catalog.get_typedef(t.oid) as definition,
+    t.typtype as "type"
+from pg_catalog.pg_type t
+where t.typtype = 'c'
+    and meta.type_id(typnamespace::regnamespace::text, typname::text) not in (
+        select id from meta.table
+        union
+        select id from meta.view
+    );
+
+create function meta.stmt_type_definition_create(definition text) returns text as $$
+    select definition;
+$$ language sql;
+
+
+create function meta.stmt_type_definition_drop(type_id meta.type_id) returns text as $$
+    select 'drop type ' ||
+        quote_ident((type_id::meta.schema_id).name) || '.' ||
+        quote_ident(type_id.name) || ';';
+$$ language sql;
+
+
+create function meta.type_definition_insert() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['definition']);
+
+        execute meta.stmt_type_definition_create(NEW.definition);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.type_definition_update() returns trigger as $$
+    begin
+        perform meta.require_all(public.hstore(NEW), array['definition']);
+
+        execute meta.stmt_type_definition_drop(OLD.id);
+        execute meta.stmt_type_definition_create(NEW.definition);
+
+        return NEW;
+    end;
+$$ language plpgsql;
+
+
+create function meta.type_definition_delete() returns trigger as $$
+    begin
+        execute meta.stmt_type_definition_drop(OLD.id);
+        return OLD;
+    end;
+$$ language plpgsql;
+
+
 
 
 /******************************************************************************

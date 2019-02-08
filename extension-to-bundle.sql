@@ -16,22 +16,6 @@ create extension bundle;
 ------------------------------------------------------------------------
 set search_path=bundle;
 
-/*
--- non-versioned meta relations
-insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','function_parameter'));
-insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','connection'));
-insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','relation_column'));
-
--- TODO: what do we do with these??  database-wide
-insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','cast'));
-insert into bundle.ignored_relation (relation_id) values (meta.relation_id('meta','extension'));
-
--- untracked schemas
-insert into bundle.ignored_schema (schema_id) values (meta.schema_id('public'));
-insert into bundle.ignored_schema (schema_id) values (meta.schema_id('information_schema'));
-insert into bundle.ignored_schema (schema_id) values (meta.schema_id('pg_catalog'));
-*/
-
 -- bundle internal tables
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle'));
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','commit'));
@@ -64,8 +48,8 @@ insert into bundle.bundle (name) values ('org.aquameta.core.email');
 
 -- schema
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'email';
--- type
-select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'email';
+-- type_definition
+select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type_definition' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'email';
 -- table
 select bundle.tracked_row_add('org.aquameta.core.email', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'email';
 -- view
@@ -102,7 +86,7 @@ create extension endpoint;
 insert into bundle.bundle (name) values ('org.aquameta.core.endpoint');
 
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'endpoint';
-select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'endpoint';
+select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type_definition' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'endpoint';
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'endpoint';
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='view' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'endpoint';
 select bundle.tracked_row_add('org.aquameta.core.endpoint', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='column' and ((((row_id).pk_value)::meta.column_id)::meta.schema_id).name = 'endpoint';
