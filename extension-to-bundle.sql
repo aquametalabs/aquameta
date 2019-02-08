@@ -113,10 +113,8 @@ select bundle.checkout((select head_commit_id from bundle.bundle where name='org
 ------------------------------------------------------------------------
 create extension event;
 
-
 -- track meta entities
 insert into bundle.bundle (name) values ('org.aquameta.core.event');
-
 select bundle.tracked_row_add('org.aquameta.core.event', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'event';
 select bundle.tracked_row_add('org.aquameta.core.event', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type_definition' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'event';
 select bundle.tracked_row_add('org.aquameta.core.event', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'event';
@@ -126,12 +124,62 @@ select bundle.tracked_row_add('org.aquameta.core.event', row_id) from bundle.unt
 select bundle.tracked_row_add('org.aquameta.core.event', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='foreign_key' and (((((row_id).pk_value)::meta.constraint_id).table_id)::meta.schema_id).name = 'event';
 select bundle.tracked_row_add('org.aquameta.core.event', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='function_definition' and ((((row_id).pk_value)::meta.function_id).schema_id).name = 'event';
 
-
 select bundle.stage_row_add('org.aquameta.core.event', (row_id::meta.schema_id).name, (row_id::meta.relation_id).name, 'id', (row_id).pk_value) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name='org.aquameta.core.event');
 
 select bundle.commit('org.aquameta.core.event','initial import');
-
 drop extension event;
 drop schema event;
-
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.event'));
+
+
+------------------------------------------------------------------------
+-- widget
+------------------------------------------------------------------------
+create extension widget;
+
+-- track meta entities
+insert into bundle.bundle (name) values ('org.aquameta.core.widget');
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type_definition' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='view' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='column' and ((((row_id).pk_value)::meta.column_id)::meta.schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='constraint_check' and (((((row_id).pk_value)::meta.constraint_id).table_id)::meta.schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='foreign_key' and (((((row_id).pk_value)::meta.constraint_id).table_id)::meta.schema_id).name = 'widget';
+select bundle.tracked_row_add('org.aquameta.core.widget', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='function_definition' and ((((row_id).pk_value)::meta.function_id).schema_id).name = 'widget';
+
+select bundle.stage_row_add('org.aquameta.core.widget', (row_id::meta.schema_id).name, (row_id::meta.relation_id).name, 'id', (row_id).pk_value) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name='org.aquameta.core.widget');
+
+select bundle.commit('org.aquameta.core.widget','initial import');
+drop extension widget;
+drop schema widget;
+select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.widget'));
+
+
+
+------------------------------------------------------------------------
+-- semantics
+------------------------------------------------------------------------
+create extension semantics;
+
+-- track meta entities
+insert into bundle.bundle (name) values ('org.aquameta.core.semantics');
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='schema' and (((row_id).pk_value)::meta.schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='type_definition' and ((((row_id).pk_value)::meta.type_id).schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='table' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='view' and ((((row_id).pk_value)::meta.relation_id)::meta.schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='column' and ((((row_id).pk_value)::meta.column_id)::meta.schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='constraint_check' and (((((row_id).pk_value)::meta.constraint_id).table_id)::meta.schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='foreign_key' and (((((row_id).pk_value)::meta.constraint_id).table_id)::meta.schema_id).name = 'semantics';
+select bundle.tracked_row_add('org.aquameta.core.semantics', row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = 'meta' and (row_id::meta.relation_id).name='function_definition' and ((((row_id).pk_value)::meta.function_id).schema_id).name = 'semantics';
+
+select bundle.stage_row_add('org.aquameta.core.semantics', (row_id::meta.schema_id).name, (row_id::meta.relation_id).name, 'id', (row_id).pk_value) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name='org.aquameta.core.semantics');
+
+select bundle.commit('org.aquameta.core.semantics','initial import');
+drop extension semantics;
+drop schema semantics;
+select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.semantics'));
+
+
+
+
