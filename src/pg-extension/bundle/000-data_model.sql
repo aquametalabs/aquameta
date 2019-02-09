@@ -191,30 +191,23 @@ from bundle.bundle bundle
 ------------------------------------------------------------------------------
 create table ignored_row (
     id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle(id) on delete cascade,
-    row_id meta.row_id,
-    unique (row_id) --TOO RESTRICTIVE?
+    row_id meta.row_id
 );
 
--- ignored_schema:  Ignored rows that are in meta.schema:  If a schema's meta row
--- is ignored, the ignore cascades down to every row in that schema, effectively
--- ignoring everything in it.
-create view ignored_schema as
-    select (row_id).pk_value::meta.schema_id as schema_id, row_id as meta_row_id
-    from bundle.ignored_row
-    where
-        (row_id::meta.schema_id).name = 'meta' and
-        (row_id::meta.relation_id).name = 'schema';
+create table ignored_schema (
+    id uuid default public.uuid_generate_v4() primary key,
+    schema_id meta.schema_id not null
+);
 
--- ignored_relation:  Same as ignored_schema but for relation.
-create view ignored_relation as
-    select (row_id).pk_value::meta.relation_id as relation_id, row_id as meta_row_id
-    from bundle.ignored_row
-    where
-        (row_id::meta.schema_id).name = 'meta' and
-        (row_id::meta.relation_id).name = 'relation';
+create table ignored_relation (
+    id uuid default public.uuid_generate_v4() primary key,
+    relation_id meta.relation_id not null
+);
 
--- TODO: ignored_column support...
+create table ignored_column (
+    id uuid default public.uuid_generate_v4() primary key,
+    column_id meta.column_id not null
+);
 
 
 ------------------------------------------------------------------------------
@@ -395,9 +388,9 @@ select
         )
     )::text as value
 
-from bundle.stage_row sr
+from bundle.stage_row sr -- this should be trackable_row or something
     join meta.relation re on sr.row_id::meta.relation_id = re.id
-    join meta.column c on c.relation_id=re.id
+    join meta.relation_column c on c.relation_id=re.id
 where sr.new_row=true
 
 union all
@@ -546,25 +539,30 @@ where change_type != 'same'
 -- stage_row_added [or stage_row_deleted?].
 ------------------------------------------------------------------------------
 
+create table trackable_nontable_relation (
+    id uuid default public.uuid_generate_v4() primary key,
+    pk_column_id meta.column_id not null
+);
+
 
 -- Relations that are not specifically ignored, and not in a ignored schema
-create or replace view not_ignored_relation as
+-- TODO: why does this have schema_id and pk_column_id?  should just be a realtion_id no?
+create or replace view trackable_relation as
     select relation_id, schema_id, primary_key_column_id from (
        -- every single table
     select t.id as relation_id, s.id as schema_id, r.primary_key_column_ids[1] as primary_key_column_id --TODO audit column
     from meta.schema s
     join meta.table t on t.schema_id=s.id
-    join meta.relation r on r.id=t.id
+    join meta.relation r on r.id=t.id -- only work with relations that have a primary key
     where primary_key_column_ids[1] is not null
 
     -- combined with every view in the meta schema
     UNION
-    select v.id as relation_id, v.schema_id, meta.column_id('meta',v.name,'id') as primary_key_column_id
-    from meta.view v
-    where v.schema_name = 'meta'
+    select pk_column_id::meta.relation_id as relation_id, pk_column_id::meta.schema_id as schema_id, pk_column_id as primary_key_column_id
+    from bundle.trackable_nontable_relation
 ) r
 
-       -- ...that is not ignored
+    -- ...that is not ignored
     where relation_id not in (
         select relation_id from bundle.ignored_relation
     )
@@ -580,19 +578,45 @@ ignored by schema- or relation-ignores.  NOTE: We haven't pulled out
 specifically ignored rows yet.
 */
 
-create view not_ignored_row_stmt as
+create or replace view bundle.not_ignored_row_stmt as
 select *, 'select meta.row_id(' ||
     quote_literal((r.schema_id).name) || ', ' ||
     quote_literal((r.relation_id).name) || ', ' ||
     quote_literal((r.primary_key_column_id).name) || ', ' ||
     quote_ident((r.primary_key_column_id).name) || '::text ' ||
     ') as row_id from ' ||
-    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) as stmt
-from bundle.not_ignored_relation r;
--- join
+    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) ||
+    -- special case meta rows so that ignored_* cascades down to all objects in it's scope
+    case
+        -- schemas
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'schema' then
+           ' where id not in (select schema_id from bundle.ignored_schema)'
+        -- relations
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('table', 'view', 'relation') then
+           ' where id not in (select relation_id from bundle.ignored_relation) and schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- functions
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'function_definition' then
+           ' where id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- columns
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'column' then
+           ' where id not in (select column_id from bundle.ignored_column) and id::meta.relation_id not in (select relation_id from bundle.ignored_relation) and id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- objects that exist in schema scope
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('operator') then
+           ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema)'
+        -- objects that exist in schema scope
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('type_definition') then
+           ' where id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
+        -- objects that exist in table scope
+        when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('constraint_check','constraint_unique','table_privilege') then
+           ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema) and table_id not in (select relation_id from bundle.ignored_relation)'
+        else ''
+    end
+    as stmt
+from bundle.trackable_relation r;
+
 
 create or replace view untracked_row as
-select r.row_id, r.row_id::meta.relation_id as relation_id
+select r.row_id /*, r.row_id::meta.relation_id as relation_id */
     from bundle.exec((
         select array_agg (stmt) from bundle.not_ignored_row_stmt
     )) r(

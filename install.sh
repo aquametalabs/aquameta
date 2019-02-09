@@ -107,6 +107,7 @@ sudo -H pip install --upgrade .
 
 # install extensions into PostgreSQL's extensions/ directory
 echo "Building core PostgreSQL extensions..."
+cd $SRC/src/pg-extension/pg_catalog_get_defs && make && make install
 cd $SRC/src/pg-extension/meta && make && make install
 cd $SRC/src/pg-extension/bundle && make && make install
 cd $SRC/src/pg-extension/filesystem && make && make install
@@ -143,6 +144,7 @@ sudo -u postgres psql -c "create extension if not exists plv8" aquameta
 
 # create aquameta core extensions
 echo "Installing core Aquameta extensions..."
+sudo -u postgres psql -c "create extension pg_catalog_get_defs schema pg_catalog" aquameta
 sudo -u postgres psql -c "create extension meta" aquameta
 sudo -u postgres psql -c "create extension bundle" aquameta
 sudo -u postgres psql -c "create extension filesystem" aquameta
