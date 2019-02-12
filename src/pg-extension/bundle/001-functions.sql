@@ -58,15 +58,6 @@ create or replace function commit (bundle_name text, message text) returns void 
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
     join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
 
-    /*
-    insert into bundle.blob (value)
-    select rr.id, f.field_id, f.value
-    from bundle.rowset_row rr
-    join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id
-    join bundle.blob b on (f.field_id).row_id = rr.row_id;
-    */
-
     raise notice 'bundle: Creating the commit...';
     -- create the commit
     insert into bundle.commit (bundle_id, parent_id, rowset_id, message)
@@ -109,6 +100,7 @@ as $$
         join bundle.rowset_row rr on rr.rowset_id = r.id
     where bundle.name = bundle_name
 $$ language sql;
+
 
 
 create or replace function commit_log (in bundle_name text, out commit_id uuid, out message text, out count bigint)
@@ -191,7 +183,7 @@ as $$
         where tra.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
 
     if not FOUND then
-        raise exception 'Row could not be delete from tracked_row_added';
+        raise exception 'Row could not be deleted from bundle.tracked_row_added';
     end if;
     return (bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value)::text;
     end;
