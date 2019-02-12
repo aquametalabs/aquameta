@@ -523,7 +523,7 @@ declare
 begin
 
     execute 'with r as (select * from ' || quote_ident ((row_id).pk_column_id.relation_id.schema_id.name) || '.'
-                             || quote_ident ((row_id).pk_column_id.relation_id.name) 
+                             || quote_ident ((row_id).pk_column_id.relation_id.name)
                              || ' where ' || quote_ident ((row_id.pk_column_id).name) 
                              || ' = ' || quote_literal (row_id.pk_value) || ') SELECT row_to_json(r.*) FROM r'
         into row_json;
@@ -626,6 +626,23 @@ begin
     into literal_value;
 
     return literal_value;
+exception when others then return null;
+end
+$$ language plpgsql;
+
+create or replace function meta.row_id_to_json(row_id meta.row_id) returns json as $$
+declare
+    json_value json;
+begin
+    execute 'select row_to_json(r) from (select * from ' 
+            || quote_ident((row_id::meta.schema_id).name) || '.'
+            || quote_ident((row_id::meta.relation_id).name)
+            || ' where ' || quote_ident(((row_id).pk_column_id).name)
+                         || '::text =' || quote_literal((row_id).pk_value)
+            || ') r'
+    into json_value;
+
+    return json_value;
 exception when others then return null;
 end
 $$ language plpgsql;
