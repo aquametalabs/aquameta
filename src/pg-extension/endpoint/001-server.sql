@@ -131,6 +131,7 @@ create table endpoint.resource (
 
 create table endpoint.template (
     id uuid default public.uuid_generate_v4() primary key,
+    name text not null default '',
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade, -- why on update cascade??
     content text not null default ''
 );
