@@ -13,7 +13,7 @@
 
 set search_path=meta,public;
 
-create type meta.schema_id AS (
+create type meta.schema_id as (
     name text
 );
 
@@ -153,7 +153,7 @@ create function meta.operator_id(
 ) returns meta.operator_id as $$
     select row(
         meta.schema_id(schema_name),
-        name, 
+        name,
         meta.type_id(left_arg_type_schema_name, left_arg_type_name),
         meta.type_id(right_arg_type_schema_name, right_arg_type_name)
     )::meta.operator_id
@@ -276,7 +276,7 @@ as assignment;
 create function meta.urldecode_arr(url text)
 returns text as $$
 begin
-  return 
+  return
    (with str as (select case when $1 ~ '^%[0-9a-fa-f][0-9a-fa-f]' then array[''] end
                                       || regexp_split_to_array ($1, '(%[0-9a-fa-f][0-9a-fa-f])+', 'i') plain,
                        array(select (regexp_matches ($1, '((?:%[0-9a-fa-f][0-9a-fa-f])+)', 'gi'))[1]) encoded)
@@ -431,7 +431,7 @@ create or replace view row as
 select r.row_id as id / *, schema_name, table_name, pk_column_name  FIXME pk_value * /
 from exec((
     select array_agg (stmt) from (
-       
+
         select s.name as schema_name,
             r.name as table_name,
             c.name as pk_column_name,
@@ -447,7 +447,7 @@ from exec((
         join meta.table t on t.schema_id=s.id
         join meta.relation r on t.id=r.id
         join meta.column c on r.primary_key_column_ids[1] = c.id
-       
+
     ) stmts
 )) r(
     row_id meta.row_id
@@ -496,13 +496,13 @@ $$ immutable language sql;
 
 /*
 create function meta.row_id(value json) returns meta.row_id as $$
-    select 
+    select
     row(
         row(
             row(
                 row(
                     value->'pk_column_id'->'relation_id'->'schema_id'->>'name'
-                ), 
+                ),
                 value->'pk_column_id'->'relation_id'->>'name'
             ),
             value->'pk_column_id'->>'name'
@@ -524,7 +524,7 @@ begin
 
     execute 'with r as (select * from ' || quote_ident ((row_id).pk_column_id.relation_id.schema_id.name) || '.'
                              || quote_ident ((row_id).pk_column_id.relation_id.name)
-                             || ' where ' || quote_ident ((row_id.pk_column_id).name) 
+                             || ' where ' || quote_ident ((row_id.pk_column_id).name)
                              || ' = ' || quote_literal (row_id.pk_value) || ') SELECT row_to_json(r.*) FROM r'
         into row_json;
     return;
@@ -634,7 +634,7 @@ create or replace function meta.row_id_to_json(row_id meta.row_id) returns json 
 declare
     json_value json;
 begin
-    execute 'select row_to_json(r) from (select * from ' 
+    execute 'select row_to_json(r) from (select * from '
             || quote_ident((row_id::meta.schema_id).name) || '.'
             || quote_ident((row_id::meta.relation_id).name)
             || ' where ' || quote_ident(((row_id).pk_column_id).name)
@@ -968,7 +968,7 @@ create function meta.eq(
     rightarg json
 ) returns boolean as $$
     select (leftarg).relation_id = rightarg->'relation_id' and
-           (leftarg).role_id = rightarg->'role_id' and 
+           (leftarg).role_id = rightarg->'role_id' and
            (leftarg).type = rightarg->>'type';
 $$ language sql;
 
@@ -1201,7 +1201,7 @@ create cast (field_id as schema_id)
 
 
 -- field to column
-/* we can't make these, because 
+/* we can't make these, because
 ERR0R:  "column_id" is already an attribute of type field_id
 
 create function column_id(in meta.field_id, out meta.column_id) as $$

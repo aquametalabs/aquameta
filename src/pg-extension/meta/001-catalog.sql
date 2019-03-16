@@ -126,7 +126,7 @@ order by 1, 2;
  *****************************************************************************/
 create view meta.cast as
 --TODO
-SELECT meta.cast_id(ts.typname, pg_catalog.format_type(castsource, NULL),tt.typname, pg_catalog.format_type(casttarget, NULL)) as id, 
+SELECT meta.cast_id(ts.typname, pg_catalog.format_type(castsource, NULL),tt.typname, pg_catalog.format_type(casttarget, NULL)) as id,
        pg_catalog.format_type(castsource, NULL) AS "source type",
        pg_catalog.format_type(casttarget, NULL) AS "target type",
        CASE WHEN castfunc = 0 THEN '(binary coercible)'
@@ -314,7 +314,7 @@ create function meta.sequence_delete() returns trigger as $$
         return OLD;
     end;
 $$ language plpgsql;
-   
+
 
 /******************************************************************************
  * meta.table
@@ -326,7 +326,7 @@ create view meta.table as
            tablename as name,
            rowsecurity as rowsecurity
     /*
-    -- going from pg_catalog.pg_tables instead, so we can get rowsecurity 
+    -- going from pg_catalog.pg_tables instead, so we can get rowsecurity
     from information_schema.tables
     where table_type = 'BASE TABLE';
     */
@@ -368,7 +368,7 @@ create function meta.table_insert() returns trigger as $$
         if NEW.rowsecurity = true then
             execute meta.stmt_table_enable_rowsecurity(NEW.schema_name, NEW.name);
         end if;
-        
+
         NEW.id := row(row(coalesce(NEW.schema_name, (NEW.schema_id).name)), NEW.name)::meta.relation_id;
         return NEW;
     end;
@@ -681,9 +681,9 @@ create view meta.relation as
            nullif(array_agg(c.name::text), array[null]::text[]) as primary_key_column_names
 
     from information_schema.tables t
-   
+
     left join meta.relation_column c
-           on c.relation_id = row(row(t.table_schema), t.table_name)::meta.relation_id and c.primary_key             
+           on c.relation_id = row(row(t.table_schema), t.table_name)::meta.relation_id and c.primary_key
 
     group by t.table_schema, t.table_name, t.table_type;
 
@@ -708,7 +708,7 @@ create view meta.foreign_key as
             on rc.constraint_catalog = tc.constraint_catalog and
                rc.constraint_schema = tc.constraint_schema and
                rc.constraint_name = tc.constraint_name
-          
+
     inner join information_schema.constraint_column_usage ccu
             on ccu.constraint_catalog = tc.constraint_catalog and
                ccu.constraint_schema = tc.constraint_schema and
@@ -720,7 +720,7 @@ create view meta.foreign_key as
                kcu.constraint_name = tc.constraint_name
 
     where constraint_type = 'FOREIGN KEY'
-   
+
     group by tc.table_schema, tc.table_name, tc.constraint_name, update_rule, delete_rule;
 
 
@@ -730,7 +730,7 @@ create function meta.stmt_foreign_key_create(schema_name text, table_name text, 
                select string_agg(name, ', ')
                from meta."column"
                where id = any(from_column_ids)
-  
+
            ) || ') references ' || (((to_column_ids[1]).relation_id).schema_id).name || '.' || ((to_column_ids[1]).relation_id).name || (
                select '(' || string_agg(c.name, ', ') || ')'
                from meta."column" c
@@ -903,9 +903,9 @@ create view meta.function as
             -- pg_catalog because pg_proc.proretset is not used in info_schema,
             -- so it doesn't have enough information to determine whether this
             -- record returns a setof.  not enough info?  and limit 1 is a
-            -- hack.  this whole function needs a rewrite, so working around 
+            -- hack.  this whole function needs a rewrite, so working around
             -- it for now.
-               or (select proretset = 't' from pg_proc join pg_namespace on pg_proc.pronamespace = pg_namespace.oid where proname = q.name and nspname = q.schema_name limit 1) 
+               or (select proretset = 't' from pg_proc join pg_namespace on pg_proc.pronamespace = pg_namespace.oid where proname = q.name and nspname = q.schema_name limit 1)
            as returns_set
 
     from (
@@ -1106,7 +1106,7 @@ $$ language plpgsql;
 /******************************************************************************
  * meta.type_definition
  *****************************************************************************/
-create view meta.type_definition as 
+create view meta.type_definition as
 select
     meta.type_id(typnamespace::regnamespace::text, typname::text) as id,
     pg_catalog.get_typedef(t.oid) as definition,
@@ -1196,7 +1196,7 @@ create view meta.trigger as
 
     inner join meta.schema t_s
             on t_s.name = t_pgn.nspname
-   
+
     inner join meta.table t
             on t.schema_id = t_s.id and
                t.name = pgc.relname
@@ -1442,7 +1442,7 @@ $$ language sql;
  * meta.role_inheritance
  *****************************************************************************/
 create view meta.role_inheritance as
-select 
+select
     r.rolname::text || '<-->' || r2.rolname::text as id,
     r.rolname::text::meta.role_id as role_id,
     r.rolname as role_name,
@@ -1695,7 +1695,7 @@ $$ language plpgsql;
 /******************************************************************************
  * meta.policy_role
  *****************************************************************************/
-create view meta.policy_role as 
+create view meta.policy_role as
 select
     meta.policy_id(relation_id, policy_name)::text || '<-->' || role_id::text as id,
     meta.policy_id(relation_id, policy_name) as policy_id,
@@ -1705,7 +1705,7 @@ select
     ((relation_id).schema_id).name as schema_name,
     role_id,
     (role_id).name as role_name
-from ( 
+from (
     select
         p.polname as policy_name,
         meta.relation_id(n.nspname, c.relname) as relation_id,
@@ -1773,9 +1773,9 @@ create function meta.policy_role_insert() returns trigger as $$
         perform meta.require_one(public.hstore(NEW), array['policy_id', 'relation_id', 'schema_name']);
 
         execute meta.stmt_policy_role_create(
-        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
-        coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
-        coalesce(NEW.policy_name, (NEW.policy_id).name), 
+        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name),
+        coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name),
+        coalesce(NEW.policy_name, (NEW.policy_id).name),
         coalesce(NEW.role_name, (NEW.role_id).name));
 
         return NEW;
@@ -1798,9 +1798,9 @@ create function meta.policy_role_update() returns trigger as $$
 
     -- create new policy_role
         execute meta.stmt_policy_role_create(
-        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name), 
-        coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name), 
-        coalesce(NEW.policy_name, (NEW.policy_id).name), 
+        coalesce(NEW.schema_name, ((NEW.relation_id).schema_id).name, (((NEW.policy_id).relation_id).schema_id).name),
+        coalesce(NEW.relation_name, (NEW.relation_id).name, ((NEW.policy_id).relation_id).name),
+        coalesce(NEW.policy_name, (NEW.policy_id).name),
         coalesce(NEW.role_name, (NEW.role_id).name));
 
         return NEW;
@@ -1867,7 +1867,7 @@ create view meta.constraint_unique as
            tc.constraint_name as name,
            array_agg(row(row(row(ccu.table_schema), ccu.table_name), ccu.column_name)::meta.column_id) as column_ids,
            array_agg(ccu.column_name::text) as column_names
-   
+
     from information_schema.table_constraints tc
 
     inner join information_schema.constraint_column_usage ccu
@@ -1966,7 +1966,7 @@ create view meta.constraint_check as
            tc.table_name as table_name,
            tc.constraint_name as name,
            cc.check_clause
-   
+
     from information_schema.table_constraints tc
 
     inner join information_schema.check_constraints cc
@@ -2159,7 +2159,7 @@ create view meta.foreign_data_wrapper as
 
         left join pg_namespace v_n
                on v_n.oid = p_v.pronamespace
-              
+
         left join meta.function v_f
                on v_f.schema_name = v_n.nspname and
                   v_f.name = p_v.proname
@@ -2317,7 +2317,7 @@ create view meta.foreign_server as
         inner join pg_catalog.pg_foreign_data_wrapper fdw
                 on fdw.oid = fs.srvfdw
     ) q
-   
+
     group by id,
              foreign_data_wrapper_id,
              name,
@@ -2484,7 +2484,7 @@ create view meta.foreign_table as
         inner join pg_catalog.pg_foreign_server pfs
                 on pfs.oid = pft.ftserver
     ) q
-   
+
     group by id,
              schema_id,
              foreign_server_id,
