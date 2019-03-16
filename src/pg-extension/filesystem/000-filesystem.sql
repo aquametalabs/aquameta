@@ -1,6 +1,6 @@
 /******************************************************************************
  * Filesystem Foreign Data Wrapper
- * 
+ *
  * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
  * Company: http://aquameta.com/
  * Project: http://blog.aquameta.com/
@@ -50,7 +50,7 @@ create foreign table filesystem.directory (
 ) server filesystem_fdw_srv options (table_name 'directory');
 
 -- http://dba.stackexchange.com/questions/1742/how-to-insert-file-data-into-a-postgresql-bytea-column
-create or replace function filesystem.bytea_import(p_path text, p_result out bytea) 
+create or replace function filesystem.bytea_import(p_path text, p_result out bytea)
 language plpgsql as $$
 declare
   l_oid oid;
@@ -58,9 +58,9 @@ declare
 begin
   p_result := '';
   select lo_import(p_path) into l_oid;
-  for r in ( select data 
-             from pg_largeobject 
-             where loid = l_oid 
+  for r in ( select data
+             from pg_largeobject
+             where loid = l_oid
              order by pageno ) loop
     p_result = p_result || r.data;
   end loop;

@@ -24,7 +24,7 @@ create table semantics.relation (
 
 /*
 moved to bundle....
-insert into semantics.relation_purpose (purpose) values 
+insert into semantics.relation_purpose (purpose) values
     ('overview'),
     ('list_view'),
     ('list_item'),

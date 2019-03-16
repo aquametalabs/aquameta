@@ -18,10 +18,10 @@
  *
  ******************************************************************************/
 
-create type endpoint.resource_bin as 
+create type endpoint.resource_bin as
 (mimetype text, content bytea);
 
-create type endpoint.resource_txt as 
+create type endpoint.resource_txt as
 (mimetype text, content text);
 
 create function endpoint.resource_bin(value json) returns endpoint.resource_bin as $$
@@ -200,9 +200,9 @@ begin
    */
 
     /*
-    
+
     select indexes from endpoint.resource_directory where directory_id=_path;
-    
+
     if indexes then
         return true;
     else
@@ -1715,7 +1715,7 @@ create or replace function endpoint.request(
 
                 end if;
 
-                -- Get rows 
+                -- Get rows
                 return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, query_args))::text, 'application/json'::text;
 
             elsif verb = 'POST' then
@@ -1732,7 +1732,7 @@ create or replace function endpoint.request(
 
                 end if;
 
-                -- Get rows 
+                -- Get rows
                 return query select 200, 'OK'::text, (select endpoint.rows_select(relation_id, post_data))::text, 'application/json'::text;
 
             elsif verb = 'PATCH' then

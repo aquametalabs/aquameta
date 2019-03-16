@@ -94,7 +94,7 @@ $$ language plpgsql;
  * specified table, if necessary
  ***********************************************************************/
 
--- todo: add trigger that checks to see 
+-- todo: add trigger that checks to see
 create table event.subscription_table (
     id uuid default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
@@ -129,7 +129,7 @@ create table event.subscription_field (
  * view event.subscription
  ***********************************************************************/
 
-create view event.subscription as 
+create view event.subscription as
  select s.id,
     s.session_id,
     'table'::text as type,
@@ -209,7 +209,7 @@ create or replace function event.event_listener_table() returns trigger as $$
                 r.schema_name::text,
                 r.name::text,
                 (r.primary_key_column_names[1]).name::text as pk
-            from meta.relation r 
+            from meta.relation r
                 join (
 
                     select s.id, s.session_id, 'table' as type, s.relation_id, null::meta.column_id
@@ -305,8 +305,8 @@ create or replace function event.event_listener_table() returns trigger as $$
                         end if;
 
                         -- Build payload of changed field
-                        execute 
-                            'select json_build_object(''operation'', ''update'', ''subscription_type'', ''' || event_receiver.type || ''', ''row_id'', $1, ''payload'', ' || 
+                        execute
+                            'select json_build_object(''operation'', ''update'', ''subscription_type'', ''' || event_receiver.type || ''', ''row_id'', $1, ''payload'', ' ||
                             '(select json_build_object(''' || (meta_column_row.id).name || ''', $2.' || (meta_column_row.id).name || ')));'
                             using row_id, NEW
                         into event;
@@ -357,10 +357,10 @@ create or replace function event.event_listener_row() returns trigger as $$
         for event_receiver in
             select distinct on (session_id) -- No duplicates
                 s.*,
-                r.schema_name::text, 
-                r.name::text, 
+                r.schema_name::text,
+                r.name::text,
                 (r.primary_key_column_names[1]).name::text as pk
-            from meta.relation r 
+            from meta.relation r
                 join (
 
                     select s.id, s.session_id, 'row' as type, s.row_id, null::meta.field_id
@@ -438,8 +438,8 @@ create or replace function event.event_listener_row() returns trigger as $$
                         end if;
 
                         -- Build payload of changed field
-                        execute 
-                            'select json_build_object(''operation'', ''update'', ''subscription_type'', ''' || event_receiver.type || ''', ''row_id'', $1, ''payload'', ' || 
+                        execute
+                            'select json_build_object(''operation'', ''update'', ''subscription_type'', ''' || event_receiver.type || ''', ''row_id'', $1, ''payload'', ' ||
                             '(select json_build_object(''' || (meta_column_row.id).name || ''', $2.' || (meta_column_row.id).name || ')));'
                             using row_id, NEW
                         into event;
