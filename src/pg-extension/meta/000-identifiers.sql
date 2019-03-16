@@ -468,24 +468,6 @@ create operator = (
     procedure = meta.eq
 );
 
-/*
-("
-    (""
-        (widget)"",widget
-    )",
-    "(
-        ""(
-            """"(widget)"""",
-            widget
-        )"",
-        id
-    )",
-    2533
-)
-*/
-
--- {"pk_column_id":{"relation_id":{"schema_id":{"name":"bundle"},"name":"bundle"},"name":"id"}
-
 create function meta.row_id(value json) returns meta.row_id as $$
     select
     row(
