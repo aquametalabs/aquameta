@@ -99,41 +99,6 @@ create table rowset_row_field (
     unique(rowset_row_id, field_id)
 );
 
-/*
-create function rowset_row_field_hash_gen_trigger() returns trigger as $$
-    begin
-        -- raise notice 'ROWSET_ROW_FIELD_HASH_GEN_TRIGGER';
-        NEW.value_hash = public.digest(NEW.value, 'sha256'::text)::bytea;
-
-        -- check if the blob already exists
-        if exists (select 1 from bundle.blob b where b.hash = NEW.value_hash) then
-            -- raise notice 'already exists.';
-            return NEW;
-        end if;
-
-        -- create the blob
-        insert into bundle.blob(value) values (NEW.value);
-        NEW.value = NULL;
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-create trigger rowset_row_field_hash_update
-    before insert or update on bundle.rowset_row_field
-    for each row execute procedure bundle.rowset_row_field_hash_gen_trigger();
-*/
-
-
-/*
-removed.  start with single parent
-create table commit_parent (
-    id uuid default public.uuid_generate_v4() primary key,
-    commit_id uuid references commit(id) on delete cascade,
-    parent_id uuid references commit(id) on delete cascade
-);
-*/
-
 create table commit (
     id uuid default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
@@ -622,8 +587,8 @@ create or replace view trackable_relation as
 
 /*
 Generates a set of sql statements that select not_ignored_rows: that are not
-ignored by schema- or relation-ignores.  NOTE: We haven't pulled out
-specifically ignored rows yet.
+ignored by schema- or relation-ignores.
+TODO: ignore rows in ignored_row
 */
 
 create or replace view bundle.not_ignored_row_stmt as
@@ -696,26 +661,3 @@ select
     (r.row_id::meta.schema_id) schema_id, count(*) as count
 from bundle.untracked_row r
 group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_id::meta.schema_id;
-
-
-/*
-------------------------------------------------------------------------------
--- 10. REMOTE PUSH/PULL
--- Other copies of this bundle that we push to and/or pull from.
-------------------------------------------------------------------------------
-
-create table remote_webrtc (
-    id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid references bundle.bundle(id) on delete cascade,
-    host text,
-    method text,
-    push boolean not null default 'f'
-);
-
-create table remote (
-    id uuid default public.uuid_generate_v4() primary key,
-    bundle_id uuid not null references bundle.bundle(id) on delete cascade,
-    endpoint_id uuid not null references endpoint.remote_endpoint(id) on delete cascade,
-    push boolean not null default 'f'
-);
-*/

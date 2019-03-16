@@ -1,31 +1,56 @@
-set search_path=bundle;
+/*******************************************************************************
+ * Bundle Remotes
+ *
+ * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
+ * Company: http://aquameta.com/
+ * Project: http://blog.aquameta.com/
+ ******************************************************************************/
+
+/*
+
+Generally, we only version control tables.  However, there might be times when
+it could make sense to version control views, foreign tables, materialized
+views, or any other type of relation.  This can be done by adding the relation
+to the bundle.trackable_nontable_relation table.
+
+This is particularly useful for version control on the meta views, which have
+triggers for insert update and delete.
+
+*/
+
+
+ set search_path=bundle;
 insert into bundle.trackable_nontable_relation (pk_column_id) values
+
+-- here are all the views in the meta extension, along with reasons why they may not be supported
+
 -- (meta.column_id('meta','cast','id')),
 (meta.column_id('meta','column','id')),
--- (meta.column_id('meta','connection','id')),
+-- (meta.column_id('meta','connection','id')), -- makes no sense
 (meta.column_id('meta','constraint_check','id')),
 (meta.column_id('meta','constraint_unique','id')),
--- (meta.column_id('meta','extension','id')),
+-- (meta.column_id('meta','extension','id')), -- right now extensions are managed manually
 (meta.column_id('meta','foreign_column','id')),
 (meta.column_id('meta','foreign_data_wrapper','id')),
 (meta.column_id('meta','foreign_key','id')),
 (meta.column_id('meta','foreign_server','id')),
 (meta.column_id('meta','foreign_table','id')),
--- (meta.column_id('meta','function','id')),
+-- (meta.column_id('meta','function','id')), -- slow as heck, replaced with function_definition
+-- (meta.column_id('meta','function_parameter','id')), -- " "
 (meta.column_id('meta','function_definition','id')),
--- (meta.column_id('meta','function_parameter','id')),
 (meta.column_id('meta','operator','id')),
--- (meta.column_id('meta','policy','id')),
+-- (meta.column_id('meta','policy','id')), -- haven't thought through how vcs on permissions would work
 -- (meta.column_id('meta','policy_role','id')),
--- (meta.column_id('meta','relation','id')),
+-- (meta.column_id('meta','relation','id')), -- no update handlers on relation, never will be.  handled by table, view etc.
 -- (meta.column_id('meta','relation_column','id')),
--- (meta.column_id('meta','role','id')),
+-- (meta.column_id('meta','role','id')), -- not sure how vcs on roles would work
 -- (meta.column_id('meta','role_inheritance','id')),
 (meta.column_id('meta','schema','id')),
 (meta.column_id('meta','sequence','id')),
 (meta.column_id('meta','table','id')),
 -- (meta.column_id('meta','table_privilege','id')),
 (meta.column_id('meta','trigger','id')),
--- (meta.column_id('meta','type','id')),
+-- (meta.column_id('meta','type','id')), -- replaced by type_definnition
 (meta.column_id('meta','type_definition','id')),
 (meta.column_id('meta','view','id'));
+

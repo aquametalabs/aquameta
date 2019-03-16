@@ -1,5 +1,6 @@
 /*******************************************************************************
- * Bundle Remotes
+ * Bundle HTTP Remotes
+ * Deprecated in favor of posstgres_fdw but still interesting?
  *
  * Created by Aquameta Labs, an open source company in Portland Oregon, USA.
  * Company: http://aquameta.com/
@@ -7,15 +8,7 @@
  ******************************************************************************/
 
 /*******************************************************************************
-*
-*
-* BUNDLE REMOTES
-*
-*
-*******************************************************************************/
-
-/*******************************************************************************
-* bundle.has_bundle
+* bundle.remote_has_bundle
 * checks a remote to see if it also has a bundle with the same id installed
 *******************************************************************************/
 
@@ -30,14 +23,14 @@ begin
     select into local_bundle_id r.bundle_id from endpoint.remote_endpoint e join bundle.remote r on r.endpoint_id = e.id where r.id = _remote_id;
 
     raise notice '########### remote has bundle: % % %', _remote_id, remote_endpoint_id, local_bundle_id;
-    if _remote_id is null or remote_endpoint_id is null or local_bundle_id is null then 
-        has_bundle := false; 
-        return; 
+    if _remote_id is null or remote_endpoint_id is null or local_bundle_id is null then
+        has_bundle := false;
+        return;
     end if;
 
-    -- 
+    --
     select into has_bundle (count(*) = 1)::boolean from (
-        select 
+        select
             (json_array_elements((rc.response_text::json)->'result')->'row'->>'id') as id
             from endpoint.client_rows_select(
                     remote_endpoint_id,
@@ -72,9 +65,9 @@ begin
 
     return query
         with remote_commit as (
-            select 
+            select
                 (json_array_elements((rc.response_text::json)->'result')->'row'->>'id')::uuid as id
-            from 
+            from
                 endpoint.client_rows_select(
                     remote_endpoint_id,
                     meta.relation_id('bundle','commit'),

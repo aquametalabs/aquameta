@@ -106,16 +106,13 @@ $$ language sql;
 create or replace function commit_log (in bundle_name text, out commit_id uuid, out message text, out count bigint)
 returns setof record
 as $$
-
--- todo: make this recursive, up the commit_parent list
 select c.id as commit_id, message, count(*)
-from bundle b
-join bundle.commit c on c.bundle_id = b.id
-join bundle.rowset r on c.rowset_id=r.id
-join bundle.rowset_row rr on rr.rowset_id = r.id
-where b.name = bundle_name
-group by b.id, c.id, message
-
+    from bundle b
+        join bundle.commit c on c.bundle_id = b.id
+        join bundle.rowset r on c.rowset_id=r.id
+        join bundle.rowset_row rr on rr.rowset_id = r.id
+    where b.name = bundle_name
+    group by b.id, c.id, message
 $$ language sql;
 
 
@@ -144,7 +141,7 @@ create or replace function tracked_row_add (
     pk_value text
 ) returns text
 as $$
-    -- TODO: check to see if this row is not tracked by some other bundle!
+    -- TODO: check to see if this row is not tracked by some other bundle?
     insert into bundle.tracked_row_added (bundle_id, row_id) values (
         (select id from bundle.bundle where name=bundle_name),
         meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
@@ -333,17 +330,6 @@ $$ language sql;
 
 ------------------------------------------------------------------------------
 -- CHECKOUT FUNCTIONS
-/*
-ok.
-
-fetch - get the latest stuff from a remote origin.  you should always be able to do this.
-merge - transition the working copy to match the head commit
-checkout -
-
-*/
-
-
---
 -- user stories:
 --
 -- 1. user downloads a new bundle, checking out where everything is fresh and
@@ -355,9 +341,9 @@ checkout -
 --
 ------------------------------------------------------------------------------
 
--- create or replace function checkout_row (in row_id meta.row_id, in fields text[], in vals text[], in force_overwrite boolean) returns void as $$
-CREATE TYPE checkout_field AS (name text, value text, type_name text);
+create type checkout_field as (name text, value text, type_name text);
 
+-- create or replace function checkout_row (in row_id meta.row_id, in fields text[], in vals text[], in force_overwrite boolean) returns void as $$
 create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
     declare
         query_str text;
@@ -465,7 +451,6 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
             execute query_str;
 
-
             /*
             (select string_agg (quote_ident((f::bundle.checkout_field).name), ',') from unnest(fields) as f) || ')'
                 || ' values '
@@ -541,7 +526,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 end
                     */
         loop
-            -- raise log '------------------------------------------------------------------------CHECKOUT meta row: % %',
+            -- raise log '-- CHECKOUT meta row: % %',
             --    (commit_row.row_id).pk_column_id.relation_id.name,
             --    (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
             perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
