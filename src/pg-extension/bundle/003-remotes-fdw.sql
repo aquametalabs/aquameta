@@ -15,7 +15,7 @@
 * databases via a normal postgresql connection.  It uses IMPORT FOREIGN SCHEMA
 * to import the bundle schema, and then provides various comparison functions
 * for push, pull and merge.
-* 
+*
 *******************************************************************************/
 
 
@@ -118,8 +118,8 @@ $$ language plpgsql;
 
 create or replace function diff_bundle_bundle_commits(
     bundle_table_a meta.relation_id,
-    bundle_table_b meta.relation_id 
-) returns table ( 
+    bundle_table_b meta.relation_id
+) returns table (
     a_bundle_id uuid, a_name text, a_head_commit_id uuid, a_commits json,
     b_bundle_id uuid, b_name text, b_head_commit_id uuid, b_commits json
 )
@@ -158,9 +158,9 @@ begin
             local.head_commit_id as local_head_commit_id,
             array_agg(local_c.id::text) as local_commits_hash,
         from %I.%I local
-            join %I.commit local_c 
- 
-        
+            join %I.commit local_c
+
+
             remote.id as remote_id,
             remote.name as remote_name,
             remote.head_commit_id as remote_head_commit_id,
@@ -208,7 +208,7 @@ create or replace function remote_commit_level_diff (
 as $$
 begin
     return query execute format('
-        select 
+        select
             c1.id as c1_id,
             c1.bundle_id as c1_bundle_id,
             c1.message as c1_message,
@@ -243,15 +243,15 @@ create or replace function remote_clone( bundle_id uuid, source_schema_name text
 returns boolean as $$
 begin
     -- rowset
-    execute format ('insert into %2$I.rowset 
+    execute format ('insert into %2$I.rowset
         select r.* from %1$I.commit c
             join %1$I.rowset r on c.rowset_id = r.id
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- rowset_row
     execute format ('
-        insert into %2$I.rowset_row 
-        select rr.* from %1$I.commit c 
+        insert into %2$I.rowset_row
+        select rr.* from %1$I.commit c
             join %1$I.rowset r on c.rowset_id = r.id
             join %1$I.rowset_row rr on rr.rowset_id = r.id
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
@@ -259,7 +259,7 @@ begin
     -- blob
     execute format ('
         insert into %2$I.blob
-        select b.* from %1$I.commit c 
+        select b.* from %1$I.commit c
             join %1$I.rowset r on c.rowset_id = r.id
             join %1$I.rowset_row rr on rr.rowset_id = r.id
             join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
@@ -268,8 +268,8 @@ begin
 
     -- rowset_row_field
     execute format ('
-        insert into %2$I.rowset_row_field 
-        select f.* from %1$I.commit c 
+        insert into %2$I.rowset_row_field
+        select f.* from %1$I.commit c
             join %1$I.rowset r on c.rowset_id = r.id
             join %1$I.rowset_row rr on rr.rowset_id = r.id
             join %1$I.rowset_row_field f on f.rowset_row_id = rr.id

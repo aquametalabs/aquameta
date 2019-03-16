@@ -1,5 +1,5 @@
 /*
- * pg_catalog.pg_get_functiondef_no_searchpath(oid) 
+ * pg_catalog.pg_get_functiondef_no_searchpath(oid)
  *
  * wraps the pg_get_functiondef() function, eliminating the search path so that
  * fully schema-qualified names are used on types, tables, views, etc.
