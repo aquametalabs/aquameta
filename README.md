@@ -14,21 +14,25 @@ Status
 Aquameta is in early prototype stages, approaching version 0.2.  Do not use it in a
 production, or untrusted environment.
 
-Core Modules
-------------
+Core Extensions
+---------------
 
-- meta - Writable system catalog for PostgreSQL
-- filesystem - A bi-directional file system integration system
-- events - Pub/sub data change events API
-- www - Maps PostgreSQL permissions and data acccess to the web, as well as allowing resource hosting and a web socket event server
-- bundle - A version control system similar to git but for database rows intead of files
-- widget - Modular web components that can be reused
-- semantics - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
+- [meta](src/pg-extension/meta) - Writable system catalog for PostgreSQL
+- [bundle](src/pg-extension/bundle) - A version control system similar to git but for database rows intead of files
+- [filesystem](src/pg-extension/filesystem) - A bi-directional file system integration system
+- [events](src/pg-extension/events) - Pub/sub data change events API
+- [endpoint](src/pg-extension/endpoint) - Maps PostgreSQL permissions and data acccess to the web, as well as allowing resource hosting and a web socket event server
+- [widget](src/pg-extension/widget) - Modular web components that can be reused
+- [semantics](src/pg-extension/semantics) - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
 
 Installation
 ------------
 
-Aquameta is designed for installation on a Ubuntu 18.04 instance.  Aquameta installs a number of `apt` packages.  It works best on a clean install of Ubuntu.  We recommend using a KVM instance, or Amazon EC2 instance.
+Aquameta is most easily installed on a Ubuntu 18.04 instance; its installer manages dependencies by as `apt` packages.
+
+First, setup a clean Ubuntu 18.04 instance.  You can run on bare metal, or using a virtual machine such as [VirtualBox](https://linuxhint.com/install_ubuntu_18-04_virtualbox/) on Mac OSX and Windows, or [KVM](https://linuxconfig.org/install-and-set-up-kvm-on-ubuntu-18-04-bionic-beaver-linux) on a Linux machine.
+
+Once you have an Ubuntu machine setup, installation is very easy:
 
 1. `git clone https://github.com/aquametalabs/aquameta.git`
 2. `cd aquameta`
