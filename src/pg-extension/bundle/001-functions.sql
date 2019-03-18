@@ -614,13 +614,22 @@ $$ language plpgsql;
 
 
 
-create or replace function bundle.delete (in _bundle_id uuid) returns void as $$
+create or replace function bundle.bundle_create (name text) returns uuid as $$
+declare
+    bundle_id uuid;
+begin
+    insert into bundle.bundle (name) values (name) returning id into bundle_id;
+    return bundle_id;
+end;
+$$ language plpgsql;
+
+create or replace function bundle.bundle_delete (in _bundle_id uuid) returns void as $$
     -- TODO: delete blobs
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
     delete from bundle.bundle where id = _bundle_id;
 $$ language sql;
 
-create or replace function bundle.delete_commit (in _commit_id uuid) returns void as $$
+create or replace function bundle.commit_delete(in _commit_id uuid) returns void as $$
     -- TODO: delete blobs
     -- TODO: delete commits in order?
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
