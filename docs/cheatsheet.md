@@ -2,7 +2,6 @@
 
 Summary of Aquameta APIs and patterns.
 
-- shell access via docker
 - command-line access to the database
 - bundles
 - resources
@@ -14,20 +13,8 @@ Summary of Aquameta APIs and patterns.
 
 This document assumes you know basic HTML, CSS, Javascript, jQuery.  Some familiarity with PostgreSQL and Docker will be helpful as well.
 
-## 1. Shell Access via Docker
-
-Aquameta is installed via Docker.  See the [quickstart](quickstart.md) for info on how to install Aquameta.
-
-Once installed, note the Docker container id for use in all command-line arguments.  Replace the `0f84133a577e` below with your docker container id:
-
-### bash shell
-```sh
-$ docker exec -it 0f84133a577e bash
-root@0f84133a577e:/s/aquameta#
-```
-
-## 2. Database
-Underneath the hood is a full-blown [PostgreSQL]() database, which you can access via the command line (and someday a fancy user interface) to create schemas, tables, etc. for use in your application.
+## 1. Accessing the Database
+Underneath the hood is a stock [PostgreSQL](http://postgresql.org/) database, which you can access via the command line (and someday a fancy user interface) to create schemas, tables, etc. for use in your application.
 
 ### open database shell
 ```sh
@@ -85,10 +72,10 @@ aquameta=#
 You can do a lot with PostgreSQL.  Consult the [documentation](https://www.postgresql.org/docs/current/static/index.html) for more information.
 
 
-## 3. Bundles
+## 2. Bundles
 A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.  The bundle management interface can be accessed via the browser at `/dev`, to manage bundles and create new ones, as well as stage and commit changes, and checkout previous versions of a repository.
 
-## 4. Resources
+## 3. Resources
 
 A resource is a static base page that is served up at the specified `path`.  You can put any HTML you want in a resource, but typically they look like this:
 
@@ -125,7 +112,7 @@ A resource is a static base page that is served up at the specified `path`.  You
 </html>
 ```
 
-## 5. Widgets
+## 4. Widgets
 Aquameta user interfaces are made up of widgets.  A widget is a row in the database which contains fields of HTML, CSS and Javascript.
 
 ### Available Variables
@@ -219,7 +206,7 @@ w.append(widget('mp:colorpicker', { start_color: '#ff0000' }));
 
 
 
-## 6. Database API
+## 5. Database API
 
 ### `AQ.Database(url)`
 Every widget has a variable called `endpoint` that can be used to access the database.  The database object is instantiated in the [Base HTML](#4-Resources) page, via the call to:
@@ -344,7 +331,7 @@ customers.forEach(function( customer ) {
 ```
 
 
-## 7. Combining Widgets and Data via `widget.sync()`
+## 6. Combining Widgets and Data via `widget.sync()`
 
 Often times when we have a `AQ.Rowset`, we want to put a widget on the screen for each row in the rowset.  We can of course iterate through the rowset with a `.forEach()` call, but `widget.sync` is a lot cooler.
 
@@ -375,7 +362,7 @@ widget.sync(customers, w.find('.customers_container'), function(customer) {
 ```
 
 
-## 8. Communication Between Widgets
+## 7. Communication Between Widgets
 
 Widgets communicate with each other using DOM events via jQuery's [trigger()](http://api.jquery.com/trigger/) and [bind()](http://api.jquery.com/bind/).  Trigger fires a named event that bubbles up the DOM tree, just like typical DOM events.  Bind listens on a particular DOM element for events matching a particular name.  When it receives one, it fires the specified function, passing it any arguments that the trigger was called with.
 
