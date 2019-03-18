@@ -50,7 +50,7 @@ plan = plpy.prepare("select * from email.smtp_server where id = $1", ["uuid"])
 rv = plpy.execute(plan, [smtp_server_id])
 
 if len(rv) != 1:
-        plpy.error('No such SMTP server with id="%s"' smtp_server_id)
+        plpy.error('No such SMTP server with id="%s"', smtp_server_id)
 
 settings = rv[0]
 
