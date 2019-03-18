@@ -5,7 +5,18 @@ Data version control system for PostgreSQL.
 ## Installation
 
 ### Requirements
-Bundle requires the [meta](https://github.com/aquametalabs/aquameta/tree/master/src/pg-extension/meta) extension.
+
+Bundle requires the following extensions:
+
+- [meta](https://github.com/aquametalabs/aquameta/tree/master/src/pg-extension/meta)
+- uuid-ossp (included with PostgreSQL)
+- pgcrypto (included with PostgreSQL)
+
+```
+create extension if not exists meta;
+create extension if not exists pgcrypto schema public;
+create extension if not exists "uuid-ossp" schema public;
+```
 
 ### Install into PostgreSQL
 ```
