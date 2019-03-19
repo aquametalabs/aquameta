@@ -661,3 +661,42 @@ select
     (r.row_id::meta.schema_id) schema_id, count(*) as count
 from bundle.untracked_row r
 group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_id::meta.schema_id;
+
+
+-- here's a table where you can stash some saved connections.
+create table remote_database (
+    id uuid default public.uuid_generate_v4() not null,
+    foreign_server_name text,
+    schema_name text,
+    host text,
+    port integer,
+    dbname text,
+    username text,
+    password text
+);
+
+
+
+------------------------------------------------------------------------------
+-- 9. EXTENSION DUMP CONFIGURATION
+--
+-- Set tables so that when pg_dump runs, their contents (rows) are dumped
+-- (which doesn't happen by default)
+------------------------------------------------------------------------------
+
+select pg_catalog.pg_extension_config_dump('blob','');
+select pg_catalog.pg_extension_config_dump('bundle','');
+select pg_catalog.pg_extension_config_dump('commit','');
+select pg_catalog.pg_extension_config_dump('ignored_column','');
+select pg_catalog.pg_extension_config_dump('ignored_relation','');
+select pg_catalog.pg_extension_config_dump('ignored_row','');
+select pg_catalog.pg_extension_config_dump('ignored_schema','');
+select pg_catalog.pg_extension_config_dump('remote_database','');
+select pg_catalog.pg_extension_config_dump('rowset','');
+select pg_catalog.pg_extension_config_dump('rowset_row','');
+select pg_catalog.pg_extension_config_dump('rowset_row_field','');
+select pg_catalog.pg_extension_config_dump('stage_field_changed','');
+select pg_catalog.pg_extension_config_dump('stage_row_added','');
+select pg_catalog.pg_extension_config_dump('stage_row_deleted','');
+select pg_catalog.pg_extension_config_dump('trackable_nontable_relation','');
+select pg_catalog.pg_extension_config_dump('tracked_row_added','');

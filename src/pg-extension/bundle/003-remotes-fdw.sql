@@ -19,19 +19,6 @@
 *******************************************************************************/
 
 
--- here's a table where you can stash some saved connections.
-create table remote_database (
-    id uuid default public.uuid_generate_v4() not null,
-    foreign_server_name text,
-    schema_name text,
-    host text,
-    port integer,
-    dbname text,
-    username text,
-    password text
-);
-
-
 -- remote_mount()
 --
 -- setup a foreign server to a remote, and import it's bundle schema
