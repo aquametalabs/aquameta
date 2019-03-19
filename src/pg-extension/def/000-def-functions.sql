@@ -21,9 +21,9 @@ create or replace function pg_get_functiondef_no_searchpath(oid) returns text
 
 
 
--- written by RhodiumToad on IRC in one hour :)
+-- pg_get_typedef* written by RhodiumToad on IRC in one hour :)
 
-create or replace function get_typedef_enum(oid) returns text
+create or replace function pg_get_typedef_enum(oid) returns text
   language plpgsql
   as $$
   declare
@@ -41,7 +41,7 @@ create or replace function get_typedef_enum(oid) returns text
   end;
   $$;
 
-create or replace function get_typedef_composite(oid) returns text
+create or replace function pg_get_typedef_composite(oid) returns text
   language plpgsql
   as $$
   declare
@@ -71,7 +71,7 @@ create or replace function get_typedef_composite(oid) returns text
   end;
   $$;
 
-create or replace function get_typedef_domain(oid) returns text
+create or replace function pg_get_typedef_domain(oid) returns text
   language plpgsql
   as $$
   declare
@@ -92,7 +92,7 @@ create or replace function get_typedef_domain(oid) returns text
   end;
   $$;
 
-create or replace function get_typedef_range(oid) returns text
+create or replace function pg_get_typedef_range(oid) returns text
   language plpgsql
   as $$
   declare
@@ -130,7 +130,7 @@ create or replace function get_typedef_range(oid) returns text
   $$;
 
 
-create or replace function get_typedef_base(oid) returns text
+create or replace function pg_get_typedef_base(oid) returns text
   language plpgsql
   as $$
   declare
@@ -186,7 +186,7 @@ create or replace function get_typedef_base(oid) returns text
   end;
   $$;
 
-create function get_typedef(typid oid) returns text
+create function pg_get_typedef(typid oid) returns text
   language plpgsql
   as $$
   declare
@@ -198,11 +198,11 @@ create function get_typedef(typid oid) returns text
       raise exception 'unknown type oid %', typid;
     end if;
     case r.typtype
-      when 'b' then return get_typedef_base(typid);
-      when 'd' then return get_typedef_domain(typid);
-      when 'c' then return get_typedef_composite(typid);
-      when 'e' then return get_typedef_enum(typid);
-      when 'r' then return get_typedef_range(typid);
+      when 'b' then return pg_get_typedef_base(typid);
+      when 'd' then return pg_get_typedef_domain(typid);
+      when 'c' then return pg_get_typedef_composite(typid);
+      when 'e' then return pg_get_typedef_enum(typid);
+      when 'r' then return pg_get_typedef_range(typid);
       when 'p' then
         if not r.typisdefined then
           return format('CREATE TYPE %s', typid::regtype);
