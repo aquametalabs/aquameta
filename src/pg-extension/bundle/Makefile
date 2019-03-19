@@ -4,8 +4,7 @@ DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
 
 $(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard *.sql)))
-# DATA = $(filter-out $(wildcard sql/*--*.sql),$(wildcard sql/*.sql))
-
+	rm -f $@
 	cat $^ > $@
 
 PGXS := $(shell $(PG_CONFIG) --pgxs)
