@@ -30,9 +30,9 @@ insert into bundle.ignored_schema(schema_id) values (meta.schema_id('information
 
 -- stage and commit the above rows
 select tracked_row_add('org.aquameta.core.bundle', 'bundle','ignored_relation','id',id::text) from bundle.ignored_relation;
-select stage_row_add('org.aquameta.core.bundle', 'bundle','ignored_relation','id',id::text) from bundle.ignored_relation;
+-- select stage_row_add('org.aquameta.core.bundle', 'bundle','ignored_relation','id',id::text) from bundle.ignored_relation;
 
 select tracked_row_add('org.aquameta.core.bundle', 'bundle','ignored_schema','id',id::text) from bundle.ignored_schema;
-select stage_row_add('org.aquameta.core.bundle', 'bundle','ignored_schema','id',id::text) from bundle.ignored_schema;
+-- select stage_row_add('org.aquameta.core.bundle', 'bundle','ignored_schema','id',id::text) from bundle.ignored_schema;
 
-select commit('org.aquameta.core.bundle', 'bundle bundle');
+-- select commit('org.aquameta.core.bundle', 'bundle bundle');
