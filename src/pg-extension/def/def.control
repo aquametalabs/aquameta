@@ -1,0 +1,4 @@
+comment = 'definition statement system catalog'
+default_version = '0.1.0'
+schema = 'def'
+relocatable = false

@@ -806,72 +806,6 @@ $$ language plpgsql;
  -- not sure this is a good idea.
 
 /******************************************************************************
- * meta.function_definition
- *
- * A view that contains the function_id and it's definition statement unparsed
- * and without any kind of metadata -- Built because meta.function was having
- * some problems, namely that argument names were not present, and are required
- * to recreate the function on an INSERT.  meta.function needs an entire
- * rewrite and potentially rethink, and ramifications on
- * endpoint.rows_select_function would be far-reaching and likely highly
- * disruptive.  Long term, function handling in both meta and endpoint need a
- * complete rewrite.  However, for bundle IO on meta.function rows, this might
- * actually be the simplest solution anyway.
- *****************************************************************************/
-
-create or replace view meta.function_definition as
-select
-    meta.function_id( pronamespace::pg_catalog.regnamespace::text, proname::text, regexp_split_to_array(pg_catalog.pg_get_function_arguments(p.oid),', ')) as id,
-    pg_catalog.pg_get_functiondef_no_searchpath(p.oid) as definition
-from pg_catalog.pg_proc p
-where proisagg is false; -- why??  otherwise I get "ERROR:  "sum" is an aggregate function"
-
-
-create function meta.stmt_function_definition_create(definition text) returns text as $$
-    select definition;
-$$ language sql;
-
-
-create function meta.stmt_function_definition_drop(function_id meta.function_id) returns text as $$
-    select 'drop function ' || quote_ident((function_id::meta.schema_id).name) || '.' || quote_ident(function_id.name) || '(' ||
-               array_to_string(function_id.parameters, ',') ||
-           ');';
-$$ language sql;
-
-
-create function meta.function_definition_insert() returns trigger as $$
-    begin
-        perform meta.require_all(public.hstore(NEW), array['definition']);
-
-        execute meta.stmt_function_definition_create(NEW.definition);
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-
-create function meta.function_definition_update() returns trigger as $$
-    begin
-        perform meta.require_all(public.hstore(NEW), array['definition']);
-
-        execute meta.stmt_function_definition_drop(OLD.id);
-        execute meta.stmt_function_definition_create(NEW.definition);
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-
-create function meta.function_definition_delete() returns trigger as $$
-    begin
-        execute meta.stmt_function_definition_drop(OLD.id);
-        return OLD;
-    end;
-$$ language plpgsql;
-
-
-
-/******************************************************************************
  * meta.function
  *****************************************************************************/
 create view meta.function as
@@ -1096,67 +1030,6 @@ $$ language plpgsql;
 create function meta.function_delete() returns trigger as $$
     begin
         execute meta.stmt_function_drop(OLD.schema_name, OLD.name, OLD.parameters);
-        return OLD;
-    end;
-$$ language plpgsql;
-
-
-
-
-/******************************************************************************
- * meta.type_definition
- *****************************************************************************/
-create view meta.type_definition as
-select
-    meta.type_id(typnamespace::regnamespace::text, typname::text) as id,
-    pg_catalog.get_typedef(t.oid) as definition,
-    t.typtype as "type"
-from pg_catalog.pg_type t
-where t.typtype = 'c'
-    and meta.type_id(typnamespace::regnamespace::text, typname::text) not in (
-        select id from meta.table
-        union
-        select id from meta.view
-    );
-
-create function meta.stmt_type_definition_create(definition text) returns text as $$
-    select definition;
-$$ language sql;
-
-
-create function meta.stmt_type_definition_drop(type_id meta.type_id) returns text as $$
-    select 'drop type ' ||
-        quote_ident((type_id::meta.schema_id).name) || '.' ||
-        quote_ident(type_id.name) || ';';
-$$ language sql;
-
-
-create function meta.type_definition_insert() returns trigger as $$
-    begin
-        perform meta.require_all(public.hstore(NEW), array['definition']);
-
-        execute meta.stmt_type_definition_create(NEW.definition);
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-
-create function meta.type_definition_update() returns trigger as $$
-    begin
-        perform meta.require_all(public.hstore(NEW), array['definition']);
-
-        execute meta.stmt_type_definition_drop(OLD.id);
-        execute meta.stmt_type_definition_create(NEW.definition);
-
-        return NEW;
-    end;
-$$ language plpgsql;
-
-
-create function meta.type_definition_delete() returns trigger as $$
-    begin
-        execute meta.stmt_type_definition_drop(OLD.id);
         return OLD;
     end;
 $$ language plpgsql;
@@ -2806,11 +2679,6 @@ create trigger meta_foreign_key_insert_trigger instead of insert on meta.foreign
 create trigger meta_foreign_key_update_trigger instead of update on meta.foreign_key for each row execute procedure meta.foreign_key_update();
 create trigger meta_foreign_key_delete_trigger instead of delete on meta.foreign_key for each row execute procedure meta.foreign_key_delete();
 
--- FUNCTION_DEFINITION
-create trigger meta_function_definition_insert_trigger instead of insert on meta.function_definition for each row execute procedure meta.function_definition_insert();
-create trigger meta_function_definition_trigger instead of update on meta.function_definition for each row execute procedure meta.function_definition_update();
-create trigger meta_function_definition_delete_trigger instead of delete on meta.function_definition for each row execute procedure meta.function_definition_delete();
-
 -- FUNCTION
 create trigger meta_function_insert_trigger instead of insert on meta.function for each row execute procedure meta.function_insert();
 create trigger meta_function_update_trigger instead of update on meta.function for each row execute procedure meta.function_update();
@@ -2848,12 +2716,6 @@ create trigger meta_connection_delete_trigger instead of delete on meta.connecti
 create trigger meta_constraint_unique_insert_trigger instead of insert on meta.constraint_unique for each row execute procedure meta.constraint_unique_insert();
 create trigger meta_constraint_unique_update_trigger instead of update on meta.constraint_unique for each row execute procedure meta.constraint_unique_update();
 create trigger meta_constraint_unique_delete_trigger instead of delete on meta.constraint_unique for each row execute procedure meta.constraint_unique_delete();
-
--- TYPE
-create trigger meta_type_definition_insert_trigger instead of insert on meta.type_definition for each row execute procedure meta.type_definition_insert();
-create trigger meta_type_definition_trigger instead of update on meta.type_definition for each row execute procedure meta.type_definition_update();
-create trigger meta_type_definition_delete_trigger instead of delete on meta.type_definition for each row execute procedure meta.type_definition_delete();
-
 
 -- CONSTRAINT CHECK
 create trigger meta_constraint_check_insert_trigger instead of insert on meta.constraint_check for each row execute procedure meta.constraint_check_insert();

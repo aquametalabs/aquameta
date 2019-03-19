@@ -5,7 +5,9 @@
  * fully schema-qualified names are used on types, tables, views, etc.
  */
 
-create or replace function pg_catalog.pg_get_functiondef_no_searchpath(oid) returns text
+set search_path=pg_catalog;
+
+create or replace function pg_get_functiondef_no_searchpath(oid) returns text
     language plpgsql
     as $$
     declare

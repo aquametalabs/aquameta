@@ -1,4 +1,4 @@
-EXTENSION = pg_catalog_get_defs
+EXTENSION = def
 EXTVERSION = 0.1.0
 DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
