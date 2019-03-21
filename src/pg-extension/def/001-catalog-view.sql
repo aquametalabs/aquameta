@@ -15,7 +15,8 @@
 create view def.view as
 select
     meta.relation_id(schemaname::text, viewname::text) as id,
-    pg_catalog.pg_get_viewdef(quote_ident(schemaname) || '.' || quote_ident(viewname)) as definition -- TODO switch to oid
+    'create view ' || quote_ident(schemaname) || '.' || quote_ident(viewname) || ' as '
+        || pg_catalog.pg_get_viewdef(quote_ident(schemaname) || '.' || quote_ident(viewname)) as definition -- TODO switch to oid
 from pg_catalog.pg_views v;
 
 create function def.stmt_view_create(definition text) returns text as $$

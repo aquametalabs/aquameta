@@ -34,9 +34,7 @@ $$ language sql;
 create function def.function_insert() returns trigger as $$
     begin
         perform def.require_all(public.hstore(NEW), array['definition']);
-
         execute def.stmt_function_create(NEW.definition);
-
         return NEW;
     end;
 $$ language plpgsql;
@@ -45,10 +43,8 @@ $$ language plpgsql;
 create function def.function_update() returns trigger as $$
     begin
         perform def.require_all(public.hstore(NEW), array['definition']);
-
         execute def.stmt_function_drop(OLD.id);
         execute def.stmt_function_create(NEW.definition);
-
         return NEW;
     end;
 $$ language plpgsql;
