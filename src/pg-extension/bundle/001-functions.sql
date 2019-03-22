@@ -218,6 +218,19 @@ as $$
 $$
 language plpgsql;
 
+create or replace function stage_row_add (
+    bundle_name text,
+    row_id meta.row_id
+) returns text
+as $$
+    select bundle.stage_row_add(bundle_name, (
+        row_id::meta.schema_id).name,
+        (row_id::meta.relation_id).name,
+        ((row_id).pk_column_id).name,
+        (row_id).pk_value
+    );
+$$ language sql;
+
 
 
 -- unstage an add
@@ -254,6 +267,20 @@ as $$
 $$
 language plpgsql;
 
+create or replace function unstage_row_add (
+    bundle_name text,
+    row_id meta.row_id
+) returns text
+as $$
+    select bundle.unstage_row_add(bundle_name, (
+        row_id::meta.schema_id).name,
+        (row_id::meta.relation_id).name,
+        ((row_id).pk_column_id).name,
+        (row_id).pk_value
+    );
+$$ language sql;
+
+
 
 
 create or replace function stage_row_delete (
@@ -277,6 +304,19 @@ as $$
     select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
 
+create or replace function stage_row_delete (
+    bundle_name text,
+    row_id meta.row_id
+) returns text
+as $$
+    select bundle.stage_row_delete(bundle_name, (
+        row_id::meta.schema_id).name,
+        (row_id::meta.relation_id).name,
+        ((row_id).pk_column_id).name,
+        (row_id).pk_value
+    );
+$$ language sql;
+
 
 
 create or replace function unstage_row_delete (
@@ -293,6 +333,19 @@ as $$
         and srd.bundle_id=(select id from bundle.bundle where name=bundle_name)
         and rr.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
     select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
+$$ language sql;
+
+create or replace function unstage_row_delete (
+    bundle_name text,
+    row_id meta.row_id
+) returns text
+as $$
+    select bundle.unstage_row_delete(bundle_name, (
+        row_id::meta.schema_id).name,
+        (row_id::meta.relation_id).name,
+        ((row_id).pk_column_id).name,
+        (row_id).pk_value
+    );
 $$ language sql;
 
 
