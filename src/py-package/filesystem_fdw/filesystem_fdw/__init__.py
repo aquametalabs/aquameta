@@ -88,7 +88,12 @@ class FilesystemForeignDataWrapper(ForeignDataWrapper):
             elif column_name == 'name':
                 row[column_name] = filename
             elif column_name == 'content':
-                row[column_name] = u'...'
+                # If 'file' table, get content
+                # if self.type == 'file' and stat.S_ISREG( os.stat(path + '/' + filename).st_mode ) and 'content' in columns:
+                with open(path + '/' + filename, 'r') as infile:
+                    row['content'] = infile.read()
+
+                # row[column_name] = u'...'
 
             elif column_name == 'parent_id' or column_name == 'directory_id':
                 row[column_name] = path
