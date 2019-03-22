@@ -218,19 +218,16 @@ echo "----------------------"
 echo "Enter the name, email and password of the user you'd like to setup as superuser:"
 read -p "Full Name: " NAME
 read -p "Email Address: " EMAIL
+read -p "PostgreSQL Username [$(logname)]: " ROLE
+if [[ $ROLE = '' ]]
+then
+	ROLE=$(logname)
+fi
 read -s -p "Password: " PASSWORD
 
 echo ""
 echo "Creating superuser...."
-REG_COMMAND="select role_name from endpoint.register('$EMAIL', '$PASSWORD', '$NAME', false)"
-REG_CONFIRM_COMMAND="select endpoint.register_confirm('$EMAIL', activation_code::text, false) from endpoint.user where email='$EMAIL'"
-ROLE=(`psql -t -U postgres -d aquameta -c "$REG_COMMAND"`)
-echo "Creating superuser $ROLE";
-
-sudo -u postgres psql -c "$REG_CONFIRM_COMMAND" aquameta
-REG_SUPERUSER_COMMAND="alter role \"$ROLE\" superuser"
-sudo -u postgres psql -c "$REG_SUPERUSER_COMMAND" aquameta
-
+REG_COMMAND="select role_name from endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
 
 
 #############################################################################

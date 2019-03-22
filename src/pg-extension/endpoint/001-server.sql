@@ -2052,6 +2052,43 @@ $$;
 
 
 /******************************************************************************
+ * endpoint.register_superuser
+ ******************************************************************************/
+
+create function endpoint.register_superuser (
+    _email text,
+    _password text,
+    fullname text,
+    role_name text,
+    out code integer,
+    out message text
+) returns record language plpgsql strict security definer
+as $$
+    begin
+        begin
+            insert into endpoint.user (email, name, active, role_id) values (_email, fullname, true, meta.role_id(role_name));
+        exception when others then
+            code := 1;
+            message := 'A user with this email address or role already exists';
+            role_name := null;
+            return;
+        end;
+
+        -- Set role password and superuser
+        update meta.role
+            set superuser=true, password = _password
+            where id = meta.role_id(role_name);
+
+        -- Inherit from generic user
+        insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), meta.role_id(role_name));
+
+        code := 0;
+        message := 'Success';
+    end
+$$;
+
+
+/******************************************************************************
  * endpoint.login
  ******************************************************************************/
 
