@@ -2062,7 +2062,7 @@ create function endpoint.register_superuser (
     role_name text,
     out code integer,
     out message text
-) returns record language plpgsql strict security definer
+) returns record language plpgsql
 as $$
     begin
         begin
