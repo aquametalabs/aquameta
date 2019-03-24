@@ -227,13 +227,15 @@ read -s -p "Password: " PASSWORD
 
 echo ""
 echo "Creating superuser...."
-REG_COMMAND="select role_name from endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
+REG_COMMAND="select endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
+sudo -u postgres psql -c "$REG_COMMAND" aquameta
 
 
 #############################################################################
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
+echo ""
 echo "New User Registration Scheme"
 echo "----------------------------"
 echo "Please select a security scheme:"
