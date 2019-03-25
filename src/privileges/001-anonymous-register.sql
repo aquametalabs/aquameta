@@ -36,11 +36,16 @@ grant select on endpoint.resource_binary to anonymous;
 alter table endpoint.resource_binary enable row level security;
 create policy anonymous on endpoint.resource_binary for select to anonymous using (false);
 
+
 -- TODO add security policies on these
 grant select on meta.column to anonymous;
+grant select on meta.function to anonymous;
+grant select on meta.function_parameter to anonymous;
+grant select on meta.relation_column to anonymous;
 grant select on endpoint.mimetype to anonymous;
 grant select on endpoint.mimetype_extension to anonymous;
 grant select on endpoint.current_user to anonymous;
+grant select on endpoint.column_mimetype to anonymous;
 grant select on endpoint.template_route to anonymous;
 grant select on endpoint.template to anonymous;
 grant select on bundle.bundle to anonymous;
