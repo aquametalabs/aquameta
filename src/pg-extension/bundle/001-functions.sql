@@ -719,3 +719,20 @@ create or replace function bundle.commit_delete(in _commit_id uuid) returns void
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
     delete from bundle.commit c where c.id = _commit_id;
 $$ language sql;
+
+
+------------------------------------------------------------------------------
+-- STATUS FUNCTIONS
+------------------------------------------------------------------------------
+
+create or replace function bundle.status()
+returns setof text as $$
+    select b.name || ' - '
+        || hds.change_type || ' - '
+        || hds.row_id::text
+    from bundle.bundle b
+        join bundle.head_db_stage_changed hds on hds.bundle_id = b.id
+    order by b.name, hds.row_id::text;
+$$ language sql;
+
+
