@@ -170,7 +170,7 @@ create table ignored_relation (
 );
 
 create table ignored_column (
-    id not null uuid default public.uuid_generate_v4() primary key,
+    id uuid not null uuid default public.uuid_generate_v4() primary key,
     column_id meta.column_id not null
 );
 
