@@ -13,7 +13,7 @@
  ***********************************************************************/
 
 create table event.session (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     owner_id meta.role_id not null -- the owner's role
 );
 
@@ -96,14 +96,14 @@ $$ language plpgsql;
 
 -- todo: add trigger that checks to see
 create table event.subscription_table (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     relation_id meta.relation_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_column (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     column_id meta.column_id,
     created_at timestamp not null default now()
@@ -111,14 +111,14 @@ create table event.subscription_column (
 
 
 create table event.subscription_row (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     row_id meta.row_id,
     created_at timestamp not null default now()
 );
 
 create table event.subscription_field (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     field_id meta.field_id,
     created_at timestamp not null default now()
@@ -176,7 +176,7 @@ union
  ***********************************************************************/
 
 create table event.event (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     event json,
     created_at timestamp not null default now()

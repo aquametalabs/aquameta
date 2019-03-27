@@ -56,7 +56,7 @@ as assignment;
  ******************************************************************************/
 
 create table mimetype (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     mimetype text not null unique
 );
 
@@ -66,21 +66,21 @@ create table mimetype (
  ******************************************************************************/
 
 create table endpoint.mimetype_extension (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     mimetype_id uuid not null references endpoint.mimetype(id),
     extension text unique
 );
 
 
 create table endpoint.column_mimetype (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     column_id meta.column_id not null,
     mimetype_id uuid not null references endpoint.mimetype(id)
 );
 
 
 create table endpoint.function_field_mimetype (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     schema_name text,
     function_name text,
     field_name text,
@@ -92,7 +92,7 @@ create table endpoint.function_field_mimetype (
  ******************************************************************************/
 
 create table endpoint."resource_binary" (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     path text not null /* unique */,
     mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
     active boolean default true,
@@ -100,7 +100,7 @@ create table endpoint."resource_binary" (
 );
 
 create table endpoint."resource_text" (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     path text not null /* unique */,
     mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
     active boolean default true,
@@ -108,21 +108,21 @@ create table endpoint."resource_text" (
 );
 
 create table endpoint.resource_file (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     file_id text not null,
     active boolean default true,
     path text not null /* unique */
 );
 
 create table endpoint.resource_directory (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     directory_id text,
     path text,
     indexes boolean
 );
 
 create table endpoint.resource (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     path text not null,
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade,
     active boolean default true,
@@ -130,14 +130,14 @@ create table endpoint.resource (
 );
 
 create table endpoint.template (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     name text not null default '',
     mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade, -- why on update cascade??
     content text not null default ''
 );
 
 create table endpoint.template_route (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     template_id uuid not null references endpoint.template(id),
     url_pattern text not null default '', -- matching paths may contain arguments from the url to be passed into the template
     args text not null default '{}' -- this route's static arguments to be passed into the template
@@ -149,7 +149,7 @@ create table endpoint.template_route (
  ******************************************************************************/
 
 create table endpoint.site_settings (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     name text,
     active boolean default false,
 
@@ -1838,12 +1838,12 @@ language plpgsql;
  ******************************************************************************/
 
 create table endpoint.user (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null default public.uuid_generate_v4()::text::meta.role_id,
     email text not null unique,
     name text not null default '',
     active boolean not null default false,
-    activation_code uuid default public.uuid_generate_v4(),
+    activation_code uuid not null default public.uuid_generate_v4(),
     created_at timestamp not null default now()
 );
 
@@ -1936,7 +1936,7 @@ $$ language sql;
  ******************************************************************************/
 
 create table endpoint.session (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null,
     user_id uuid references endpoint.user(id)
 );

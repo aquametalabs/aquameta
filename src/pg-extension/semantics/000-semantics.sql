@@ -10,12 +10,12 @@
 set search_path=semantics;
 
 create table semantics.relation_purpose (
-    id uuid primary key default public.uuid_generate_v4(),
+    id uuid not null default public.uuid_generate_v4() primary key,
     purpose text not null
 );
 
 create table semantics.relation (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     relation_id meta.relation_id not null,
     purpose_id uuid references semantics.relation_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
@@ -36,12 +36,12 @@ insert into semantics.relation_purpose (purpose) values
 
 
 create table semantics.column_purpose (
-    id uuid primary key default public.uuid_generate_v4(),
+    id uuid not null default public.uuid_generate_v4() primary key,
     purpose text not null
 );
 
 create table semantics."type" (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     type_id meta.type_id,
     purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
@@ -49,7 +49,7 @@ create table semantics."type" (
 );
 
 create table semantics."column" (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     column_id meta.column_id,
     purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
@@ -73,7 +73,7 @@ insert into semantics.column_purpose (purpose) values
 
 
 create table semantics.foreign_key (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     foreign_key_id meta.foreign_key_id,
     inline boolean default false
 );

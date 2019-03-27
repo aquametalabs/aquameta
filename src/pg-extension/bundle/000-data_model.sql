@@ -75,24 +75,24 @@ create trigger blob_hash_update
 
 
 create table bundle (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     name text,
     -- head_commit_id uuid, (circular, added later)
     unique(name)
 );
 
 create table rowset (
-    id uuid default public.uuid_generate_v4() primary key
+    id uuid not null default public.uuid_generate_v4() primary key
 );
 
 create table rowset_row (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     rowset_id uuid references rowset(id) on delete cascade,
     row_id meta.row_id
 );
 
 create table rowset_row_field (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
     field_id meta.field_id,
     value_hash text references blob(hash) on delete cascade,
@@ -100,7 +100,7 @@ create table rowset_row_field (
 );
 
 create table commit (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
     rowset_id uuid references rowset(id) on delete cascade,
     role_id meta.role_id,
@@ -155,22 +155,22 @@ from bundle.bundle bundle
 -- don't want to continue to be hasseled about adding to the stage.
 ------------------------------------------------------------------------------
 create table ignored_row (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     row_id meta.row_id
 );
 
 create table ignored_schema (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     schema_id meta.schema_id not null
 );
 
 create table ignored_relation (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     relation_id meta.relation_id not null
 );
 
 create table ignored_column (
-    id uuid default public.uuid_generate_v4() primary key,
+    id not null uuid default public.uuid_generate_v4() primary key,
     column_id meta.column_id not null
 );
 
@@ -184,7 +184,7 @@ create table ignored_column (
 
 -- a row not in the current commit, but is marked to be added to the next commit
 create table stage_row_added (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id) on delete cascade,
     row_id meta.row_id,
     unique (bundle_id, row_id)
@@ -192,7 +192,7 @@ create table stage_row_added (
 
 -- a row that is marked to be deleted from the current commit in the next commit
 create table stage_row_deleted (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id) on delete cascade,
     rowset_row_id uuid references rowset_row(id),
     unique (bundle_id, rowset_row_id)
@@ -201,7 +201,7 @@ create table stage_row_deleted (
 -- a field that is marked to be different from the current commmit in the next
 -- commit, with it's value
 create table stage_field_changed (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id),
     field_id meta.field_id,
     new_value text,
@@ -435,7 +435,7 @@ select * from bundle.stage_row_keys_to_fields(srk.relation_id, srk.pk_column_nam
 ------------------------------------------------------------------------------
 
 create table tracked_row_added (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id) on delete cascade,
     row_id meta.row_id,
     unique (row_id)
@@ -553,7 +553,7 @@ where change_type != 'same'
 ------------------------------------------------------------------------------
 
 create table trackable_nontable_relation (
-    id uuid default public.uuid_generate_v4() primary key,
+    id uuid not null default public.uuid_generate_v4() primary key,
     pk_column_id meta.column_id not null
 );
 
@@ -665,7 +665,7 @@ group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_
 
 -- here's a table where you can stash some saved connections.
 create table remote_database (
-    id uuid default public.uuid_generate_v4() not null,
+    id uuid not null default public.uuid_generate_v4() primary key,
     foreign_server_name text,
     schema_name text,
     host text,
