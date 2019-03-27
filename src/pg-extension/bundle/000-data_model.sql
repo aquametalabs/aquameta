@@ -676,6 +676,26 @@ create table remote_database (
 );
 
 
+------------------------------------------------------------------------------
+-- 9. ORIGINS
+--
+-- When a bundle is imported or cloned, it should record the source from
+-- whence it came in one of these tables, and thusly prompt user accordingly
+------------------------------------------------------------------------------
+
+create table bundle_origin_csv (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle(id),
+    directory text not null
+);
+
+
+create table bundle_origin_remote (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle(id),
+    remote_database_id uuid references remote_database(id)
+);
+
 
 ------------------------------------------------------------------------------
 -- 9. EXTENSION DUMP CONFIGURATION
@@ -700,3 +720,5 @@ select pg_catalog.pg_extension_config_dump('stage_row_added','');
 select pg_catalog.pg_extension_config_dump('stage_row_deleted','');
 select pg_catalog.pg_extension_config_dump('trackable_nontable_relation','');
 select pg_catalog.pg_extension_config_dump('tracked_row_added','');
+select pg_catalog.pg_extension_config_dump('bundle_origin_csv','');
+select pg_catalog.pg_extension_config_dump('bundle_origin_remote','');

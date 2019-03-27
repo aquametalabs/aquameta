@@ -27,7 +27,7 @@ create or replace function remote_mount (
     foreign_server_name text,
     schema_name text,
     host text,
-	port integer,
+    port integer,
     dbname text,
     username text,
     password text
@@ -263,8 +263,7 @@ begin
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- bundle
-    execute format ('insert into %2$I.bundle
-		(id, name)
+    execute format ('insert into %2$I.bundle (id, name)
         select b.id, b.name from %1$I.bundle b
         where b.id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
@@ -276,12 +275,14 @@ begin
 
     -- todo: ignored rows?
 
-	execute format ('update %2$I.bundle
-		set head_commit_id = (
-        select b.head_commit_id
-		from %1$I.bundle b
-        where b.id=%3$L) where id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+    execute format ('update %2$I.bundle
+        set head_commit_id = (
+            select b.head_commit_id
+            from %1$I.bundle b
+            where b.id=%3$L
+    ) where id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
+    -- execute format ('insert into bundle.origin_remote (bundle_id, remote_id)
 
     return true;
 end;

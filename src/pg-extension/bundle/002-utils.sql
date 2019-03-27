@@ -70,6 +70,7 @@ begin
     execute format('copy bundle.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
     execute format('alter table bundle.bundle enable trigger all');
     execute format('alter table bundle.commit enable trigger all');
+    -- execute format('insert into bundle.origin_csv select .....? from ''%s/rowset_row_field.csv''', directory);
 end
 $$;
 
