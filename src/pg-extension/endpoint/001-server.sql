@@ -1091,7 +1091,7 @@ create function endpoint.column_list(
 
         execute
             'select string_agg(' || quote_literal(table_alias) || ' || ''.'' || name, '', '')
-            from meta.column
+            from meta.relation_column
             where schema_name = ' || quote_literal(_schema_name) || ' and
                 relation_name = ' || quote_literal(_relation_name) ||
                 case when include is not null then
