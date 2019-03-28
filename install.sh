@@ -130,7 +130,7 @@ systemctl restart postgresql.service
 
 # create aquameta database
 sudo -u postgres createdb aquameta
-sudo -u postgres psql -c "alter database dbname set bytea_output to 'hex'" aquameta
+sudo -u postgres psql -c "alter database aquameta set bytea_output to 'hex'" aquameta
 
 # create dependency extensions required by aquameta
 echo "Installing dependency extensions..."
