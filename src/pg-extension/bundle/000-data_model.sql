@@ -516,8 +516,8 @@ from (
     from bundle.head_commit_row hcr
     full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
     left join stage_field_changed sfc on (sfc.field_id).row_id=hcr.row_id
-    left join offstage_field_changed ofc on ofc.row_id=hcr.row_id
-    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, ofc.row_id
+    left join offstage_field_changed ofc on (ofc.field_id).row_id=hcr.row_id
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
 
     union
 

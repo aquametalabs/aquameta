@@ -48,7 +48,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     select f.value
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
+    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id; -- TODO: should we be checking here to see if the staged value is different than the w.c. value??
 
     raise notice 'bundle: Committing stage_row_fields...';
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
