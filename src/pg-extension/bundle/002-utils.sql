@@ -60,17 +60,25 @@ create or replace function bundle.bundle_import_csv(directory text)
  language plpgsql
 as $$
 begin
+    -- triggers must be disabled because bundle and commit have circilar
+    -- dependencies, and blob
     execute format('alter table bundle.bundle disable trigger all');
     execute format('alter table bundle.commit disable trigger all');
     execute format('copy bundle.bundle from ''%s/bundle.csv''', directory);
     execute format('copy bundle.commit from ''%s/commit.csv''', directory);
+
+    -- copy the commit data
     execute format('copy bundle.rowset from ''%s/rowset.csv''', directory);
     execute format('copy bundle.rowset_row from ''%s/rowset_row.csv''', directory);
     execute format('copy bundle.blob from ''%s/blob.csv''', directory);
     execute format('copy bundle.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
     execute format('alter table bundle.bundle enable trigger all');
     execute format('alter table bundle.commit enable trigger all');
-    -- execute format('insert into bundle.origin_csv select .....? from ''%s/rowset_row_field.csv''', directory);
+
+    -- set the origin for this bundle
+    execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid) on commit drop');
+    execute format('copy origin_temp from ''%s/bundle.csv''', directory);
+    execute format('insert into bundle.bundle_origin_csv(directory, bundle_id) select %L, id from origin_temp', directory);
 end
 $$;
 

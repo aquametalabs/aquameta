@@ -679,8 +679,8 @@ create table remote_database (
 ------------------------------------------------------------------------------
 -- 9. ORIGINS
 --
--- When a bundle is imported or cloned, it should record the source from
--- whence it came in one of these tables, and thusly prompt user accordingly
+-- When a bundle is imported or fetched, the origin is the source from whence
+-- it came.   We use this on push and pull, import and export.
 ------------------------------------------------------------------------------
 
 create table bundle_origin_csv (
