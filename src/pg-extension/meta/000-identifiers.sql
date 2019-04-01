@@ -425,35 +425,6 @@ create function exec(statements text[]) returns setof record as $$
 $$ language plpgsql volatile returns null on null input;
 
 
-/*
--- TODO should this include views?  meta only?
-create or replace view row as
-select r.row_id as id / *, schema_name, table_name, pk_column_name  FIXME pk_value * /
-from exec((
-    select array_agg (stmt) from (
-
-        select s.name as schema_name,
-            r.name as table_name,
-            c.name as pk_column_name,
-            quote_ident((r.primary_key_column_ids[1]).name) as pk_value,
-            'select meta.row_id(' ||
-                quote_literal(s.name) || ', ' ||
-                quote_literal(t.name) || ', ' ||
-                quote_literal((r.primary_key_column_ids[1]).name) || ', ' ||
-                quote_ident((r.primary_key_column_ids[1]).name) || '::text ' ||
-                ') as row_id from ' ||
-                quote_ident(s.name) || '.' || quote_ident(t.name) as stmt
-        from meta.schema s
-        join meta.table t on t.schema_id=s.id
-        join meta.relation r on t.id=r.id
-        join meta.column c on r.primary_key_column_ids[1] = c.id
-
-    ) stmts
-)) r(
-    row_id meta.row_id
-);
-*/
-
 create function meta.eq(
     leftarg meta.row_id,
     rightarg json
@@ -521,6 +492,14 @@ create cast (meta.row_id as json)
 as assignment;
 */
 
+
+/*
+ * TODO: Audit this.
+ * Seems like row_id should have pk_column_name in it instead of looking stuff
+ * up.  Seems like we should be using quote_ident since idents can contain
+ * slashes.  Actually kind of our own version of quote_ident that is
+ * slash-aware.
+ */
 
 create or replace function meta.row_id(value text) returns meta.row_id as $$
 declare

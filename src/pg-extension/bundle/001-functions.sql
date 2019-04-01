@@ -48,7 +48,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     select f.value
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
+    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id; -- TODO: should we be checking here to see if the staged value is different than the w.c. value??
 
     raise notice 'bundle: Committing stage_row_fields...';
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
@@ -658,7 +658,7 @@ create or replace function checkout (in commit_id uuid) returns void as $$
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
                 join bundle.blob b on f.value_hash=b.hash
-                join meta.column col on (f.field_id).column_id = col.id
+                join meta.relation_column col on (f.field_id).column_id = col.id
             where c.id=commit_id
             and (rr.row_id::meta.schema_id).name != 'meta'
             group by rr.id
@@ -698,6 +698,45 @@ $$ language plpgsql;
 
 
 
+/*
+ * row_id here is text because composite types custom input functions, they all
+ * use record_in, so we can't pass it a text string without explicitly casting
+ * it in the call.  So it just takes text and casts it internally.
+ */
+create function checkout_row(_row_id text, commit_id uuid) returns void as $$
+    declare
+        commit_row record;
+    begin
+        for commit_row in
+            select
+                rr.row_id,
+                array_agg(
+                    row(
+                        ((f.field_id).column_id).name,
+                        b.value,
+                        col.type_name
+                    )::bundle.checkout_field
+                ) as fields_agg
+            from bundle.commit c
+                join bundle.rowset r on c.rowset_id=r.id
+                join bundle.rowset_row rr on rr.rowset_id=r.id
+                join bundle.rowset_row_field f on f.rowset_row_id=rr.id
+                join bundle.blob b on f.value_hash=b.hash
+                join meta.relation_column col on (f.field_id).column_id = col.id
+            where c.id=commit_id
+                and rr.row_id = _row_id::meta.row_id
+            group by rr.id
+        loop
+            perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
+        end loop;
+        return;
+    end;
+$$ language plpgsql;
+
+------------------------------------------------------------------------------
+-- BUNDLE CREATE / DELETE
+------------------------------------------------------------------------------
+
 create or replace function bundle.bundle_create (name text) returns uuid as $$
 declare
     bundle_id uuid;
@@ -712,6 +751,10 @@ create or replace function bundle.bundle_delete (in _bundle_id uuid) returns voi
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
     delete from bundle.bundle where id = _bundle_id;
 $$ language sql;
+
+------------------------------------------------------------------------------
+-- COMMIT DELETE
+------------------------------------------------------------------------------
 
 create or replace function bundle.commit_delete(in _commit_id uuid) returns void as $$
     -- TODO: delete blobs
