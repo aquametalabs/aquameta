@@ -27,7 +27,7 @@ create or replace function remote_mount (
     foreign_server_name text,
     schema_name text,
     host text,
-	port integer,
+    port integer,
     dbname text,
     username text,
     password text
@@ -225,10 +225,14 @@ language plpgsql;
 -- remote_clone ()
 --
 -- copy a repository from one bundle schema (typically a remote) to another (typically a local one)
-
-create or replace function remote_clone( bundle_id uuid, source_schema_name text, dest_schema_name text )
+create or replace function remote_clone( remote_database_id uuid, bundle_id uuid ) -- source_schema_name text, dest_schema_name text )
 returns boolean as $$
+declare
+    source_schema_name text;
+    dest_schema_name text;
 begin
+    select schema_name from bundle.remote_database where id = remote_database_id into source_schema_name;
+    select 'bundle' into dest_schema_name;
     -- rowset
     execute format ('insert into %2$I.rowset
         select r.* from %1$I.commit c
@@ -263,8 +267,7 @@ begin
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- bundle
-    execute format ('insert into %2$I.bundle
-		(id, name)
+    execute format ('insert into %2$I.bundle (id, name)
         select b.id, b.name from %1$I.bundle b
         where b.id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
@@ -276,12 +279,14 @@ begin
 
     -- todo: ignored rows?
 
-	execute format ('update %2$I.bundle
-		set head_commit_id = (
-        select b.head_commit_id
-		from %1$I.bundle b
-        where b.id=%3$L) where id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+    execute format ('update %2$I.bundle
+        set head_commit_id = (
+            select b.head_commit_id
+            from %1$I.bundle b
+            where b.id=%3$L
+    ) where id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
+    execute format ('insert into bundle.bundle_origin_remote (bundle_id, remote_database_id) values( %L, %L )', bundle_id, remote_database_id);
 
     return true;
 end;
