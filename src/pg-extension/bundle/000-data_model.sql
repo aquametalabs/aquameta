@@ -693,7 +693,7 @@ create table bundle_origin_csv (
 create table bundle_origin_remote (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
-    remote_database_id uuid references remote_database(id) on delete cascade,
+    remote_database_id uuid references remote_database(id) on delete cascade
 );
 
 
