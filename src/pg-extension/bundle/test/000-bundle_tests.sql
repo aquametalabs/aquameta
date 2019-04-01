@@ -145,6 +145,11 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 4: stage_row_add()
 -------------------------------------------------------------------------------
+select bundle.tracked_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',1::text);
+select bundle.tracked_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',2::text);
+select bundle.tracked_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',3::text);
+select bundle.tracked_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',4::text);
+
 select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',1::text);
 select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',2::text);
 select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',3::text);
@@ -214,6 +219,7 @@ select row_eq(
 -------------------------------------------------------------------------------
 -- TEST 7: second round of stage_row_add()
 -------------------------------------------------------------------------------
+select bundle.tracked_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',5::text);
 select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',5::text);
 select row_eq(
     $$ select * from repo_summary('com.aquameta.core.bundle.tests') $$,
@@ -364,6 +370,7 @@ select row_eq(
 insert into bundle_test.chakra (id, position, name, color, tone_hz) values
     (7, 7, 'Crown',        'violet', 194.18)
 ;
+select bundle.tracked_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',7::text);
 select bundle.stage_row_add('com.aquameta.core.bundle.tests', 'bundle_test','chakra','id',7::text);
 select bundle.commit('com.aquameta.core.bundle.tests','last few');
 select bundle.checkout((select id from bundle.commit where message='last few'));
