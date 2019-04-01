@@ -3,6 +3,7 @@
 2ec9f8b2-d30a-4267-863e-f36667a57c8a	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	843e8f14-e2ab-42cb-9142-e7d6165fc48c	\N	ea88a679-30ce-40d6-8d80-bce37568b49c	2019-01-20 12:40:20.640802	rework / page
 32e2754f-2cd5-4de8-a4da-0073b0cb022d	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	1ef85234-0cec-4a64-830d-c21eb6d53d71	\N	89ac3c75-d87a-4373-9938-364191803c65	2019-01-28 05:30:06.286814	template / template_route editor
 46baa2d6-c4dd-4f9e-8158-19aa90d9fdf5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	7dcef837-5b85-4ed0-bb7d-ab113e2bc5e8	\N	7923f69c-5a09-4683-9de5-6e55754487fd	2019-01-25 02:09:52.429288	fix code editor to work (kind of) with json yuck
+5fe68261-2b5f-457c-8f2c-ce73c063d6d4	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	1a3c5f53-613a-4fab-b5ac-246013703e72	\N	fc1b0134-467f-4197-991b-d8e7d579aa27	2019-03-27 20:25:32.856732	stage enhancements, bundle import and export stubs
 6839c938-13ea-40c1-ab8a-ad3a061ab3cb	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	16cf434a-82c0-4bc6-9b13-0c51b7693222	\N	b8afcbf3-7d01-410c-a105-1187da5bfada	2019-01-19 16:07:26.482546	layout and styling
 71ac778d-6797-4f0a-b73c-15f2ed2622ca	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	445bfde7-b92d-43e4-b3e9-304e40315cd0	\N	017a5626-a556-4fac-a156-629be666b1e2	2019-01-24 19:47:42.067451	add server_js field to widget ide
 71cb7b07-9aea-42a4-8c90-e0fda2ce296f	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	5501c4df-3538-47b1-92f1-677e42bb1a81	\N	f4a1df3c-c814-4dae-910d-0d0ced9596f9	2019-03-24 07:29:51.548505	bundle export, binary upload, untrack rows on stage, template delete and ignored row mgr stub
@@ -23,3 +24,4 @@ c8ae7a0b-fc0b-4bfb-8a8a-5186835744da	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	12f61b
 ea88a679-30ce-40d6-8d80-bce37568b49c	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	efca24d0-29dc-4c6b-bd6e-09e382d26e85	\N	bbbcb497-b098-46d7-a3b9-746d54b32ae8	2019-01-19 19:47:22.685364	remove references to http:// for SSL support, misc IDE fixes
 f4a1df3c-c814-4dae-910d-0d0ced9596f9	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	e0c40416-b76f-4aa2-a84c-37482d2c14aa	\N	72dc0235-6bee-4df6-ae50-f48512e337c7	2019-03-22 04:26:12.3468	untracked row manager interface
 fc1b0134-467f-4197-991b-d8e7d579aa27	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	b0b13f08-c509-41b9-aa30-f0832148336f	\N	71cb7b07-9aea-42a4-8c90-e0fda2ce296f	2019-03-24 22:30:54.623754	field diff
+fc5fd37e-ea02-4b42-b33e-fa548c460868	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	5e60a146-ce7a-497e-93be-83a4177e8383	\N	5fe68261-2b5f-457c-8f2c-ce73c063d6d4	2019-04-01 03:31:20.731543	stage enhancemnts, import, export
