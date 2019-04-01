@@ -15,7 +15,16 @@ create or replace function bundle.bundle_export_csv(bundle_name text, directory 
  returns void
  language plpgsql
 as $$
+declare
+    has_commits boolean;
 begin
+    select true from bundle.bundle b join bundle.commit c on c.bundle_id = b.id
+        where b.name = bundle_name
+    into has_commits;
+
+    if has_commits != true then
+	raise exception 'No commits found!';
+    end if;
     execute format('copy (select distinct * from bundle.bundle
         where name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
 
