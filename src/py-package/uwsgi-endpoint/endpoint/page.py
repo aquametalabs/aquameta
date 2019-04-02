@@ -71,12 +71,18 @@ def application(env, start_response):
             routes = cursor.fetchall()
             rowcount += cursor.rowcount
 
-            # render template only if we don't have other rows
+            # render template if we found one ^^.  only if we don't have other rows
             template_resources = None
             if routes != None:
                 cursor.execute('''
                     select
-                        , endpoint.template_render(t.id, r.args::json, array_to_json(regexp_matches(%s, r.url_pattern))'{}'::json) as content, m.mimetype
+                        endpoint.template_render(
+                            t.id,
+                            r.args::json,
+                            array_to_json( regexp_matches(%s, r.url_pattern) ),
+                            '{}'::json
+                        ) as content, 
+                        m.mimetype
                     from endpoint.template_route r
                         join endpoint.template t on r.template_id = t.id
                         join endpoint.mimetype m on t.mimetype_id = m.id

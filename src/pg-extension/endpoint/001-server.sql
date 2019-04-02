@@ -2196,7 +2196,7 @@ create or replace function endpoint.template_render(
         plv8.elog( ERROR, e, e)
         return false;
     }
-    plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
+    // plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
 
     // setup javascript scope
     var context = {};
