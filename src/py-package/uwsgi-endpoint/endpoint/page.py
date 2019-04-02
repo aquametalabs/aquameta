@@ -69,7 +69,6 @@ def application(env, start_response):
                 select array_to_json(regexp_matches(%s, r.url_pattern)) as match from endpoint.template_route r
                 ''', (request.path,))
             routes = cursor.fetchall()
-            logging.info('HEYYYYYY routes: %s' % (routes))
             rowcount += cursor.rowcount
 
             # render template only if we don't have other rows
@@ -77,15 +76,14 @@ def application(env, start_response):
             if routes != None:
                 cursor.execute('''
                     select
-                        array_to_json(regexp_matches(%s, r.url_pattern)), endpoint.template_render(t.id, r.args::json, '{}'::json) as content, m.mimetype
+                        , endpoint.template_render(t.id, r.args::json, array_to_json(regexp_matches(%s, r.url_pattern))'{}'::json) as content, m.mimetype
                     from endpoint.template_route r
                         join endpoint.template t on r.template_id = t.id
                         join endpoint.mimetype m on t.mimetype_id = m.id
                 ''', (request.path,))
                 template_resources = cursor.fetchall()
-                logging.info('HEEEEYYYYYYYY we got a template row. %s' % (template_resources))
             else:
-                logging.info('HEEEEYYYYYYYY NO WE DID NOT GET a row')
+#                logging.info('HEEEEYYYYYYYY NO WE DID NOT GET a row')
 #            cursor.execute('''
 #                select
 #                    id, regex_matches(%s, r.url_pattern),

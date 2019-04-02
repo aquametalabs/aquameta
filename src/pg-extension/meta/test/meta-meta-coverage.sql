@@ -2,7 +2,7 @@ begin;
 
 set search_path=meta;
 
-drop table meta_meta_relation cascade;
+drop table if exists meta_meta_relation cascade;
 create table meta_meta_relation (
 	-- TYPE
 	id serial not null primary key,

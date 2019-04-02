@@ -231,6 +231,7 @@ declare
     source_schema_name text;
     dest_schema_name text;
 begin
+    -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
     select schema_name from bundle.remote_database where id = remote_database_id into source_schema_name;
     select 'bundle' into dest_schema_name;
     -- rowset
