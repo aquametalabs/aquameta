@@ -79,8 +79,7 @@ def application(env, start_response):
                         endpoint.template_render(
                             t.id,
                             r.args::json,
-                            array_to_json( regexp_matches(%s, r.url_pattern) ),
-                            '{}'::json
+                            array_to_json( regexp_matches(%s, r.url_pattern) )
                         ) as content, 
                         m.mimetype
                     from endpoint.template_route r
@@ -88,7 +87,7 @@ def application(env, start_response):
                         join endpoint.mimetype m on t.mimetype_id = m.id
                 ''', (request.path,))
                 template_resources = cursor.fetchall()
-            else:
+#            else:
 #                logging.info('HEEEEYYYYYYYY NO WE DID NOT GET a row')
 #            cursor.execute('''
 #                select
