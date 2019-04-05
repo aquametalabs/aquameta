@@ -89,6 +89,9 @@ DEBIAN_FRONTEND=nointeractive \
 git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
 cd plv8-postgres-10-debian-binaries
 ./install-binaries-huzzah.sh
+cd $SRC
+rm -rf plv8-postgres-10-debian-binaries
+ldconfig
 
 
 
