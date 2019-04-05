@@ -88,7 +88,7 @@ def application(env, start_response):
                         join endpoint.mimetype m on t.mimetype_id = m.id
                 ''', (request.path,))
                 template_resources = cursor.fetchall()
-            else:
+#            else:
 #                logging.info('HEEEEYYYYYYYY NO WE DID NOT GET a row')
 #            cursor.execute('''
 #                select
