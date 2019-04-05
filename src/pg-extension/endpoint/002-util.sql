@@ -1,3 +1,10 @@
+/******************************************************************************
+ * ENDPOINT SERVER
+ * Filesystem import functions
+ *
+ * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ ******************************************************************************/
+
 /*
  * These functions take a filesystem directory path, and import all files in
  * that directory into endpoint.resource or endpoint.resource_binary.

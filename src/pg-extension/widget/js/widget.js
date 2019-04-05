@@ -1,9 +1,8 @@
 /*******************************************************************************
-* Widget.js
-*
-* Created by Aquameta Labs, an open source company in Portland Oregon, USA.
-* Project: http://aquameta.com/
-******************************************************************************/
+ * Widget.js
+ *
+ * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ ******************************************************************************/
 define(['/doT.min.js', '/jQuery.min.js', '/datum.js'], function(doT, $, AQ, undefined) {
 
     'use strict';
