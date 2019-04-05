@@ -56,36 +56,40 @@ DEST=${DEST:-/opt/aquameta}
 #############################################################################
 # apt packages
 #############################################################################
+apt-get install software-properties-common
 
 echo "Adding apt repositories..."
 add-apt-repository "deb http://deb.debian.org/debian/ stretch main contrib non-free"
-add-apt-repository "deb-src http://deb.debian.org/debian/ stretch main contrib non-free"
 add-apt-repository "deb http://security.debian.org/ stretch/updates main contrib non-free"
-add-apt-repository "deb-src http://security.debian.org/ stretch/updates main contrib non-free"
 add-apt-repository "deb http://deb.debian.org/debian/ stretch-updates main contrib non-free"
-add-apt-repository "deb-src http://deb.debian.org/debian/ stretch-updates main contrib non-free"
 
 echo "Adding PostgreSQL apt repository..."
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 RELEASE=$(lsb_release -cs)
 echo "deb http://apt.postgresql.org/pub/repos/apt/ ${RELEASE}"-pgdg main | sudo tee  /etc/apt/sources.list.d/pgdg.list
 
-
-
 echo "Installing dependencies via apt..."
 # update
 apt-get update -y
 
-# add the universe repository
-
-
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt-get install -y postgresql-10 postgresql-10-plv8 postgresql-10-python-multicorn \
+	apt install -y postgresql-10 postgresql-10-python-multicorn \
 	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
-	python-werkzeug python-psycopg2 nginx sudo sendmail \
-	fuse \
-	libssl-dev libpcre3 libpcre3-dev
+	python-werkzeug python-psycopg2 nginx sendmail \
+	fuse dnsutils \
+	libssl-dev libpcre3 libpcre3-dev \
+	git vim tmux sudo
+
+
+
+#############################################################################
+# plv8 binaries
+#############################################################################
+git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
+cd plv8-postgres-10-debian-binaries
+./install-binaries-huzzah.sh
+
 
 
 #############################################################################
@@ -226,28 +230,6 @@ systemctl restart nginx
 
 
 #############################################################################
-# setup aquameta superuser
-#############################################################################
-
-echo "Superuser Registration"
-echo "----------------------"
-echo "Enter the name, email and password of the user you'd like to setup as superuser:"
-read -p "Full Name: " NAME
-read -p "Email Address: " EMAIL
-read -p "PostgreSQL Username [$(logname)]: " ROLE
-if [[ $ROLE = '' ]]
-then
-	ROLE=$(logname)
-fi
-read -s -p "Password: " PASSWORD
-
-echo ""
-echo "Creating superuser...."
-REG_COMMAND="select endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
-sudo -u postgres psql -c "$REG_COMMAND" aquameta
-
-
-#############################################################################
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
@@ -276,6 +258,28 @@ fi
 
 sudo -u postgres psql -f $SRC/src/privileges/002-user.sql aquameta
 
+
+
+#############################################################################
+# setup aquameta superuser
+#############################################################################
+
+echo "Superuser Registration"
+echo "----------------------"
+echo "Enter the name, email and password of the user you'd like to setup as superuser:"
+read -p "Full Name: " NAME
+read -p "Email Address: " EMAIL
+read -p "PostgreSQL Username [$(logname)]: " ROLE
+if [[ $ROLE = '' ]]
+then
+	ROLE=$(logname)
+fi
+read -s -p "Password: " PASSWORD
+
+echo ""
+echo "Creating superuser...."
+REG_COMMAND="select endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
+sudo -u postgres psql -c "$REG_COMMAND" aquameta
 
 
 
