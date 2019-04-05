@@ -79,8 +79,7 @@ def application(env, start_response):
                         endpoint.template_render(
                             t.id,
                             r.args::json,
-                            array_to_json( regexp_matches(%s, r.url_pattern) ),
-                            '{}'::json
+                            array_to_json( regexp_matches(%s, r.url_pattern) )
                         ) as content, 
                         m.mimetype
                     from endpoint.template_route r
