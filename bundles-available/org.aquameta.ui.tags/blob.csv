@@ -1,6 +1,10 @@
 \\x00a9e4255a5b63067b76cbfb9fd67f26bdb91be802d5ffcb177ec1b7a8d4c623	li
 \\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2	.{{= name }} {\n}
 \\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab	var w = $("#"+id);
+\\xa11a75e0feeecc1a9eff682b06ef0b1461ed4ee7a4d6da4ae333bdc1041d9d51	option
+\\xa2ff2522382852a144365e46f2f8646319024abb7ae1aa9c97c24177c44e3deb	18251e25-cfca-4f4d-bde5-c9c5be89eaba
+\\xb4109920496eb265c91078c527592d80d8d7f49546c9c8231d5ef4f0fdb5cb13	<option id="{{= id }}" class="{{= name }}" value="{{= value }}">\n    {{= label }}\n</option>
 \\xb462be37eb1d011a9e7009fc3ded570a9d5f1c3767572003c9d124b76d4213b7	<li id="{{= id }}" class="{{= name }}">\n    {{= content }}\n</li>
 \\xd103fa289ce6b5f6c57d50cf2c1d655be29601b9ae168236d55431a1c5589120	e83c6a04-bc73-43ed-ab3e-2642bf43e9e1
+\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	
 \\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382	return {};
