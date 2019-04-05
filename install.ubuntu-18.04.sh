@@ -46,6 +46,8 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+
+
 #############################################################################
 # prompt for $DEST location
 #############################################################################
@@ -56,7 +58,6 @@ DEST=${DEST:-/opt/aquameta}
 #############################################################################
 # apt packages
 #############################################################################
-
 echo "Installing dependencies via apt..."
 # update
 apt-get update -y
@@ -72,6 +73,7 @@ DEBIAN_FRONTEND=nointeractive \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
 	fuse \
 	libssl-dev libpcre3 libpcre3-dev
+
 
 
 #############################################################################
@@ -212,28 +214,6 @@ systemctl restart nginx
 
 
 #############################################################################
-# setup aquameta superuser
-#############################################################################
-
-echo "Superuser Registration"
-echo "----------------------"
-echo "Enter the name, email and password of the user you'd like to setup as superuser:"
-read -p "Full Name: " NAME
-read -p "Email Address: " EMAIL
-read -p "PostgreSQL Username [$(logname)]: " ROLE
-if [[ $ROLE = '' ]]
-then
-	ROLE=$(logname)
-fi
-read -s -p "Password: " PASSWORD
-
-echo ""
-echo "Creating superuser...."
-REG_COMMAND="select endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
-sudo -u postgres psql -c "$REG_COMMAND" aquameta
-
-
-#############################################################################
 # grant default permissions for 'anonymous' and 'user' roles
 #############################################################################
 
@@ -262,6 +242,28 @@ fi
 
 sudo -u postgres psql -f $SRC/src/privileges/002-user.sql aquameta
 
+
+
+#############################################################################
+# setup aquameta superuser
+#############################################################################
+
+echo "Superuser Registration"
+echo "----------------------"
+echo "Enter the name, email and password of the user you'd like to setup as superuser:"
+read -p "Full Name: " NAME
+read -p "Email Address: " EMAIL
+read -p "PostgreSQL Username [$(logname)]: " ROLE
+if [[ $ROLE = '' ]]
+then
+	ROLE=$(logname)
+fi
+read -s -p "Password: " PASSWORD
+
+echo ""
+echo "Creating superuser...."
+REG_COMMAND="select endpoint.register_superuser('$EMAIL', '$PASSWORD', '$NAME', '$ROLE')"
+sudo -u postgres psql -c "$REG_COMMAND" aquameta
 
 
 

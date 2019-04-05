@@ -86,6 +86,8 @@ DEBIAN_FRONTEND=nointeractive \
 #############################################################################
 # plv8 binaries
 #############################################################################
+DEBIAN_FRONTEND=nointeractive \
+	apt install libc++-dev
 git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
 cd plv8-postgres-10-debian-binaries
 ./install-binaries-huzzah.sh
@@ -295,6 +297,6 @@ EXTERNAL_IP=`dig +short myip.opendns.com @resolver1.opendns.com`
 echo ""
 echo "Aquameta was successfully installed.  Next, login and configure your installation:"
 echo ""
-echo "Localhost link: http://localhost/setup"
-echo "Machine link:   http://$MACHINE_IP/setup"
-echo "External link:  http://$EXTERNAL_IP/setup"
+echo "Localhost link: http://localhost/"
+echo "Machine link:   http://$MACHINE_IP/"
+echo "External link:  http://$EXTERNAL_IP/"
