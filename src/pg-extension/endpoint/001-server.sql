@@ -2190,13 +2190,13 @@ create or replace function endpoint.template_render(
     try {
         var template_rows = plv8.execute('select * from endpoint.template where id=$1', [ template_id ]);
         template = template_rows[0];
-        plv8.elog(NOTICE, ' template is ' + template.id);
+        // plv8.elog(NOTICE, ' template is ' + template.id);
     }
     catch( e ) {
         plv8.elog( ERROR, e, e)
         return false;
     }
-    plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
+    // plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
 
     // setup javascript scope
     var context = {};

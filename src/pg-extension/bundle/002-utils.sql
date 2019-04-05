@@ -15,7 +15,16 @@ create or replace function bundle.bundle_export_csv(bundle_name text, directory 
  returns void
  language plpgsql
 as $$
+declare
+    has_commits boolean;
 begin
+    select true from bundle.bundle b join bundle.commit c on c.bundle_id = b.id
+        where b.name = bundle_name
+    into has_commits;
+
+    if has_commits != true then
+	raise exception 'No commits found!';
+    end if;
     execute format('copy (select distinct * from bundle.bundle
         where name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
 
@@ -92,3 +101,33 @@ as $$
     delete from bundle.blob where hash not in (select value_hash from bundle.rowset_row_field);
     delete from bundle.rowset where id not in (select rowset_id from bundle.commit);
 $$ language sql;
+
+
+create or replace function bundle.search(term text, _bundle_id uuid default null, case_sensitive boolean default false)
+returns table (bundle_id uuid, bundle_name text, commit_ids uuid[], field_ids text[], messages text[], value_hash text, value text)
+as $$
+declare
+    search_stmt text;
+    ilike text;
+begin
+    if case_sensitive = true then
+        ilike := 'i';
+    else
+        ilike := '';
+    end if;
+    search_stmt := format('select b.id as bundle_id, b.name, array_agg(c.id) as commit_id, array_agg(rrf.field_id::text) as field_ids, array_agg(c.message), rrf.value_hash, bb.value
+        from bundle.bundle b
+            join bundle.commit c on c.bundle_id=b.id
+        join bundle.rowset r on c.rowset_id=r.id
+        join bundle.rowset_row rr on rr.rowset_id=r.id
+        join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+        join bundle.blob bb on rrf.value_hash=bb.hash
+        where bb.value ilike ''%%%s%%''', term);
+    if _bundle_id is not null then
+         search_stmt := search_stmt || format(' and bundle_id=%L', _bundle_id);
+    end if;
+    search_stmt := search_stmt || ' group by b.id, b.name, rrf.value_hash, bb.value';
+    raise notice 'search_stmt: %', search_stmt;
+    return query execute search_stmt;
+end;
+$$ language plpgsql;

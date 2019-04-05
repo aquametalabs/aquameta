@@ -734,6 +734,18 @@ create function checkout_row(_row_id text, commit_id uuid) returns void as $$
 $$ language plpgsql;
 
 ------------------------------------------------------------------------------
+-- BUNDLE COPY
+------------------------------------------------------------------------------
+/*
+create function bundle.bundle_copy(_bundle_id uuid, new_name text) returns uuid as $$
+    insert into bundle.bundle select * from bundle.bundle where id=_bundle_id;
+    insert into bundle.rowset select * from bundle.rowset r join commit c on c.rowset_id=r.id where c.bundle_id = _bundle_id;
+    insert into bundle.commit select * from bundle.commit where bundle_id = _bundle_id;
+
+$$ language sql;
+*/
+
+------------------------------------------------------------------------------
 -- BUNDLE CREATE / DELETE
 ------------------------------------------------------------------------------
 
