@@ -87,7 +87,7 @@ DEBIAN_FRONTEND=nointeractive \
 # plv8 binaries
 #############################################################################
 DEBIAN_FRONTEND=nointeractive \
-	apt install libc++-dev
+	apt install -y libc++-dev
 git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
 cd plv8-postgres-10-debian-binaries
 ./install-binaries-huzzah.sh

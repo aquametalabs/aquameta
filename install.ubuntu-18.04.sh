@@ -68,11 +68,25 @@ add-apt-repository universe
 
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt-get install -y postgresql-10 postgresql-10-plv8 postgresql-10-python-multicorn \
+	apt-get install -y postgresql-10 postgresql-10-python-multicorn \
 	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
 	fuse \
 	libssl-dev libpcre3 libpcre3-dev
+
+
+
+#############################################################################
+# plv8 binaries
+#############################################################################
+DEBIAN_FRONTEND=nointeractive \
+	apt install -y libc++-dev
+git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
+cd plv8-postgres-10-debian-binaries
+./install-binaries-huzzah.sh
+cd $SRC
+rm -rf plv8-postgres-10-debian-binaries
+ldconfig
 
 
 
@@ -276,6 +290,6 @@ EXTERNAL_IP=`dig +short myip.opendns.com @resolver1.opendns.com`
 echo ""
 echo "Aquameta was successfully installed.  Next, login and configure your installation:"
 echo ""
-echo "Localhost link: http://localhost/setup"
-echo "Machine link:   http://$MACHINE_IP/setup"
-echo "External link:  http://$EXTERNAL_IP/setup"
+echo "Localhost link: http://localhost/"
+echo "Machine link:   http://$MACHINE_IP/"
+echo "External link:  http://$EXTERNAL_IP/"
