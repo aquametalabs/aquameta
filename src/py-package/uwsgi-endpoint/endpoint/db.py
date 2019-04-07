@@ -18,9 +18,13 @@ def connect(request):
 
 @contextmanager
 def cursor_for_request(request):
-    with connect(request) as db_conn:
-        cursor = db_conn.cursor()
-        yield cursor
+    try:
+        with connect(request) as db_conn:
+            cursor = db_conn.cursor()
+            yield cursor
+
+    finally:
+        db_conn.close()
 
 
 @contextmanager
