@@ -112,15 +112,18 @@ ldconfig
 
 echo "Installing core python packages..."
 
-pip install requests fusepy psycopg2==2.7.7
+pip install requests fusepy
 
 # filesystem_fdw
 cd $SRC/src/py-package/filesystem_fdw
-sudo -H pip install --upgrade .
+sudo -H pip install --force-reinstall .
 
 # aquameta-endpoint
 cd $SRC/src/py-package/uwsgi-endpoint
-sudo -H pip install --upgrade .
+sudo -H pip install --force-reinstall .
+
+# work around bug in psycopg2 v2.8.1
+sudo pip install --force-reinstall psycopg2==2.7.7
 
 
 
