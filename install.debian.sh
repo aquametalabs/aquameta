@@ -112,7 +112,7 @@ ldconfig
 
 echo "Installing core python packages..."
 
-pip install requests fusepy
+pip install requests fusepy psycopg2==2.7.7
 
 # filesystem_fdw
 cd $SRC/src/py-package/filesystem_fdw
