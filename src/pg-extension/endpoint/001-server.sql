@@ -2181,14 +2181,16 @@ $$ language plpythonu;
 create or replace function endpoint.template_render(
     template_id uuid,
     route_args json default '{}',
-    url_args json default '{}'
+    url_args json default '[]'
 ) returns text as $$
+
+
     // fetch the template
     var template;
     try {
         var template_rows = plv8.execute('select * from endpoint.template where id=$1', [ template_id ]);
         template = template_rows[0];
-        // plv8.elog(NOTICE, ' template is ' + template.id);
+        plv8.elog(NOTICE, ' template is ' + template.id);
     }
     catch( e ) {
         plv8.elog( ERROR, e, e)
@@ -2196,10 +2198,16 @@ create or replace function endpoint.template_render(
     }
     // plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
 
+
+
     // setup javascript scope
     var context = {};
+    // route_args is an object passed in from route.args json
     for (var key in route_args) { context[key] = route_args[key]; }
-    for (var key in url_args) { context[key] = url_args[key]; }
+    // url_args is an array of vals extracted from the matching url_pattern
+    context.url_args = url_args;
+    plv8.elog(NOTICE, 'context set to '+JSON.stringify(context));
+
 
     // eval datum-plv8
     var datum_rows = plv8.execute("select * from widget.dependency_js where name='datum-plv8'");
