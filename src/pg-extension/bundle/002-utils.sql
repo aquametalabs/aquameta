@@ -100,30 +100,69 @@ as $$
 $$ language sql;
 
 
-create or replace function bundle.search(term text, _bundle_id uuid default null, case_sensitive boolean default false)
-returns table (bundle_id uuid, bundle_name text, commit_ids uuid[], field_ids text[], messages text[], value_hash text, value text)
-as $$
+
+
+create type search_method as enum ('like','ilike','regex', 'iregex');
+create type search_scope as enum ('head','stage','tracked','changed','history');
+
+create or replace function bundle.search(
+    term text,
+    search_method search_method,
+    scope search_scope,
+    _bundle_id uuid default null)
+returns table (bundle_id uuid,
+    bundle_name text,
+    commit_ids uuid[],
+    field_ids text[],
+    messages text[],
+    value_hash text,
+    value text
+) as $$
 declare
     search_stmt text;
-    ilike text;
 begin
-    if case_sensitive = true then
-        ilike := 'i';
-    else
-        ilike := '';
-    end if;
-    search_stmt := format('select b.id as bundle_id, b.name, array_agg(c.id) as commit_id, array_agg(rrf.field_id::text) as field_ids, array_agg(c.message), rrf.value_hash, bb.value
+    search_stmt := 'select
+        b.id as bundle_id, b.name, array_agg(c.id) as commit_id, array_agg(rrf.field_id::text) as field_ids, array_agg(c.message), rrf.value_hash, value
         from bundle.bundle b
-            join bundle.commit c on c.bundle_id=b.id
-        join bundle.rowset r on c.rowset_id=r.id
-        join bundle.rowset_row rr on rr.rowset_id=r.id
-        join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-        join bundle.blob bb on rrf.value_hash=bb.hash
-        where bb.value ilike ''%%%s%%''', term);
+            join bundle.commit c on c.bundle_id=b.id ';
+    case scope
+        when 'head' then
+        search_stmt := search_stmt || '
+            join bundle.head_commit_row hcr on hcr.commit_id = c.id
+            join bundle.head_commit_field rrf on rrf.row_id = hcr.row_id
+            join blob bb on rrf.value_hash = bb.hash ';
+        when 'stage' then
+        search_stmt := search_stmt || '
+            join bundle.stage_row sr on sr.bundle_id = b.id
+            join bundle.stage_row_field rrf on rrf.stage_row_id = sr.row_id ';
+        when 'history' then
+        search_stmt := search_stmt || '
+            join bundle.rowset r on c.rowset_id=r.id
+            join bundle.rowset_row rr on rr.rowset_id=r.id
+            join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+            join bundle.blob bb on rrf.value_hash = bb.hash ';
+        else raise exception 'Not Yet Implemented';
+    end case;
+
+    case search_method
+        when 'like' then
+        search_stmt := search_stmt || ' where value like ''%%%s%%'' ';
+        when 'ilike' then
+        search_stmt := search_stmt || ' where value ilike ''%%%s%%'' ';
+        when 'regex' then
+        search_stmt := search_stmt || ' where value ~ ''%s'' ';
+        when 'iregex' then
+        search_stmt := search_stmt || ' where value ~* ''%s'' ';
+    end case;
+
     if _bundle_id is not null then
          search_stmt := search_stmt || format(' and bundle_id=%L', _bundle_id);
     end if;
-    search_stmt := search_stmt || ' group by b.id, b.name, rrf.value_hash, bb.value';
+
+    search_stmt := search_stmt || '
+        group by b.id, b.name, rrf.value_hash, value';
+
+    search_stmt := format( search_stmt, term );
     raise notice 'search_stmt: %', search_stmt;
     return query execute search_stmt;
 end;
