@@ -331,29 +331,31 @@ problem: stage_field_change contains W.C. data when there are unstaged changes.
 
 create or replace view stage_row_field as
 ---------- new rows ----------
-select
-    sr.row_id as stage_row_id,
-    meta.field_id(
-        re.schema_name,
-        re.name,
-        re.primary_key_column_names[1], -- FIXME
-        (sr.row_id).pk_value,
-        c.name
-    ) as field_id,
-
-    meta.field_id_literal_value( ----  THIS IS SLOW!
+select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex') as value_hash from (
+    select
+        sr.row_id as stage_row_id,
         meta.field_id(
             re.schema_name,
             re.name,
             re.primary_key_column_names[1], -- FIXME
             (sr.row_id).pk_value,
             c.name
-        )
-    )::text as value
+        ) as field_id,
 
-from bundle.stage_row_added sr
-    join meta.relation re on sr.row_id::meta.relation_id = re.id
-    join meta.relation_column c on c.relation_id=re.id
+        meta.field_id_literal_value( ----  THIS IS SLOW!
+            meta.field_id(
+                re.schema_name,
+                re.name,
+                re.primary_key_column_names[1], -- FIXME
+                (sr.row_id).pk_value,
+                c.name
+            )
+        )::text as value
+
+    from bundle.stage_row_added sr
+        join meta.relation re on sr.row_id::meta.relation_id = re.id
+        join meta.relation_column c on c.relation_id=re.id
+    ) r
 
 union all
 
@@ -365,7 +367,8 @@ select
         when sfc.field_id is not null then
             sfc.new_value
         else b.value
-    end as value
+    end as value,
+    hcf.value_hash
 from bundle.stage_row sr
     left join bundle.head_commit_field hcf on sr.row_id=hcf.row_id
     left join bundle.blob b on hcf.value_hash = b.hash
