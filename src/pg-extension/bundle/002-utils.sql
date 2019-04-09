@@ -156,7 +156,7 @@ begin
     end case;
 
     if _bundle_id is not null then
-         search_stmt := search_stmt || format(' and bundle_id=%L', _bundle_id);
+         search_stmt := search_stmt || format(' and b.id=%L', _bundle_id);
     end if;
 
     search_stmt := search_stmt || '
