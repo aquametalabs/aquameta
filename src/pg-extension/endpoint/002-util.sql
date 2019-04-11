@@ -37,3 +37,7 @@ where directory_id=directory
 returning path;
 $$ language sql;
 
+
+create function endpoint.get_mimetype_id(_mimetype text) returns uuid as $$
+select id from endpoint.mimetype where mimetype=_mimetype;
+$$ language sql;
