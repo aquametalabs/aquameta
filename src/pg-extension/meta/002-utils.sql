@@ -8,11 +8,16 @@ create or replace function meta.row_exists(in row_id meta.row_id, out answer boo
     declare
         stmt text;
     begin
-        execute 'select (count(*) = 1) from ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id::meta.relation_id).name) ||
-                ' where ' || quote_ident((row_id.pk_column_id).name) || ' = ' || quote_literal(row_id.pk_value)
-            into answer;
-    exception
-        when others then answer := false;
+        stmt := format (
+            'select (count(*) = 1) from %I.%I where %I::text = %L',
+                (row_id::meta.schema_id).name,
+                (row_id::meta.relation_id).name,
+                (row_id.pk_column_id).name,
+                row_id.pk_value
+            );
+
+        -- raise warning '%s', stmt;
+        execute stmt into answer;
 
     end;
 $$ language plpgsql;
