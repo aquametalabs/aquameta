@@ -1,9 +1,10 @@
 begin;
 
-set search_path=meta;
+drop schema if exists meta_meta;
+create schema meta_meta;
+set search_path=meta_meta, meta;
 
-drop table if exists meta_meta_relation cascade;
-create table meta_meta_relation (
+create table meta_meta.relation (
 	-- TYPE
 	id serial not null primary key,
 	name text not null,
@@ -103,7 +104,7 @@ begin
 	_relation_update_trigger_id :=
 		meta.trigger_id('meta', name, 'meta_' || name || '_update_trigger');
 
-	insert into meta_meta_relation (
+	insert into meta_meta.relation (
         name,
 		-- type
 		type_id,
@@ -231,7 +232,7 @@ select
     _exists(relation_delete_trigger_id) relation_delete_trigger_id,
     _exists(relation_update_trigger_function_id) relation_update_trigger_function_id,
     _exists(relation_update_trigger_id) relation_update_trigger_id
-    from meta_meta_relation
+    from meta_meta.relation
 ;
 
 
@@ -257,7 +258,7 @@ select
     (r13.id is not null) as relation_update_trigger_function_id,
     (r14.id is not null) as relation_update_trigger_id
 
-    from meta_meta_relation r
+    from meta_meta.relation r
 
     left join meta.type r1 on type_id = r1.id
     left join meta.function r2 on type_constructor_function_id = r2.id
@@ -279,4 +280,4 @@ select
 ;
 
 
-rollback;
+commit;
