@@ -124,7 +124,7 @@ sudo -H pip install --upgrade --force-reinstall .
 
 # aquameta-endpoint
 cd $SRC/src/py-package/uwsgi-endpoint
-sudo -H pip install --upgrade --focre-reinstall .
+sudo -H pip install --upgrade --force-reinstall .
 
 
 
