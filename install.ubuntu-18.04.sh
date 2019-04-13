@@ -51,8 +51,9 @@ fi
 #############################################################################
 # prompt for $DEST location
 #############################################################################
-read -p "Installation directory [/opt/aquameta]: " DEST
-DEST=${DEST:-/opt/aquameta}
+read -p "Installation directory [$SRC]: " DEST
+DEST=${DEST:-$SRC}
+
 
 
 #############################################################################
@@ -180,9 +181,12 @@ sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 #############################################################################
 
 echo "Setting up $DEST/..."
-mkdir --parents $DEST
-cp -R $SRC/bundles-available $DEST
-cp -R $SRC/bundles-enabled $DEST
+if [ "$DEST" != "$SRC" ]; then
+    mkdir --parents $DEST
+    cp -R $SRC/bundles-available $DEST
+    cp -R $SRC/bundles-enabled $DEST
+fi
+
 chown -R postgres:postgres $DEST/bundles-available
 chown -R postgres:postgres $DEST/bundles-enabled
 
