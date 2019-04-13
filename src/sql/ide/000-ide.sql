@@ -26,5 +26,10 @@ select table_id,
 from meta.foreign_key;
 
 
-commit;
+create table ide.sql_code (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    code text not null default ''
+);
 
+
+commit;
