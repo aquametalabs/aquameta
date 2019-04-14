@@ -62,6 +62,33 @@ end;
 $$ language plpgsql;
 
 
+
+create or replace function remote_mount( remote_database_id uuid ) returns boolean as $$
+    select bundle.remote_mount(
+        foreign_server_name,
+        schema_name,
+        host,
+        port,
+        dbname,
+        username,
+        password)
+    from bundle.remote_database
+    where id = remote_database_id;
+$$ language sql;
+
+create or replace function remote_unmount( remote_database_id uuid ) returns boolean as $$
+declare
+    _schema_name text;
+    _foreign_server_name text;
+begin
+    select schema_name, foreign_server_name from bundle.remote_database into _schema_name, _foreign_server_name;
+    execute format('drop schema if exists %I cascade', _schema_name);
+    execute format('drop server if exists %I cascade', _foreign_server_name);
+    return true;
+end;
+$$ language plpgsql;
+
+
 -- bundle_commits_array( bundle_relation_id )
 --
 -- contains a row for each bundle in a database, containing the "commit" row of each commit in the bundle
