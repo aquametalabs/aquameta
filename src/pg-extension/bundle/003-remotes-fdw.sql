@@ -52,8 +52,10 @@ begin
         schema_name
     );
 
-    execute format(
-        'import foreign schema bundle from server %I into %I options (import_default %L)',
+    execute format('
+        import foreign schema bundle limit to 
+            (bundle, commit, rowset, rowset_row, rowset_row_field, blob)
+        from server %I into %I options (import_default %L)', 
         foreign_server_name, schema_name, 'true'
     );
 
@@ -85,6 +87,22 @@ begin
     execute format('drop schema if exists %I cascade', _schema_name);
     execute format('drop server if exists %I cascade', _foreign_server_name);
     return true;
+end;
+$$ language plpgsql;
+
+create or replace function remote_is_mounted( remote_database_id uuid ) returns boolean as $$
+declare
+    _schema_name text;
+    _foreign_server_name text;
+    has_schema boolean;
+    has_server boolean;
+    has_tables boolean;
+begin
+    select schema_name, foreign_server_name from bundle.remote_database into _schema_name, _foreign_server_name;
+    execute format ('select (count(*) = 1) from meta.schema where name = %L', _schema_name) into has_schema;
+    execute format ('select (count(*) = 1) from meta.foreign_server where name = %L', _foreign_server_name) into has_server;
+    execute format ('select (count(*) = 6) from meta.foreign_table where schema_name = %L and name in (''bundle'',''commit'',''rowset'',''rowset_row'',''rowset_row_field'',''blob'')', _schema_name) into has_tables;
+    return has_schema and has_server and has_tables;
 end;
 $$ language plpgsql;
 
