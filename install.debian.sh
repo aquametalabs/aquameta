@@ -51,7 +51,6 @@ fi
 #############################################################################
 # prompt for $DEST location
 #############################################################################
-
 read -p "Installation directory [$SRC]: " DEST
 DEST=${DEST:-$SRC}
 
@@ -60,27 +59,27 @@ DEST=${DEST:-$SRC}
 #############################################################################
 # apt packages
 #############################################################################
-apt-get install software-properties-common
+echo "Installing dependencies via apt..."
 
-echo "Adding apt repositories..."
+apt-get install -y software-properties-common
+
 add-apt-repository "deb http://deb.debian.org/debian/ stretch main contrib non-free"
 add-apt-repository "deb http://security.debian.org/ stretch/updates main contrib non-free"
 add-apt-repository "deb http://deb.debian.org/debian/ stretch-updates main contrib non-free"
 
-echo "Adding PostgreSQL apt repository..."
+# add postgresql official repository
+sudo apt-get install wget ca-certificates
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-RELEASE=$(lsb_release -cs)
-echo "deb http://apt.postgresql.org/pub/repos/apt/ ${RELEASE}"-pgdg main | sudo tee  /etc/apt/sources.list.d/pgdg.list
+echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
-echo "Installing dependencies via apt..."
 # update
 apt-get update -y
 
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt install -y postgresql-10 postgresql-10-python-multicorn \
-	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
-	python-werkzeug python-psycopg2 nginx sendmail \
+	apt-get install -y postgresql-11 postgresql-11-python-multicorn \
+	postgresql-server-dev-11 postgresql-plpython-11 python-pip \
+	python-werkzeug python-psycopg2 nginx sudo sendmail \
 	fuse dnsutils \
 	libssl-dev libpcre3 libpcre3-dev \
 	git vim tmux sudo
@@ -90,10 +89,11 @@ DEBIAN_FRONTEND=nointeractive \
 #############################################################################
 # plv8 binaries
 #############################################################################
-DEBIAN_FRONTEND=nointeractive \
-	apt install -y libc++-dev
+#DEBIAN_FRONTEND=nointeractive \
+#	apt install -y libc++-dev
+# ^^ donno why we need this
 git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
-cd plv8-postgres-10-debian-binaries
+cd plv8-postgres-10-debian-binaries/pg11
 ./install-binaries-huzzah.sh
 cd $SRC
 rm -rf plv8-postgres-10-debian-binaries
@@ -152,7 +152,7 @@ cd $SRC/src/pg-extension/semantics && make && make install
 
 echo "Configuring PostgreSQL..."
 # enable peer authentication
-sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/10/main/pg_hba.conf
+sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/11/main/pg_hba.conf
 systemctl restart postgresql.service
 
 # create aquameta database
@@ -209,6 +209,19 @@ done
 echo "Checking out head commit of every bundle ..."
 sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
 
+
+
+#############################################################################
+# load remotes and download core bundles from hub
+#############################################################################
+
+for REMOTE in `find $SRC/src/remotes/*.sql -type f`
+do
+    sudo -u postgres psql -f $REMOTE
+done
+
+sudo -u postgres psql -c "select bundle.remote_mount(id) from bundle.remote_database"
+sudo -u postgres psql -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
 
 
 #############################################################################
