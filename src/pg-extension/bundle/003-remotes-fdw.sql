@@ -272,18 +272,27 @@ create or replace function remote_clone( remote_database_id uuid, bundle_id uuid
 returns boolean as $$
 declare
     source_schema_name text;
+    source_host text;
     dest_schema_name text;
+    source_bundle_name text;
+    source_bundle_id uuid;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name from bundle.remote_database where id = remote_database_id into source_schema_name;
+    select schema_name, host from bundle.remote_database where id = remote_database_id into source_schema_name, source_host;
     select 'bundle' into dest_schema_name;
+    
+    execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
+    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_host;
+
     -- rowset
+    raise notice '...rowset';
     execute format ('insert into %2$I.rowset
         select r.* from %1$I.commit c
             join %1$I.rowset r on c.rowset_id = r.id
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- rowset_row
+    raise notice '...rowset_row';
     execute format ('
         insert into %2$I.rowset_row
         select rr.* from %1$I.commit c
@@ -292,6 +301,7 @@ begin
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- blob
+    raise notice '...blob';
     execute format ('
         insert into %2$I.blob
         select b.* from %1$I.commit c
@@ -302,6 +312,7 @@ begin
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- rowset_row_field
+    raise notice '...rowset_row_field';
     execute format ('
         insert into %2$I.rowset_row_field
         select f.* from %1$I.commit c
@@ -311,11 +322,13 @@ begin
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- bundle
+    raise notice '...bundle';
     execute format ('insert into %2$I.bundle (id, name)
         select b.id, b.name from %1$I.bundle b
         where b.id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- commit
+    raise notice '...commit';
     execute format ('
         insert into %2$I.commit
         select c.* from %1$I.commit c
