@@ -21,6 +21,7 @@
 --
 -- setup a foreign server to a remote, and import it's bundle schema
 
+
 create or replace function remote_mount (
     foreign_server_name text,
     schema_name text,
@@ -53,7 +54,7 @@ begin
 
     execute format('
         import foreign schema bundle limit to
-            (bundle, commit, rowset, rowset_row, rowset_row_field, blob)
+            (bundle, commit, rowset, rowset_row, rowset_row_field, blob, _bundle_blob)
         from server %I into %I options (import_default %L)',
         foreign_server_name, schema_name, 'true'
     );
@@ -312,33 +313,8 @@ begin
     raise notice '...blob';
     execute format ('
         insert into %2$I.blob
-        select b.* from %1$I.commit c
-            join %1$I.rowset r on c.rowset_id = r.id
-            join %1$I.rowset_row rr on rr.rowset_id = r.id
-            join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
-            join %1$I.blob b on f.value_hash = b.hash
-        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
-/*
- * attempt at optimization -- only tears
- *
-    -- blob
-    raise notice '...blob';
-    execute format ('
-        select string_agg(quote_literal(rrf.value_hash), '','') from %1$I.rowset_row_field rrf
-            join %1$I.rowset_row rr on rrf.rowset_row_id = rr.id
-            join %1$I.rowset r on rr.rowset_id = r.id
-            join %1$I.commit c on r.id = c.rowset_id
-            join %1$I.bundle b on c.bundle_id = b.id
-            where rrf.value_hash is not null and b.id = %2$L group by rr.id', source_schema_name, bundle_id)
-        into hashes;
-    raise notice '......hashes: %', hashes;
-
-    execute format ('
-        insert into %1$I.blob
-        select hash from %2$I.blob b
-        where hash in (%3$s)', dest_schema_name, source_schema_name, hashes);
-
-*/
+        select bb.hash, bb.value from %1$I._bundle_blob bb
+        where bb.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- rowset_row_field
     raise notice '...rowset_row_field';
@@ -377,3 +353,15 @@ begin
 end;
 $$
 language plpgsql;
+
+
+
+/* optimization view for postgres_fdw */
+
+create or replace view _bundle_blob as
+select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle b
+    join commit c on c.bundle_id = b.id
+    join rowset r on c.rowset_id = r.id
+    join rowset_row rr on rr.rowset_id = r.id
+    join rowset_row_field rrf on rrf.rowset_row_id = rr.id
+    join blob bb on bb.hash = rrf.value_hash;
