@@ -89,9 +89,9 @@ DEBIAN_FRONTEND=nointeractive \
 #############################################################################
 # plv8 binaries
 #############################################################################
-#DEBIAN_FRONTEND=nointeractive \
-#	apt install -y libc++-dev
-# ^^ donno why we need this
+DEBIAN_FRONTEND=nointeractive \
+	apt install -y libc++-dev
+
 cd $SRC
 git clone https://github.com/aquametalabs/plv8-binaries.git
 cd plv8-binaries/postgresql-11/plv8-2.3.11
