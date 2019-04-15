@@ -92,11 +92,12 @@ DEBIAN_FRONTEND=nointeractive \
 #DEBIAN_FRONTEND=nointeractive \
 #	apt install -y libc++-dev
 # ^^ donno why we need this
-git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
-cd plv8-postgres-10-debian-binaries/pg11
+cd $SRC
+git clone https://github.com/aquametalabs/plv8-binaries.git
+cd plv8-binaries/postgresql-11/plv8-2.3.11
 ./install-binaries-huzzah.sh
 cd $SRC
-rm -rf plv8-postgres-10-debian-binaries
+rm -rf plv8-binaries
 ldconfig
 
 
@@ -215,13 +216,13 @@ sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join
 # load remotes and download core bundles from hub
 #############################################################################
 
-for REMOTE in `find $SRC/src/remotes/*.sql -type f`
-do
-    sudo -u postgres psql -f $REMOTE
-done
-
-sudo -u postgres psql -c "select bundle.remote_mount(id) from bundle.remote_database"
-sudo -u postgres psql -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+#for REMOTE in `find $SRC/src/remotes/*.sql -type f`
+#do
+#    sudo -u postgres psql -f $REMOTE
+#done
+#
+#sudo -u postgres psql -c "select bundle.remote_mount(id) from bundle.remote_database"
+#sudo -u postgres psql -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
 
 
 #############################################################################
