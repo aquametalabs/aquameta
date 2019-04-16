@@ -191,38 +191,40 @@ sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 # install and checkout enabled bundles
 #############################################################################
 
-echo "Setting up $DEST/..."
-if [ "$DEST" != "$SRC" ]; then
-    mkdir --parents $DEST
-    cp -R $SRC/bundles-available $DEST
-    cp -R $SRC/bundles-enabled $DEST
-fi
-
-chown -R postgres:postgres $DEST/bundles-available
-chown -R postgres:postgres $DEST/bundles-enabled
-
-echo "Loading bundles-enabled/*/*.csv ..."
-for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
-do
-    sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
-done
-
-echo "Checking out head commit of every bundle ..."
-sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
-
+#echo "Setting up $DEST/..."
+#if [ "$DEST" != "$SRC" ]; then
+#    mkdir --parents $DEST
+#    cp -R $SRC/bundles-available $DEST
+#    cp -R $SRC/bundles-enabled $DEST
+#fi
+#
+#chown -R postgres:postgres $DEST/bundles-available
+#chown -R postgres:postgres $DEST/bundles-enabled
+#
+#echo "Loading bundles-enabled/*/*.csv ..."
+#for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
+#do
+#    sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
+#done
+#
+#echo "Checking out head commit of every bundle ..."
+#sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
+#
 
 
 #############################################################################
 # load remotes and download core bundles from hub
 #############################################################################
 
-#for REMOTE in `find $SRC/src/remotes/*.sql -type f`
-#do
-#    sudo -u postgres psql -f $REMOTE
-#done
-#
-#sudo -u postgres psql -c "select bundle.remote_mount(id) from bundle.remote_database"
-#sudo -u postgres psql -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+for REMOTE in `find $SRC/src/remotes/*.sql -type f`
+do
+    sudo -u postgres psql aquameta -f $REMOTE
+done
+
+sudo -u postgres psql aquameta -c "select bundle.remote_mount(id) from bundle.remote_database"
+sudo -u postgres psql aquameta -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+echo "Checking out head commit of every bundle ..."
+sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
 
 
 #############################################################################
