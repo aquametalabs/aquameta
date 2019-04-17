@@ -72,7 +72,6 @@ sudo apt-get install wget ca-certificates
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
-
 # update
 apt-get update -y
 
@@ -219,11 +218,13 @@ sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 
 for REMOTE in `find $SRC/src/remotes/*.sql -type f`
 do
-    sudo -u postgres psql -f $REMOTE
+    sudo -u postgres psql aquameta -f $REMOTE
 done
 
-sudo -u postgres psql -c "select bundle.remote_mount(id) from bundle.remote_database"
-sudo -u postgres psql -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+sudo -u postgres psql aquameta -c "select bundle.remote_mount(id) from bundle.remote_database"
+sudo -u postgres psql aquameta -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+echo "Checking out head commit of every bundle ..."
+sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
 
 
 #############################################################################
