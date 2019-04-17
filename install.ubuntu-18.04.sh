@@ -60,20 +60,29 @@ DEST=${DEST:-$SRC}
 # apt packages
 #############################################################################
 echo "Installing dependencies via apt..."
-# update
-apt-get update -y
 
-# add the universe repository
 apt-get install -y software-properties-common
 add-apt-repository universe
 
+
+
+
+# add postgresql official repository
+sudo apt-get install wget ca-certificates
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
+
+# update
+apt-get update -y
+
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt-get install -y postgresql-10 postgresql-10-python-multicorn \
-	postgresql-server-dev-10 postgresql-plpython-10 python-pip \
+	apt-get install -y postgresql-11 postgresql-11-python-multicorn \
+	postgresql-server-dev-11 postgresql-plpython-11 python-pip \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
-	fuse \
-	libssl-dev libpcre3 libpcre3-dev
+	fuse dnsutils \
+	libssl-dev libpcre3 libpcre3-dev \
+	git vim tmux sudo
 
 
 
@@ -82,11 +91,13 @@ DEBIAN_FRONTEND=nointeractive \
 #############################################################################
 DEBIAN_FRONTEND=nointeractive \
 	apt install -y libc++-dev
-git clone https://github.com/aquametalabs/plv8-postgres-10-debian-binaries.git
-cd plv8-postgres-10-debian-binaries
+
+cd $SRC
+git clone https://github.com/aquametalabs/plv8-binaries.git
+cd plv8-binaries/postgresql-11/plv8-2.3.11
 ./install-binaries-huzzah.sh
 cd $SRC
-rm -rf plv8-postgres-10-debian-binaries
+rm -rf plv8-binaries
 ldconfig
 
 
@@ -142,7 +153,7 @@ cd $SRC/src/pg-extension/semantics && make && make install
 
 echo "Configuring PostgreSQL..."
 # enable peer authentication
-sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/10/main/pg_hba.conf
+sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/11/main/pg_hba.conf
 systemctl restart postgresql.service
 
 # create aquameta database
@@ -180,25 +191,40 @@ sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 # install and checkout enabled bundles
 #############################################################################
 
-echo "Setting up $DEST/..."
-if [ "$DEST" != "$SRC" ]; then
-    mkdir --parents $DEST
-    cp -R $SRC/bundles-available $DEST
-    cp -R $SRC/bundles-enabled $DEST
-fi
+#echo "Setting up $DEST/..."
+#if [ "$DEST" != "$SRC" ]; then
+#    mkdir --parents $DEST
+#    cp -R $SRC/bundles-available $DEST
+#    cp -R $SRC/bundles-enabled $DEST
+#fi
+#
+#chown -R postgres:postgres $DEST/bundles-available
+#chown -R postgres:postgres $DEST/bundles-enabled
+#
+#echo "Loading bundles-enabled/*/*.csv ..."
+#for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
+#do
+#    sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
+#done
+#
+#echo "Checking out head commit of every bundle ..."
+#sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
+#
 
-chown -R postgres:postgres $DEST/bundles-available
-chown -R postgres:postgres $DEST/bundles-enabled
 
-echo "Loading bundles-enabled/*/*.csv ..."
-for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
+#############################################################################
+# load remotes and download core bundles from hub
+#############################################################################
+
+for REMOTE in `find $SRC/src/remotes/*.sql -type f`
 do
-    sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
+    sudo -u postgres psql aquameta -f $REMOTE
 done
 
+sudo -u postgres psql aquameta -c "select bundle.remote_mount(id) from bundle.remote_database"
+sudo -u postgres psql aquameta -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
 echo "Checking out head commit of every bundle ..."
-sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
-
+sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
 
 
 #############################################################################

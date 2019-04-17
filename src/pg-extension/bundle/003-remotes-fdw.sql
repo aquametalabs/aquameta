@@ -6,7 +6,6 @@
 
 /*******************************************************************************
 *
-*
 * BUNDLE REMOTES -- postgres_fdw
 *
 * This version uses the postgres_fdw foreign data wrapper to mount remote
@@ -17,9 +16,11 @@
 *******************************************************************************/
 
 
+
 -- remote_mount()
 --
 -- setup a foreign server to a remote, and import it's bundle schema
+
 
 create or replace function remote_mount (
     foreign_server_name text,
@@ -36,11 +37,10 @@ begin
     execute format(
         'create server %I
             foreign data wrapper postgres_fdw
-            options (host %L, port %L, dbname %L)',
+            options (host %L, port %L, dbname %L, fetch_size ''1000'', extensions %L)',
 
-        foreign_server_name, host, port, dbname
+        foreign_server_name, host, port, dbname, 'uuid-ossp'
     );
-
 
     execute format(
         'create user mapping for public server %I options (user %L, password %L)',
@@ -53,9 +53,9 @@ begin
     );
 
     execute format('
-        import foreign schema bundle limit to 
-            (bundle, commit, rowset, rowset_row, rowset_row_field, blob)
-        from server %I into %I options (import_default %L)', 
+        import foreign schema bundle limit to
+            (bundle, commit, rowset, rowset_row, rowset_row_field, blob, _bundle_blob)
+        from server %I into %I options (import_default %L)',
         foreign_server_name, schema_name, 'true'
     );
 
@@ -78,6 +78,8 @@ create or replace function remote_mount( remote_database_id uuid ) returns boole
     where id = remote_database_id;
 $$ language sql;
 
+
+
 create or replace function remote_unmount( remote_database_id uuid ) returns boolean as $$
 declare
     _schema_name text;
@@ -89,6 +91,8 @@ begin
     return true;
 end;
 $$ language plpgsql;
+
+
 
 create or replace function remote_is_mounted( remote_database_id uuid ) returns boolean as $$
 declare
@@ -107,10 +111,10 @@ end;
 $$ language plpgsql;
 
 
+
 -- bundle_commits_array( bundle_relation_id )
 --
 -- contains a row for each bundle in a database, containing the "commit" row of each commit in the bundle
-
 
 create or replace function bundle_commits_array( bundle_relation_id meta.relation_id )
 returns table (
@@ -166,8 +170,6 @@ $$ language sql;
 /*
 
 EARLIER ATTEMPTS AT GREATNESS:
-
-
 
 -- remote_bundle_level_diff ()
 --
@@ -262,8 +264,9 @@ begin
 end;
 $$
 language plpgsql;
-
 */
+
+
 
 -- remote_clone ()
 --
@@ -278,12 +281,18 @@ declare
     source_bundle_id uuid;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, host from bundle.remote_database where id = remote_database_id into source_schema_name, source_host;
+    select schema_name, host from bundle.remote_database
+        where id = remote_database_id
+	into source_schema_name, source_host;
+
+    -- dest_schema_name
     select 'bundle' into dest_schema_name;
-    
+
+    -- source
     execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
     raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_host;
 
+    --------------- transfer --------------
     -- rowset
     raise notice '...rowset';
     execute format ('insert into %2$I.rowset
@@ -304,12 +313,8 @@ begin
     raise notice '...blob';
     execute format ('
         insert into %2$I.blob
-        select b.* from %1$I.commit c
-            join %1$I.rowset r on c.rowset_id = r.id
-            join %1$I.rowset_row rr on rr.rowset_id = r.id
-            join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
-            join %1$I.blob b on f.value_hash = b.hash
-        where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
+        select bb.hash, bb.value from %1$I._bundle_blob bb
+        where bb.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
     -- rowset_row_field
     raise notice '...rowset_row_field';
@@ -334,8 +339,7 @@ begin
         select c.* from %1$I.commit c
         where c.bundle_id=%3$L', source_schema_name, dest_schema_name, bundle_id);
 
-    -- todo: ignored rows?
-
+    -- bundle.head_commit_id
     execute format ('update %2$I.bundle
         set head_commit_id = (
             select b.head_commit_id
@@ -349,3 +353,15 @@ begin
 end;
 $$
 language plpgsql;
+
+
+
+/* optimization view for postgres_fdw */
+
+create or replace view _bundle_blob as
+select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle b
+    join commit c on c.bundle_id = b.id
+    join rowset r on c.rowset_id = r.id
+    join rowset_row rr on rr.rowset_id = r.id
+    join rowset_row_field rrf on rrf.rowset_row_id = rr.id
+    join blob bb on bb.hash = rrf.value_hash;
