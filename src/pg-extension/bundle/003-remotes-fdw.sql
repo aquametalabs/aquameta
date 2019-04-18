@@ -365,3 +365,103 @@ select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle b
     join rowset_row rr on rr.rowset_id = r.id
     join rowset_row_field rrf on rrf.rowset_row_id = rr.id
     join blob bb on bb.hash = rrf.value_hash;
+
+
+
+/*
+ * bundle.remote_pull
+ *
+ * transfer from remote all the commits that are not in the local repostiory for specified bundle
+ *
+ */
+
+create or replace function remote_pull( remote_database_id uuid, bundle_id uuid )
+returns setof text as $$
+declare
+	dest_schema_name text;
+	source_host text;
+	source_schema_name text;
+	source_bundle_name text;
+	source_bundle_id uuid;
+	new_commit_ids text;
+    new_commits_count integer;
+    rowset_count integer;
+begin
+    -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
+    select schema_name, host from bundle.remote_database
+        where id = remote_database_id
+	into source_schema_name, source_host;
+
+    -- dest_schema_name
+    select 'bundle' into dest_schema_name;
+
+    -- source
+    execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
+
+    -- new_commit_ids - commits in the bundle
+    execute format ('
+        select count(*), string_agg(quote_literal(c.id::text),'','')
+            from %1$I.commit c
+            join %1$I.bundle b on c.bundle_id = b.id
+            where b.id = %2$L
+                and c.id not in (select id from bundle.commit where bundle_id = %2$L)
+        ', source_schema_name, bundle_id)
+        into new_commits_count, new_commit_ids;
+
+    -- notice
+    raise notice 'Pulling % new commits for % (%) from %...', 
+        new_commits_count, source_bundle_name, source_bundle_id, source_host;
+
+    raise notice 'new_commit_ids: %', new_commit_ids;
+
+    -- rowset
+    raise notice '...rowset';
+    execute format ('insert into %2$I.rowset
+        select r.* from %1$I.commit c
+            join %1$I.rowset r on c.rowset_id = r.id
+        where c.bundle_id=%3$L
+            and c.id in (%4$s)',
+        source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
+
+    -- rowset_row
+    raise notice '...rowset_row';
+    execute format ('
+        insert into %2$I.rowset_row
+        select rr.* from %1$I.commit c
+            join %1$I.rowset r on c.rowset_id = r.id
+            join %1$I.rowset_row rr on rr.rowset_id = r.id
+        where c.bundle_id=%3$L
+            and c.id in (%4$s)',
+        source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
+
+    -- blob TODO: stop transferring all the blobs for just a pull
+    raise notice '...blob';
+    execute format ('
+        insert into %2$I.blob
+        select bb.hash, bb.value
+            from %1$I._bundle_blob bb
+            where bb.bundle_id=%3$L',
+        source_schema_name, dest_schema_name, bundle_id);
+
+    -- rowset_row_field
+    raise notice '...rowset_row_field';
+    execute format ('
+        insert into %2$I.rowset_row_field
+        select f.* from %1$I.commit c
+            join %1$I.rowset r on c.rowset_id = r.id
+            join %1$I.rowset_row rr on rr.rowset_id = r.id
+            join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
+        where c.bundle_id=%3$L
+            and c.id in (%4$s)', 
+        source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
+
+    -- commit
+    raise notice '...commit';
+    execute format ('insert into %2$I.commit
+        select c.* from %1$I.commit c
+        where c.bundle_id=%3$L
+            and c.id in (%4$s)',
+        source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
+
+end;
+$$ language plpgsql;
