@@ -64,6 +64,7 @@ echo "Installing dependencies via apt..."
 echo "Please choose:"
 echo "  a) Debian 9 apt repository"
 echo "  b) Ubuntu 18 apt repository"
+REPLY=
 while ! [[ $REPLY =~ ^[aAbB]$ ]]
 do
 	echo
@@ -81,7 +82,6 @@ else
 	apt-get install -y software-properties-common
 	add-apt-repository universe
 fi
-REPLY=
 
 # add postgresql official repository
 sudo apt-get install -y wget ca-certificates
@@ -213,6 +213,7 @@ echo "  a) Hub installl -- download bundles (and future updates)"
 echo "     from the Aquameta bundle hub."
 echo "  b) Offline install -- do not connect to the hub, install"
 echo "     from source only."
+REPLY=
 while ! [[ $REPLY =~ ^[aAbB]$ ]]
 do
 	echo
@@ -249,6 +250,7 @@ else
 	echo "Checking out head commit of every bundle ..."
 	sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
 fi
+
 
 
 #############################################################################
@@ -292,6 +294,7 @@ echo "Please select a security scheme:"
 echo "a) PRIVATE - No anonymous access, no anonymous user registration"
 echo "b) OPEN REGISTRATION - Anonymous users may register for an account and read limited data"
 
+REPLY=
 until [[ $REPLY =~ ^[AaBb]$ ]]; do
 	read -p "Choice? [a/B] " -n 1 -r
     echo
