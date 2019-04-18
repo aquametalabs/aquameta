@@ -412,7 +412,7 @@ begin
     raise notice 'Pulling % new commits for % (%) from %...', 
         new_commits_count, source_bundle_name, source_bundle_id, source_host;
 
-    raise notice 'new_commit_ids: %', new_commit_ids;
+    -- raise notice 'new_commit_ids: %', new_commit_ids;
 
     -- rowset
     raise notice '...rowset';
@@ -462,6 +462,111 @@ begin
         where c.bundle_id=%3$L
             and c.id in (%4$s)',
         source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
+
+end;
+$$ language plpgsql;
+
+
+
+/*
+ * bundle.remote_pull
+ *
+ * transfer from remote all the commits that are not in the local repostiory for specified bundle
+ *
+ */
+
+create or replace function remote_push( remote_database_id uuid, bundle_id uuid )
+returns setof text as $$
+declare
+	dest_schema_name text;
+	remote_host text;
+	remote_schema_name text;
+	remote_bundle_name text;
+	remote_bundle_id uuid;
+	new_commit_ids text;
+    new_commits_count integer;
+    rowset_count integer;
+begin
+    -- remote_schema_name, remote_host
+    select schema_name, host from bundle.remote_database
+        where id = remote_database_id
+	into remote_schema_name, remote_host;
+
+    -- dest_schema_name
+    select 'bundle' into dest_schema_name;
+
+    -- remote
+    execute format ('select b.name, b.id from bundle.bundle b where id=%1$L', bundle_id) into remote_bundle_name, remote_bundle_id;
+
+    -- new_commit_ids - commits in the bundle
+    execute format ('
+        select count(*), string_agg(quote_literal(c.id::text),'','')
+            from bundle.commit c
+            join bundle.bundle b on c.bundle_id = b.id
+            where b.id = %2$L
+                and c.id not in (select id from %1$I.commit where bundle_id = %2$L)
+        ', remote_schema_name, bundle_id)
+        into new_commits_count, new_commit_ids;
+
+    -- notice
+    raise notice 'Pushing % new commits for % (%) from %...', 
+        new_commits_count, remote_bundle_name, remote_bundle_id, remote_host;
+
+    raise notice 'new_commit_ids: %', new_commit_ids;
+
+    -- rowset
+    raise notice '...rowset';
+    execute format ('insert into %1$I.rowset
+        select r.* from bundle.commit c
+            join bundle.rowset r on c.rowset_id = r.id
+        where c.bundle_id=%2$L
+            and c.id in (%3$s)',
+        remote_schema_name, bundle_id, new_commit_ids);
+
+    -- rowset_row
+    raise notice '...rowset_row';
+    execute format ('
+        insert into %1$I.rowset_row
+        select rr.* from bundle.commit c
+            join bundle.rowset r on c.rowset_id = r.id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+        where c.bundle_id=%2$L
+            and c.id in (%3$s)',
+        remote_schema_name, bundle_id, new_commit_ids);
+
+    -- blob TODO: stop transferring all the blobs for just a pull
+    raise notice '...blob';
+    execute format ('
+        insert into %1$I.blob
+        select bb.hash, bb.value from bundle.bundle b
+            join bundle.commit c on c.bundle_id = b.id
+            join bundle.rowset r on c.rowset_id = r.id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+            join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+            join bundle.blob bb on rrf.value_hash = bb.hash
+            where b.id=%2$L',
+            -- and bb.hash not in (select all the hashes that aren't new.... optimization)
+        remote_schema_name, bundle_id);
+
+    -- rowset_row_field
+    raise notice '...rowset_row_field';
+    execute format ('
+        insert into %1$I.rowset_row_field
+        select f.* from bundle.commit c
+            join bundle.rowset r on c.rowset_id = r.id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+            join bundle.rowset_row_field f on f.rowset_row_id = rr.id
+        where c.bundle_id=%2$L
+            and c.id in (%3$s)', 
+        remote_schema_name, bundle_id, new_commit_ids);
+
+    -- commit
+    raise notice '...commit';
+    execute format ('insert into %1$I.commit
+        select c.* from bundle.commit c
+        where c.bundle_id=%2$L
+            and c.id in (%3$s)',
+        remote_schema_name, bundle_id, new_commit_ids);
 
 end;
 $$ language plpgsql;
