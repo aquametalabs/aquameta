@@ -61,14 +61,30 @@ DEST=${DEST:-$SRC}
 #############################################################################
 echo "Installing dependencies via apt..."
 
-apt-get install -y software-properties-common
+echo "Please choose:"
+echo "  a) Debian 9 apt repository"
+echo "  b) Ubuntu 18 apt repository"
+while ! [[ $REPLY =~ ^[aAbB]$ ]]
+do
+	echo
+	read -p "[a/b] " -n 1 -r
+done
 
-add-apt-repository "deb http://deb.debian.org/debian/ stretch main contrib non-free"
-add-apt-repository "deb http://security.debian.org/ stretch/updates main contrib non-free"
-add-apt-repository "deb http://deb.debian.org/debian/ stretch-updates main contrib non-free"
+if [[ $REPLY =~ ^[aA]$ ]]
+then
+	apt-get install -y software-properties-common
+
+	add-apt-repository "deb http://deb.debian.org/debian/ stretch main contrib non-free"
+	add-apt-repository "deb http://security.debian.org/ stretch/updates main contrib non-free"
+	add-apt-repository "deb http://deb.debian.org/debian/ stretch-updates main contrib non-free"
+else
+	apt-get install -y software-properties-common
+	add-apt-repository universe
+fi
+REPLY=
 
 # add postgresql official repository
-sudo apt-get install wget ca-certificates
+sudo apt-get install -y wget ca-certificates
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
@@ -190,41 +206,49 @@ sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
 #############################################################################
 # install and checkout enabled bundles
 #############################################################################
+echo "Installing core bundles..."
 
-#echo "Setting up $DEST/..."
-#if [ "$DEST" != "$SRC" ]; then
-#    mkdir --parents $DEST
-#    cp -R $SRC/bundles-available $DEST
-#    cp -R $SRC/bundles-enabled $DEST
-#fi
-#
-#chown -R postgres:postgres $DEST/bundles-available
-#chown -R postgres:postgres $DEST/bundles-enabled
-#
-#echo "Loading bundles-enabled/*/*.csv ..."
-#for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
-#do
-#    sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
-#done
-#
-#echo "Checking out head commit of every bundle ..."
-#sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
-
-
-
-#############################################################################
-# load remotes and download core bundles from hub
-#############################################################################
-
-for REMOTE in `find $SRC/src/remotes/*.sql -type f`
+echo "Please choose:"
+echo "  a) Hub installl -- download bundles (and future updates)"
+echo "     from the Aquameta bundle hub."
+echo "  b) Offline install -- do not connect to the hub, install"
+echo "     from source only."
+while ! [[ $REPLY =~ ^[aAbB]$ ]]
 do
-    sudo -u postgres psql aquameta -f $REMOTE
+	echo
+	read -p "[A/b] " -n 1 -r
 done
 
-sudo -u postgres psql aquameta -c "select bundle.remote_mount(id) from bundle.remote_database"
-sudo -u postgres psql aquameta -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
-echo "Checking out head commit of every bundle ..."
-sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
+if [[ $REPLY =~ ^[bB]$ ]]
+then
+	if [ "$DEST" != "$SRC" ]; then
+	    mkdir --parents $DEST
+	    cp -R $SRC/bundles-available $DEST
+	    cp -R $SRC/bundles-enabled $DEST
+	fi
+
+	chown -R postgres:postgres $DEST/bundles-available
+	chown -R postgres:postgres $DEST/bundles-enabled
+
+	echo "Loading bundles-enabled/*/*.csv ..."
+	for D in `find $DEST/bundles-enabled/* \( -type l -o -type d \)`
+	do
+	    sudo -u postgres psql -c "select bundle.bundle_import_csv('$D')" aquameta
+	done
+
+	echo "Checking out head commit of every bundle ..."
+	sudo -u postgres psql -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" aquameta
+else
+	for REMOTE in `find $SRC/src/remotes/*.sql -type f`
+	do
+	    sudo -u postgres psql aquameta -f $REMOTE
+	done
+
+	sudo -u postgres psql aquameta -c "select bundle.remote_mount(id) from bundle.remote_database"
+	sudo -u postgres psql aquameta -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+	echo "Checking out head commit of every bundle ..."
+	sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
+fi
 
 
 #############################################################################
