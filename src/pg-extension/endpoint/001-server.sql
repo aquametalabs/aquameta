@@ -1940,7 +1940,7 @@ create table endpoint.session (
 );
 
 create function endpoint.session(session_id uuid)
-returns endpoint.session as $$
+returns setof endpoint.session as $$
     select * from endpoint.session where id=session_id;
 $$
 language sql security definer;
