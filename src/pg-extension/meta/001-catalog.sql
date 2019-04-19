@@ -945,12 +945,12 @@ create view meta.function as
             left join information_schema.parameters p
                 on p.specific_catalog = r.specific_catalog and
                     p.specific_schema = r.specific_schema and
-                    p.specific_name = r.specific_name and
-                    p.ordinal_position > 0 and
-                    p.parameter_mode like 'IN%' -- Includes IN and INOUT
-
+                    p.specific_name = r.specific_name 
+   
         where r.routine_type = 'FUNCTION' and
-            r.routine_name not in ('pg_identify_object', 'pg_sequence_parameters')
+            r.routine_name not in ('pg_identify_object', 'pg_sequence_parameters') and
+            p.ordinal_position > 0 and
+            p.parameter_mode like 'IN%' -- Includes IN and INOUT
 
         group by r.routine_catalog,
             r.routine_schema,
@@ -971,7 +971,8 @@ create view meta.function as
         left join information_schema.parameters p_in
             on p_in.specific_catalog = q.specific_catalog and
                 p_in.specific_schema = q.specific_schema and
-                p_in.specific_name = q.specific_name and
+                p_in.specific_name = q.specific_name
+         where
                 p_in.ordinal_position > 0 and
                 p_in.parameter_mode = 'IN'
 
