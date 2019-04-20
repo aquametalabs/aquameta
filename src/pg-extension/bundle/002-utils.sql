@@ -110,10 +110,17 @@ create or replace function bundle.search(
     search_method search_method,
     scope search_scope,
     _bundle_id uuid default null)
-returns table (bundle_id uuid,
+returns table (
+    bundle_id uuid,
     bundle_name text,
     commit_ids uuid[],
-    field_ids text[],
+
+    row_schema_name text,
+    row_relation_name text,
+    row_pk_column_name text,
+    row_pk_value text,
+    field_name text,
+
     messages text[],
     value_hash text,
     value text
@@ -122,7 +129,19 @@ declare
     search_stmt text;
 begin
     search_stmt := 'select
-        b.id as bundle_id, b.name, array_agg(c.id) as commit_id, array_agg(rrf.field_id::text) as field_ids, array_agg(c.message), rrf.value_hash, value
+        b.id as bundle_id,
+        b.name,
+        array_agg(c.id) as commit_ids,
+
+        (rrf.field_id::meta.schema_id).name as row_schema_name,
+        (rrf.field_id::meta.relation_id).name as row_relation_name,
+        (((rrf.field_id).row_id).pk_column_id).name as row_pk_column_name,
+        ((rrf.field_id).row_id).pk_value as row_pk_value,
+        ((rrf.field_id).column_id).name as field_name,
+
+        array_agg(c.message),
+        rrf.value_hash,
+        value
         from bundle.bundle b
             join bundle.commit c on c.bundle_id=b.id ';
     case scope
@@ -160,7 +179,7 @@ begin
     end if;
 
     search_stmt := search_stmt || '
-        group by b.id, b.name, rrf.value_hash, value';
+        group by rrf.field_id, b.id, b.name, rrf.value_hash, value';
 
     search_stmt := format( search_stmt, term );
     raise notice 'search_stmt: %', search_stmt;
