@@ -187,8 +187,9 @@ end;
 $$ language plpgsql;
 
 
+/*
 
-create or replace function bundle.remote_commits_ahead( remote_database_id, bundle_id ) 
+create or replace function bundle.remote_commits_ahead( remote_database_id uuid, bundle_id uuid) 
 returns bundle.commit
 as $$
 declare
@@ -208,6 +209,7 @@ begin
         remote
 
 $$ language sql;
+*/
 
 
 
