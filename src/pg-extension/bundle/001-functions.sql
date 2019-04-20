@@ -473,7 +473,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
                 query_str := query_str
                 || coalesce(
                     quote_literal(fields[i].value)
-                        || '::'
+                        || '::text::'
                         || fields[i].type_name,
                     'NULL'
                 );
