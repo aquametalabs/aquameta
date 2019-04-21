@@ -319,7 +319,7 @@ begin
         select b.id, b.name from bundle.bundle b
         where b.id=%2$L', remote_schema_name, bundle_id);
 
-    perform remote_push_commits( remote_database_id, bundle_id );
+    perform bundle.remote_push_commits( remote_database_id, bundle_id );
 
     raise notice '...updating bundle.head_commit_id';
     execute format ('update bundle.bundle b

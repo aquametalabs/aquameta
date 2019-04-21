@@ -62,9 +62,11 @@ $$;
 -- import a bundle from a csv export (created by above).
 
 create or replace function bundle.bundle_import_csv(directory text)
- returns void
+ returns uuid
  language plpgsql
 as $$
+declare
+    bundle_id uuid;
 begin
     -- triggers must be disabled because bundle and commit have circilar
     -- dependencies, and blob
@@ -85,6 +87,8 @@ begin
     execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid) on commit drop');
     execute format('copy origin_temp from ''%s/bundle.csv''', directory);
     execute format('insert into bundle.bundle_origin_csv(directory, bundle_id) select %L, id from origin_temp', directory);
+    select id from origin_temp into bundle_id;
+    return bundle_id;
 end
 $$;
 
