@@ -111,7 +111,7 @@ begin
     select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
     execute format ('select (count(*) = 1) from meta.schema where name = %L', _schema_name) into has_schema;
     execute format ('select (count(*) = 1) from meta.foreign_server where name = %L', _foreign_server_name) into has_server;
-    execute format ('select (count(*) = 6) from meta.foreign_table where schema_name = %L and name in (''bundle'',''commit'',''rowset'',''rowset_row'',''rowset_row_field'',''blob'')', _schema_name) into has_tables;
+    execute format ('select (count(*) = 7) from meta.foreign_table where schema_name = %L and name in (''bundle'',''commit'',''rowset'',''rowset_row'',''rowset_row_field'',''blob'',''_bundle_blob'')', _schema_name) into has_tables;
     return has_schema and has_server and has_tables;
 end;
 $$ language plpgsql;
@@ -358,7 +358,7 @@ language plpgsql;
 
 
 /*
- * bundle.remote_pull
+ * bundle.remote_pull_commits
  *
  * transfer from remote all the commits that are not in the local repostiory for specified bundle
  *
@@ -453,7 +453,8 @@ begin
     execute format ('insert into %2$I.commit
         select c.* from %1$I.commit c
         where c.bundle_id=%3$L
-            and c.id in (%4$s)',
+            and c.id in (%4$s)
+        order by c.time asc', -- TODO: we're just sorting by time here which is a hack.  build the parent_id tree recursively.
         source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
 
     return true;
@@ -500,6 +501,8 @@ begin
             join bundle.bundle b on c.bundle_id = b.id
             where b.id = %2$L
                 and c.id not in (select id from %1$I.commit where bundle_id = %2$L)
+            group by c.time
+            order by c.time asc
         ', remote_schema_name, bundle_id)
         into new_commits_count, new_commit_ids;
 
@@ -512,7 +515,7 @@ begin
     raise notice 'Pushing % new commits for % (%) from %...', 
         new_commits_count, remote_bundle_name, remote_bundle_id, remote_host;
 
-    raise notice 'new_commit_ids: %', new_commit_ids;
+    -- raise notice 'new_commit_ids: %', new_commit_ids;
 
     -- rowset
     raise notice '...rowset';
@@ -566,7 +569,8 @@ begin
     execute format ('insert into %1$I.commit
         select c.* from bundle.commit c
         where c.bundle_id=%2$L
-            and c.id in (%3$s)',
+            and c.id in (%3$s)
+        order by c.time asc', -- TODO: we're just sorting by time here which is a hack.  build the parent_id tree recursively.
         remote_schema_name, bundle_id, new_commit_ids);
 
     return true;
