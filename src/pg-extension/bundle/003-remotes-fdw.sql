@@ -66,7 +66,8 @@ $$ language plpgsql;
 
 
 create or replace function bundle.remote_mount( remote_database_id uuid ) returns boolean as $$
-    select bundle.remote_mount(
+begin
+    execute format ('select bundle.remote_mount(
         foreign_server_name,
         schema_name,
         host,
@@ -75,8 +76,13 @@ create or replace function bundle.remote_mount( remote_database_id uuid ) return
         username,
         password)
     from bundle.remote_database
-    where id = remote_database_id;
-$$ language sql;
+    where id = %L', remote_database_id);
+    return true;
+exception
+    when others then return false;
+end;
+
+$$ language plpgsql;
 
 
 
@@ -85,7 +91,7 @@ declare
     _schema_name text;
     _foreign_server_name text;
 begin
-    select schema_name, foreign_server_name from bundle.remote_database into _schema_name, _foreign_server_name;
+    select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
     execute format('drop schema if exists %I cascade', _schema_name);
     execute format('drop server if exists %I cascade', _foreign_server_name);
     return true;
@@ -102,12 +108,31 @@ declare
     has_server boolean;
     has_tables boolean;
 begin
-    select schema_name, foreign_server_name from bundle.remote_database into _schema_name, _foreign_server_name;
+    select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
     execute format ('select (count(*) = 1) from meta.schema where name = %L', _schema_name) into has_schema;
     execute format ('select (count(*) = 1) from meta.foreign_server where name = %L', _foreign_server_name) into has_server;
     execute format ('select (count(*) = 6) from meta.foreign_table where schema_name = %L and name in (''bundle'',''commit'',''rowset'',''rowset_row'',''rowset_row_field'',''blob'')', _schema_name) into has_tables;
     return has_schema and has_server and has_tables;
 end;
+$$ language plpgsql;
+
+
+
+create or replace function bundle.remote_is_online( remote_database_id uuid ) returns boolean as $$
+declare
+    _schema_name text;
+    _foreign_server_name text;
+    is_online boolean;
+begin
+    select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
+
+    -- xocolatl | you could do something like  create foreign table pg_temp.test(i int) server s options (table '(select 1)'); 
+    execute format ('select count(*) from %I.bundle where name = ''connection_test''', _schema_name);
+    return true;
+exception
+    when others then
+        return false;
+end
 $$ language plpgsql;
 
 
