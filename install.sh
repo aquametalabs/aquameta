@@ -246,7 +246,7 @@ else
 	done
 
 	sudo -u postgres psql aquameta -c "select bundle.remote_mount(id) from bundle.remote_database"
-	sudo -u postgres psql aquameta -c "select bundle.remote_clone (r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
+	sudo -u postgres psql aquameta -c "select bundle.remote_pull_bundle(r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'"
 	echo "Checking out head commit of every bundle ..."
 	sudo -u postgres psql aquameta -c "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;"
 fi

@@ -78,7 +78,7 @@ remote_mount( remote_database_id )
 remote_unmount( remote_database_id )
 remote_is_mounted( remote_database_id )
 diff_bundle_bundle_commits( bundle_table_a meta.relation_id, bundle_table_b relation_id meta.relation_id )
-remote_clone( bundle_id uuid, source_schema_name text, dest_schema_name text)
+remote_pull_bundle( remote_database_id uuid, bundle_id uuid )
 -- remote_push() -- coming soon
 -- remote_pull() -- coming soon
 ```

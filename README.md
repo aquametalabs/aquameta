@@ -32,7 +32,7 @@ Aquameta is most easily installed on a Ubuntu 18.04 instance; its installer mana
 
 First, setup a clean Ubuntu 18.04 instance.  You can run on bare metal, or using a virtual machine such as [VirtualBox](https://linuxhint.com/install_ubuntu_18-04_virtualbox/) on Mac OSX and Windows, or [KVM](https://linuxconfig.org/install-and-set-up-kvm-on-ubuntu-18-04-bionic-beaver-linux) on a Linux machine.
 
-Once you have an Ubuntu machine setup, installation is very easy:
+Once your Linux machine setup, just download the latest [release](https://github.com/aquametalabs/aquameta/releases), or to try the bleeding edge version, clone the repository.  Then run the install script:
 
 1. `git clone https://github.com/aquametalabs/aquameta.git`
 2. `cd aquameta`
