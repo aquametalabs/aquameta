@@ -5,6 +5,7 @@
 46baa2d6-c4dd-4f9e-8158-19aa90d9fdf5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	7dcef837-5b85-4ed0-bb7d-ab113e2bc5e8	\N	7923f69c-5a09-4683-9de5-6e55754487fd	2019-01-25 02:09:52.429288	fix code editor to work (kind of) with json yuck
 4f1e7f8c-187a-43f4-9a24-a73f99135873	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	783091af-ddb0-4bd1-84df-4eea6126eccc	\N	d4aded65-cc97-4e11-b3ef-bc089dd2b93b	2019-04-20 14:13:09.689172	improvements to search, stage, push & pull, remotes, new row selector, etc.
 571da51d-a0f3-48cf-a016-025e5a204553	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	8747d93c-4b4f-4dda-b988-c386c6245c08	\N	fc5fd37e-ea02-4b42-b33e-fa548c460868	2019-04-02 11:27:36.040154	convert ui to semantic UI layout
+5fb658ff-49f9-4eb7-aafe-849c616c2342	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	b335fd10-dd23-4d9a-a27c-17546492bc36	\N	80d1fbd4-09c3-47d0-bd9a-f1577c482d94	2019-04-24 14:30:27.100079	bundle push and pull, new splash page, etc.
 5fe68261-2b5f-457c-8f2c-ce73c063d6d4	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	1a3c5f53-613a-4fab-b5ac-246013703e72	\N	fc1b0134-467f-4197-991b-d8e7d579aa27	2019-03-27 20:25:32.856732	stage enhancements, bundle import and export stubs
 6839c938-13ea-40c1-ab8a-ad3a061ab3cb	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	16cf434a-82c0-4bc6-9b13-0c51b7693222	\N	b8afcbf3-7d01-410c-a105-1187da5bfada	2019-01-19 16:07:26.482546	layout and styling
 71ac778d-6797-4f0a-b73c-15f2ed2622ca	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	445bfde7-b92d-43e4-b3e9-304e40315cd0	\N	017a5626-a556-4fac-a156-629be666b1e2	2019-01-24 19:47:42.067451	add server_js field to widget ide
