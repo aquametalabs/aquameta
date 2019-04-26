@@ -822,7 +822,7 @@ select
     meta.function_id( pronamespace::pg_catalog.regnamespace::text, proname::text, regexp_split_to_array(pg_catalog.pg_get_function_arguments(p.oid),', ')) as id,
     pg_catalog.pg_get_functiondef_no_searchpath(p.oid) as definition
 from pg_catalog.pg_proc p
-where prokind='a'; -- why??  otherwise I get "ERROR:  "sum" is an aggregate function"
+where prokind != 'a'; -- why??  otherwise I get "ERROR:  "sum" is an aggregate function"
 
 
 create function meta.stmt_function_definition_create(definition text) returns text as $$

@@ -11,12 +11,53 @@ create extension if not exists plv8;
 create extension meta;
 create extension bundle;
 
+
+------------------------------------------------------------------------
+-- track meta entities
+------------------------------------------------------------------------
+insert into bundle.trackable_nontable_relation (pk_column_id) values
+
+-- here are all the views in the meta extension, along with reasons why they may not be supported
+
+-- (meta.column_id('meta','cast','id')),
+(meta.column_id('meta','column','id')),
+-- (meta.column_id('meta','connection','id')), -- makes no sense
+(meta.column_id('meta','constraint_check','id')),
+(meta.column_id('meta','constraint_unique','id')),
+-- (meta.column_id('meta','extension','id')), -- right now extensions are managed manually
+(meta.column_id('meta','foreign_column','id')),
+(meta.column_id('meta','foreign_data_wrapper','id')),
+(meta.column_id('meta','foreign_key','id')),
+(meta.column_id('meta','foreign_server','id')),
+(meta.column_id('meta','foreign_table','id')),
+-- (meta.column_id('meta','function','id')), -- slow as heck, replaced with function_definition
+-- (meta.column_id('meta','function_parameter','id')), -- " "
+(meta.column_id('meta','function_definition','id')),
+(meta.column_id('meta','operator','id')),
+-- (meta.column_id('meta','policy','id')), -- haven't thought through how vcs on permissions would work
+-- (meta.column_id('meta','policy_role','id')),
+-- (meta.column_id('meta','relation','id')), -- no update handlers on relation, never will be.  handled by table, view etc.
+-- (meta.column_id('meta','relation_column','id')),
+-- (meta.column_id('meta','role','id')), -- not sure how vcs on roles would work
+-- (meta.column_id('meta','role_inheritance','id')),
+(meta.column_id('meta','schema','id')),
+(meta.column_id('meta','sequence','id')),
+(meta.column_id('meta','table','id')),
+-- (meta.column_id('meta','table_privilege','id')),
+(meta.column_id('meta','trigger','id')),
+-- (meta.column_id('meta','type','id')), -- replaced by type_definnition
+(meta.column_id('meta','type_definition','id')),
+(meta.column_id('meta','view','id'));
+
+
 ------------------------------------------------------------------------
 -- bundle
 ------------------------------------------------------------------------
 set search_path=bundle;
 
-insert into bundle.bundle (name) values ('org.aquameta.core.bundle');
+-- insert into bundle.bundle (name) values ('org.aquameta.core.bundle');
+
+
 
 -- TODO: track the ignored_rows
 
@@ -65,6 +106,12 @@ drop schema email;
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.email'));
 
 
+
+
+------------------------------------------------------------------------
+-- endpoint
+------------------------------------------------------------------------
+create extension filesystem;
 
 
 ------------------------------------------------------------------------
@@ -170,7 +217,3 @@ select bundle.commit('org.aquameta.core.semantics','initial import');
 drop extension semantics;
 drop schema semantics;
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.semantics'));
-
-
-
-
