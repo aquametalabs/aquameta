@@ -5,6 +5,57 @@
  * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
+/*
+column_purpose
+---------------------
+new_field
+grid_field_display
+form_edit
+grid_display
+grid_label
+form_field
+form_display
+grid_view_label
+grid_edit
+grid_field_edit
+form_label
+form_field_edit uuid
+form_field_display
+form_field_label
+
+                column_id                 |  purpose   |      widget_name
+------------------------------------------+------------+-----------------------
+ ("(""(endpoint)"",resource)",content)    | form_field | form_field_html
+ ("(""(endpoint)"",template)",content)    | form_field | form_field_html
+ ("(""(endpoint)"",template_route)",args) | form_field | form_field_javascript
+ ("(""(widget)"",dependency_js)",content) | form_field | form_field_javascript
+ ("(""(widget)"",widget)",common_js)      | form_field | form_field_javascript
+ ("(""(widget)"",widget)",css)            | form_field | form_field_css
+ ("(""(widget)"",widget)",html)           | form_field | form_field_html
+ ("(""(widget)"",widget)",post_js)        | form_field | form_field_javascript
+ ("(""(widget)"",widget)",pre_js)         | form_field | form_field_javascript
+ ("(""(widget)"",widget)",server_js)      | form_field | form_field_javascript
+
+relation_purpose
+----------------
+grid_row
+grid_view
+row_detail
+text_identifier
+list_item
+list_view
+new_row
+
+
+       relation_id       |     purpose     | widget_name
+-------------------------+-----------------+---------------------------------------------
+ ("(endpoint)",resource) | row_detail      | row_detail_resource
+ ("(endpoint)",template) | row_detail      | row_detail_template
+ ("(widget)",widget)     | text_identifier | semantics_widget_widget_listitem_identifier
+ ("(widget)",widget)     | row_detail      | row_detail_widget
+ ("(widget)",widget)     | row_detail      | row_detail_widget
+*/
+
 set search_path=semantics;
 
 create table semantics.relation_purpose (
@@ -77,6 +128,13 @@ create table semantics.foreign_key (
 );
 
 
+/*
+ * semantics.relation_widget()
+ *
+ * first look for a widget specifically for this relation.
+ * second, fall back to a widget with the same name as the specified purpose.
+ *
+ */
 create or replace function semantics.relation_widget (
     relation_id meta.relation_id,
     widget_purpose text,
@@ -105,6 +163,14 @@ end;
 $$ language plpgsql;
 
 
+/*
+ * semantics.relation_widget()
+ *
+ * first look for a widget specifically for this column.
+ * second, look for a widget specifically for this column's type.
+ * third, fall back to a widget with the same name as the specified purpose.
+ *
+ */
 create or replace function semantics.column_widget (
     column_id meta.column_id,
     widget_purpose text,
@@ -145,3 +211,48 @@ begin
 end;
 $$ language plpgsql;
 
+
+
+/*
+ * some convenience views
+ *
+ */
+
+create or replace view type_summary as
+select
+    t.type_id,
+    cp.id as column_purpose_id,
+    cp.purpose,
+    w.id as widget_id,
+    w.name as widget_name
+from semantics.type t
+    join semantics.column_purpose cp on t.purpose_id = cp.id
+    join widget.widget w on t.widget_id = w.id;
+
+
+
+create view column_summary as
+select
+    c.id as column_id,
+    cp.id as column_purpose_id,
+    cp.purpose,
+    w.id as widget_id,
+    w.name as widget_name
+from meta.column c
+    join semantics.column sc on c.id = sc.column_id
+    join semantics.column_purpose cp on sc.purpose_id = cp.id
+    join widget.widget w on sc.widget_id = w.id;
+
+
+
+create view relation_summary as
+select
+    c.id as relation_id,
+    cp.id as relation_purpose_id,
+    cp.purpose,
+    w.id as widget_id,
+    w.name as widget_name
+from meta.relation c
+    join semantics.relation sc on c.id = sc.relation_id
+    join semantics.relation_purpose cp on sc.purpose_id = cp.id
+    join widget.widget w on sc.widget_id = w.id;
