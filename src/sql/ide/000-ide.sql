@@ -32,4 +32,35 @@ create table ide.sql_code (
 );
 
 
+
+create or replace view ide.resource as
+select r.*, b.id as bundle_id, b.name from (
+    select meta.row_id('endpoint','resource','id',r.id::text), path, mimetype from endpoint.resource r join endpoint.mimetype m on r.mimetype_id = m.id
+    union
+    select meta.row_id('endpoint','resource_binary','id',rb.id::text), path, mimetype from endpoint.resource_binary rb join endpoint.mimetype m on rb.mimetype_id = m.id
+) r
+join bundle.rowset_row rr on rr.row_id = r.row_id
+join bundle.rowset rs on rr.rowset_id = rs.id
+join bundle.commit c on c.rowset_id = rs.id
+join bundle.bundle b on b.head_commit_id = c.id
+order by path;
+
+
+
+create or replace view ide.route as
+select r.*, b.id as bundle_id, b.name from (
+    select meta.row_id('endpoint','template_route','id',r.id::text), url_pattern, t.name as template_name, mimetype
+    from endpoint.template_route r
+        join endpoint.template t on r.template_id = t.id
+        join endpoint.mimetype m on t.mimetype_id = m.id
+) r
+join bundle.rowset_row rr on rr.row_id = r.row_id
+join bundle.rowset rs on rr.rowset_id = rs.id
+join bundle.commit c on c.rowset_id = rs.id
+join bundle.bundle b on b.head_commit_id = c.id
+order by url_pattern;
+
+
+
+
 commit;
