@@ -46,7 +46,11 @@ From the installer, follow the instructions.
 Development
 -----------
 
-To begin development, first login as the superuser you created during install at http://{your_host}/login.  The primary development interface lives at http://{your_ip}/dev.   For more information, see the [documentation](docs/).
+To begin development, first login as the superuser you created during the Aquameta install at http://{your_ip}/login.
+The primary development interface lives at http://{your_ip}/dev.
+Create new Aquameta users at http://{your_ip}/register
+Current Aquameta user info at http://{your_ip}/account
+For more information, see the [documentation](docs/).
 
 Contribute
 ----------
