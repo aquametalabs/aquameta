@@ -13,12 +13,14 @@ Summary of Aquameta APIs and patterns.
 
 This document assumes you know basic HTML, CSS, Javascript, jQuery.  Some familiarity with PostgreSQL and Docker will be helpful as well.
 
+
+
 ## 1. Accessing the Database
 Underneath the hood is a stock [PostgreSQL](http://postgresql.org/) database, which you can access via the command line (and someday a fancy user interface) to create schemas, tables, etc. for use in your application.
 
 ### open database shell
 ```sh
-$ docker exec -it 0f84133a577e psql aquameta
+$ psql aquameta -U yourusername
 psql (9.6.0)
 Type "help" for help.
 
@@ -72,8 +74,11 @@ aquameta=#
 You can do a lot with PostgreSQL.  Consult the [documentation](https://www.postgresql.org/docs/current/static/index.html) for more information.
 
 
+
 ## 2. Bundles
 A bundle is a version-controlled collection of rows in the database, similar in function to a [git]() repository.  The bundle management interface can be accessed via the browser at `/dev`, to manage bundles and create new ones, as well as stage and commit changes, and checkout previous versions of a repository.
+
+
 
 ## 3. Resources
 
@@ -111,6 +116,8 @@ A resource is a static base page that is served up at the specified `path`.  You
     <body></body>
 </html>
 ```
+
+
 
 ## 4. Widgets
 Aquameta user interfaces are made up of widgets.  A widget is a row in the database which contains fields of HTML, CSS and Javascript.
@@ -331,6 +338,7 @@ customers.forEach(function( customer ) {
 ```
 
 
+
 ## 6. Combining Widgets and Data via `widget.sync()`
 
 Often times when we have a `AQ.Rowset`, we want to put a widget on the screen for each row in the rowset.  We can of course iterate through the rowset with a `.forEach()` call, but `widget.sync` is a lot cooler.
@@ -360,6 +368,7 @@ widget.sync(customers, w.find('.customers_container'), function(customer) {
     return widget('bh:customer_summary', { customer: customer });
 });
 ```
+
 
 
 ## 7. Communication Between Widgets
@@ -419,6 +428,3 @@ Clicking the "Compliment user" button calls the click handler function, which tr
 ## Conclusion
 
 These are the basics of how to build apps with Aquameta.  Thank you.  The end.
-
-
-
