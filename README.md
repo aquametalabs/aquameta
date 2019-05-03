@@ -22,7 +22,7 @@ Aquameta contains seven core PostgreSQL extensions, which together make up the w
 - [meta](src/pg-extension/meta) - Writable system catalog for PostgreSQL
 - [bundle](src/pg-extension/bundle) - A version control system similar to git but for database rows intead of files
 - [filesystem](src/pg-extension/filesystem) - A bi-directional file system integration system
-- [events](src/pg-extension/events) - Pub/sub data change events API
+- [event](src/pg-extension/event) - Pub/sub data change events API
 - [endpoint](src/pg-extension/endpoint) - Maps PostgreSQL permissions and data acccess to the web, as well as allowing resource hosting and a web socket event server
 - [widget](src/pg-extension/widget) - Modular web components that can be reused
 - [semantics](src/pg-extension/semantics) - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
