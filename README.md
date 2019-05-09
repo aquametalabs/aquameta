@@ -1,18 +1,24 @@
 aquameta
 ========
 
-Aquameta is a web development environment where instead of storing code as flat
-files in the file system, everything is stored in PostgreSQL as relational
-data, including source code, html, css, javascript, images and other resources,
-system configurations, database schema, permissions and more.  It has a
-web-based IDE, and can be used to build web applications and much more.  For
-more info, see [blog.aquameta.com](http://blog.aquameta.com/), espcially the [introduction](http://blog.aquameta.com/introducing-aquameta/).
+User Documentation
+------------------
 
-Status
-------
+Aquameta is a web-based IDE for full-stack web development.  It allows the user to edit HTML, CSS, Javascript, database schema, views, templates, routes, tests and documentation, and do version control, branching, pushing, pulling, user management and permissions, all from a single web-based IDE.
 
-Aquameta is in early prototype stages, approaching version 0.2.  Do not use it in a
-production, or untrusted environment.
+* [demo video](https://www.youtube.com/watch?v=ZOpj8lvNJtg)
+* [get started](docs/quickstart.md)
+* [cheat sheet](docs/cheatsheet.md)
+* [user documentation](docs/user.md)
+
+
+Systems Documenatation
+----------------------
+Under the hood, Aquameta is a "datafied" web stack, a fairly radical departure from how most web stacks are architected.  It is built entirely in PostgreSQL.  Traditional web stacks are riddled with unnecessary complexity, because they lack an information model.  The web stack *has structure*, but for largely historical reasons, we don't use the database to manage our code, templates, config files, etc.  Well, Aquameta does.
+
+The goal of Aquameta is to reimplement the web stack using the language of data as a grand unifier.  We have used the database to model countless domains and bring simplicity and coherences to vast complexity.  However, the traditional web stack remains quite complex and diverse.  Aquameta is a ground-up rebuild of each layer in the stack as relational data instead of files, and results in a vast decrease in complexity, and increase in modularity and reusability.
+
+If this interests you, there's an [introduction](http://blog.aquameta.com/introducing-aquameta/) and more over on the [blog](http://blog.aquameta.com/).
 
 Core Extensions
 ---------------
