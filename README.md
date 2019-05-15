@@ -1,18 +1,25 @@
 aquameta
 ========
 
-Aquameta is a web development environment where instead of storing code as flat
-files in the file system, everything is stored in PostgreSQL as relational
-data, including source code, html, css, javascript, images and other resources,
-system configurations, database schema, permissions and more.  It has a
-web-based IDE, and can be used to build web applications and much more.  For
-more info, see [blog.aquameta.com](http://blog.aquameta.com/), espcially the [introduction](http://blog.aquameta.com/introducing-aquameta/).
+User Guide
+----------
 
-Status
-------
+Aquameta is a web-based IDE for full-stack web development.  It allows the user to edit HTML, CSS, Javascript, database schema, views, templates, routes, tests and documentation, and do version control, branching, pushing, pulling, user management and permissions, all from a single web-based IDE.
 
-Aquameta is in early prototype stages, approaching version 0.2.  Do not use it in a
-production, or untrusted environment.
+* [demo video](https://www.youtube.com/watch?v=ZOpj8lvNJtg)
+* [get started](docs/quickstart.md)
+* [cheat sheet](docs/cheatsheet.md)
+* [user documentation](docs/user.md)
+
+
+Motivation
+----------
+
+Under the hood, Aquameta is a "datafied" web stack, a fairly radical departure from how most web stacks are architected.  It is built entirely in PostgreSQL.  Traditional web stacks are riddled with unnecessary complexity, because they lack an information model.  They *have structure*, but they don't make use of the very best tool to organize all those config files and templates and dependencies, namely the database.  Well, Aquameta does.
+
+The goal of Aquameta is to reimplement the web stack using the database.  We have used the database to model countless domains and bring simplicity and coherences to vast complexity.  However, the traditional web stack remains quite complex and diverse.  Aquameta is a ground-up rebuild of each layer in the stack as relational data instead of files, and results in a vast decrease in complexity, and increase in modularity and reusability.
+
+If this interests you, there's an [introduction](http://blog.aquameta.com/introducing-aquameta/) and more over on the [blog](http://blog.aquameta.com/).
 
 Core Extensions
 ---------------
@@ -43,23 +50,9 @@ Once your Linux machine is setup, acquire the Aquameta package by either downloa
 From the installer, follow the instructions.
 
 
-Development
------------
-
-To begin development, first login as the superuser you created during the Aquameta install at http://{your_ip}/login.
-The primary development interface lives at http://{your_ip}/dev.
-Create new Aquameta users at http://{your_ip}/register
-Current Aquameta user info at http://{your_ip}/account
-For more information, see the [documentation](docs/).
-
 Contribute
 ----------
 
 - Source Code: [github.com/aquametalabs/aquameta](https://github.com/aquametalabs/aquameta)
 - Issue Tracker: [github.com/aquametalabs/aquameta/issues](https://github.com/aquametalabs/aquameta/issues)
 - IRC: #aquameta on [freenode.net](http://freenode.net)
-
-License
--------
-
-The project is licensed under the GPL 3.0.
