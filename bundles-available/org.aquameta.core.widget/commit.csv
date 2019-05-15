@@ -1,1 +1,2 @@
 36b2c906-1269-42f1-a3a5-85924bc3ec55	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	1e10a9c8-f21a-44e0-bd40-961cc632ead4	\N	\N	2019-01-25 08:47:32.81343	datum-plv8 first commit
+7e03b3a7-e27c-4636-9eb4-a1696ba73852	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	5df34e13-bfef-49d0-a503-c61cde530887	\N	36b2c906-1269-42f1-a3a5-85924bc3ec55	2019-05-15 06:19:29.993625	delete the plv8 version of datum, move it to the new endpoint.js_module table
