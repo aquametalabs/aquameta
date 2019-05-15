@@ -87,29 +87,23 @@ create table endpoint.function_field_mimetype (
 
 /******************************************************************************
  * endpoint.resource
+ * these tables contain static resources that exist at a URL path, to be served
+ * by the endpoint upon a GET request matching their path.
  ******************************************************************************/
 
 create table endpoint."resource_binary" (
     id uuid not null default public.uuid_generate_v4() primary key,
-    path text not null /* unique */,
+    path text not null,
     mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
     active boolean default true,
     content bytea not null
-);
-
-create table endpoint."resource_text" (
-    id uuid not null default public.uuid_generate_v4() primary key,
-    path text not null /* unique */,
-    mimetype_id uuid not null references endpoint.mimetype(id) on delete restrict on update cascade,
-    active boolean default true,
-    content text not null
 );
 
 create table endpoint.resource_file (
     id uuid not null default public.uuid_generate_v4() primary key,
     file_id text not null,
     active boolean default true,
-    path text not null /* unique */
+    path text not null
 );
 
 create table endpoint.resource_directory (
@@ -127,6 +121,12 @@ create table endpoint.resource (
     content text not null default ''
 );
 
+/******************************************************************************
+ * templates
+ * - dynamic HTML fragments, parsed and rendered upon request.
+ * - could possibly be non-HTML fragments as well.
+ ******************************************************************************/
+
 create table endpoint.template (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text not null default '',
@@ -139,6 +139,21 @@ create table endpoint.template_route (
     template_id uuid not null references endpoint.template(id),
     url_pattern text not null default '', -- matching paths may contain arguments from the url to be passed into the template
     args text not null default '{}' -- this route's static arguments to be passed into the template
+);
+
+
+
+/******************************************************************************
+ * plv8 module
+ * libraries that plv8 can load in -- temporary until plv8 supports import
+ * natively.
+ ******************************************************************************/
+
+create table endpoint.js_module (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name text not null default '',
+    version text not null default '',
+    code text not null default ''
 );
 
 
@@ -2174,52 +2189,112 @@ $$ language plpythonu;
 
 
 /*******************************************************************************
-* FUNCTION template_render
-* Renders a template
-*******************************************************************************/
+ * template stuff
+ * templates can be invoked in two ways:
+ *
+ * - via template_route
+ * - from one template, via a call to the template() function
+ *
+ */
+
+
+/*******************************************************************************
+ * bundled_template()
+ * grabs a template by bundle_name + name
+ *******************************************************************************/
+
+create or replace function endpoint.bundled_template (
+    bundle_name text,
+    template_name text
+) returns setof endpoint.template as $$
+        select t.*
+        from bundle.bundle b
+            join bundle.tracked_row tr on tr.bundle_id=b.id
+            join endpoint.template t on t.id = (tr.row_id).pk_value::uuid
+        where ((tr.row_id)::meta.schema_id).name = 'endpoint'
+            and ((tr.row_id)::meta.relation_id).name = 'template'
+            and t.name=template_name
+            and b.name = bundle_name
+$$ language sql;
+
+
+
+/*******************************************************************************
+ * FUNCTION template_render
+ * Renders a template
+ *******************************************************************************/
 
 create or replace function endpoint.template_render(
     template_id uuid,
     route_args json default '{}',
     url_args json default '[]'
 ) returns text as $$
-
-
     // fetch the template
     var template;
     try {
         var template_rows = plv8.execute('select * from endpoint.template where id=$1', [ template_id ]);
-        template = template_rows[0];
-        plv8.elog(NOTICE, ' template is ' + template.id);
+        template_row = template_rows[0];
+        plv8.elog(NOTICE, ' template is ' + template_row.id);
     }
     catch( e ) {
-        plv8.elog( ERROR, e, e)
+        plv8.elog( ERROR, e, e);
         return false;
     }
-    // plv8.elog(NOTICE, 'template '+template.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
-
-
+    plv8.elog(NOTICE, 'template '+template_row.name+' called with route_args '+JSON.stringify(route_args)+', url_args'+JSON.stringify(url_args));
 
     // setup javascript scope
     var context = {};
-    // route_args is an object passed in from route.args json
-    for (var key in route_args) { context[key] = route_args[key]; }
     // url_args is an array of vals extracted from the matching url_pattern
     context.url_args = url_args;
+    // route_args is an object passed in from route.args json
+    for (var key in route_args) { context[key] = route_args[key]; }
     plv8.elog(NOTICE, 'context set to '+JSON.stringify(context));
 
+    // doT.js
+    var doT_rows = plv8.execute("select * from endpoint.js_module where name='doT'");
+    eval( doT_rows[0].code );
+    // context.doT = doT;
 
-    // eval datum-plv8
-    var datum_rows = plv8.execute("select * from widget.dependency_js where name='datum-plv8'");
-    eval( datum_rows[0].content )
 
-    // eval doT.js
-    var doT_rows = plv8.execute("select * from endpoint.resource where path='/doT.min.js'");
-    eval(doT_rows[0].content);
+    plv8.elog(NOTICE, 'done with doT');
+
+    // aquameta-template-plv8
+    var aq_template = plv8.execute("select * from endpoint.js_module where name='aquameta-template-plv8'");
+    eval( aq_template[0].code );
+    // import template() funciton into context, so doT can see it
+    context.template = AQ.Template.template;
+    plv8.elog(NOTICE, 'done with template: '+template);
+
 
     // render the template
-    var htmlTemplate = doT.template(template.content);
+    var htmlTemplate = doT.template(template_row.content);
     var html = htmlTemplate(context);
+    plv8.elog(NOTICE, 'html = '+html);
 
     return html;
 $$ language plv8;
+
+
+
+/*******************************************************************************
+* FUNCTION template_render
+* Renders a template
+*******************************************************************************/
+
+/*
+
+this will be called by the client-side template lib, whenever that's completed.
+
+create or replace function endpoint.template_render(
+    bundle_name text,
+    template_name text,
+    args json default '{}'
+) returns text as $$
+    // eval doT.js
+    var doT_rows = plv8.execute("select * from endpoint.plv8_module where name='doT' and version='1.1.0'");
+    eval(doT_rows[0].code);
+
+
+    return template( bundle_name, template_name, args);
+$$ language plv8;
+*/
