@@ -20,6 +20,7 @@ grant select on endpoint.resource to anonymous;
 grant select on endpoint.resource_binary to anonymous;
 grant select on endpoint.template to anonymous;
 grant select on endpoint.template_route to anonymous;
+grant select on endpoint.js_module to anonymous;
 grant select on endpoint.session to anonymous; -- TODO: needs RLS
 
 -- function privileges
