@@ -1,3 +1,4 @@
 0f78d994-11e3-46bb-ae7e-fc9c62922b0a	a5b58074-e2ba-47f5-9b4c-697e8f7e2a90	91130434-e291-4333-9b14-52b31a8aa4fb	\N	e833dccc-4d67-42ad-a0ab-7d73599d74dd	2019-04-13 09:19:08.544278	disable loading of inputs and views on widget.js since we don't use them
 2d652b2d-5727-4c2f-8707-7787ef6df092	a5b58074-e2ba-47f5-9b4c-697e8f7e2a90	dff8bc47-936f-48ef-84b1-f76f0fea7593	\N	\N	2019-01-21 22:00:39.154158	initial import
+8b2e0eaf-73ac-47cc-90d8-cd8c451a118c	a5b58074-e2ba-47f5-9b4c-697e8f7e2a90	f0493e16-c8a0-46f5-81fb-8a0d0cefacff	\N	0f78d994-11e3-46bb-ae7e-fc9c62922b0a	2019-05-15 06:16:54.688756	put doT and aquameta-template-plv8 in the new endpoint.js_module table, semantics support for code field
 e833dccc-4d67-42ad-a0ab-7d73599d74dd	a5b58074-e2ba-47f5-9b4c-697e8f7e2a90	ae57d74d-f604-4ffd-8d78-3cc34c2becb2	\N	2d652b2d-5727-4c2f-8707-7787ef6df092	2019-03-22 20:13:52.002272	change mimetype on .js files to text/javascript
