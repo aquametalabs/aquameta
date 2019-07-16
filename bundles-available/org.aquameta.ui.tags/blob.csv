@@ -1,4 +1,5 @@
 \\x00a9e4255a5b63067b76cbfb9fd67f26bdb91be802d5ffcb177ec1b7a8d4c623	li
+\\x01e906f9f83dac8d2e00e6a96e8a4ad833bf3638416acd8f8f9430bfcfc651d2	var w = $("#"+id);\n\nif( typeof row != 'undefined' ) {\n    w.data('row', row);\n}
 \\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2	.{{= name }} {\n}
 \\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab	var w = $("#"+id);
 \\x5b5e12674367523b93ffc4ee7058996b466f5dc1251760466544a785c53f1d8b	<option id="{{= id }}" class="{{= name }}" value="{{= value }}" {{? typeof selected != 'undefined' && selected }}selected="selected"{{?}}>\n    {{= label }}\n</option>
