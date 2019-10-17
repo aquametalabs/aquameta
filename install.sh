@@ -98,6 +98,7 @@ DEBIAN_FRONTEND=nointeractive \
 	python-werkzeug python-psycopg2 nginx sudo sendmail \
 	fuse dnsutils \
 	libssl-dev libpcre3 libpcre3-dev \
+	llvm-6.0 \
 	git vim tmux sudo
 
 
