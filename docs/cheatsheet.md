@@ -398,7 +398,7 @@ w.closest('.main').bind('alert_message', function(e,o) {
 });
 ```
 
-Now, anywhere in our app, we can trigger an event with this name and arguments, and the listener will recieve and handle it.  Whenever .main recieves a `alert_message` event, the handler will fire and show the message passed in.  
+Now, anywhere in our app, we can trigger an event with this name and arguments, and the listener will recieve and handle it.  Whenever .main receives a `alert_message` event, the handler will fire and show the message passed in.  
 
 ### Widget that Triggers an Event for the Listener
 
