@@ -94,6 +94,7 @@ apt-get update -y
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
 	apt-get install -y \
+	build-essential \
 	dnsutils \
 	fuse \
 	git \
