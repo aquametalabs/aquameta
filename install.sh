@@ -148,7 +148,10 @@ ldconfig
 
 echo "Installing core python packages..."
 
-pip install requests fusepy
+pip install --upgrade setuptools
+pip install --upgrade wheel
+pip install requests
+pip install fusepy
 
 # filesystem_fdw
 cd $SRC/src/py-package/filesystem_fdw
