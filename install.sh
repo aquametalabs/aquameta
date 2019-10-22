@@ -107,6 +107,7 @@ DEBIAN_FRONTEND=nointeractive \
 	postgresql-11-python-multicorn \
 	postgresql-plpython-11 \
 	postgresql-server-dev-11 \
+	python-dev \
 	python-pip \
 	python-psycopg2 \
 	python-werkzeug \
