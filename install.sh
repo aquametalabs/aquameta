@@ -93,13 +93,29 @@ apt-get update -y
 
 # install required packages
 DEBIAN_FRONTEND=nointeractive \
-	apt-get install -y postgresql-11 postgresql-11-python-multicorn \
-	postgresql-server-dev-11 postgresql-plpython-11 python-pip \
-	python-werkzeug python-psycopg2 nginx sudo sendmail \
-	fuse dnsutils \
-	libssl-dev libpcre3 libpcre3-dev \
+	apt-get install -y \
+	build-essential \
+	dnsutils \
+	fuse \
+	git \
+	libssl-dev \
+	libpcre3 \
+	libpcre3-dev \
 	llvm-6.0 \
-	git vim tmux sudo
+	nginx \
+	postgresql-11 \
+	postgresql-11-python-multicorn \
+	postgresql-plpython-11 \
+	postgresql-server-dev-11 \
+	python-dev \
+	python-pip \
+	python-psycopg2 \
+	python-werkzeug \
+	sendmail \
+	sendmail-bin \
+	sudo \
+	tmux \
+	vim
 
 
 
@@ -134,7 +150,10 @@ ldconfig
 
 echo "Installing core python packages..."
 
-pip install requests fusepy
+pip install --upgrade setuptools
+pip install --upgrade wheel
+pip install requests
+pip install fusepy
 
 # filesystem_fdw
 cd $SRC/src/py-package/filesystem_fdw
