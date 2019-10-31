@@ -4,6 +4,7 @@
 1d890d59-029b-4d79-994a-2c986147a2fe	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	5a26442a-d8fc-4fc3-bef1-330b7caf4e63	\N	ef01a52b-fed1-4068-9d19-dd2fcb2d5cc4	2019-04-24 16:31:27.836416	left a debugger call in there :(
 2ec9f8b2-d30a-4267-863e-f36667a57c8a	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	843e8f14-e2ab-42cb-9142-e7d6165fc48c	\N	ea88a679-30ce-40d6-8d80-bce37568b49c	2019-01-20 12:40:20.640802	rework / page
 32e2754f-2cd5-4de8-a4da-0073b0cb022d	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	1ef85234-0cec-4a64-830d-c21eb6d53d71	\N	89ac3c75-d87a-4373-9938-364191803c65	2019-01-28 05:30:06.286814	template / template_route editor
+3c975eb0-596c-4972-b48f-8a057271dffb	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	cb91831c-e9dc-4db2-804f-4618f4043e7b	\N	1d890d59-029b-4d79-994a-2c986147a2fe	2019-10-31 21:09:38.908102	stub UI for Database, and Users & Security
 46baa2d6-c4dd-4f9e-8158-19aa90d9fdf5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	7dcef837-5b85-4ed0-bb7d-ab113e2bc5e8	\N	7923f69c-5a09-4683-9de5-6e55754487fd	2019-01-25 02:09:52.429288	fix code editor to work (kind of) with json yuck
 4f1e7f8c-187a-43f4-9a24-a73f99135873	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	783091af-ddb0-4bd1-84df-4eea6126eccc	\N	d4aded65-cc97-4e11-b3ef-bc089dd2b93b	2019-04-20 14:13:09.689172	improvements to search, stage, push & pull, remotes, new row selector, etc.
 571da51d-a0f3-48cf-a016-025e5a204553	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	8747d93c-4b4f-4dda-b988-c386c6245c08	\N	fc5fd37e-ea02-4b42-b33e-fa548c460868	2019-04-02 11:27:36.040154	convert ui to semantic UI layout
