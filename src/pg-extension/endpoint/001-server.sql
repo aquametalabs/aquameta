@@ -376,6 +376,7 @@ create type join_graph_row as (
 
 /*
 sample usage:
+(which is old and wrong)
 select endpoint.construct_join_graph('foo',
     '{ "schema_name": "bundle", "relation_name": "bundle", "label": "b", "join_local_field": "id", "where_clause": "b.id = ''e2edb6c9-cb76-4b57-9898-2e08debe99ee''" }',
     '[
@@ -385,6 +386,30 @@ select endpoint.construct_join_graph('foo',
         {"schema_name": "bundle", "relation_name": "rowset_row_field", "label": "rrf", "join_local_field": "rowset_row_id", "related_label": "rr", "related_field": "id"},
         {"schema_name": "bundle", "relation_name": "blob", "label": "blb", "join_local_field": "hash", "related_label": "rrf", "related_field": "value_hash"}
      ]');
+
+here is the json equiv of a current call. which also does not work, because meta id cast to text is perhaps going wonky?  FIXME
+var start_rowset = {
+    schema_name: "meta",
+    relation_name: "table",
+    label: "t",
+    join_local_field: "id",
+    pk_field: "id",
+    join_pk_field: "id",
+    where_clause: "t.schema_name='"+schema_name+"'"
+};
+
+var subrowsets = [
+    {
+        schema_name: "meta",
+        relation_name: "column",
+        label: "c",
+        pk_field: "id",
+        join_local_field: "relation_id",
+        related_label: "t",
+        related_field: "id"
+    }
+];
+
 */
 
 create or replace function endpoint.construct_join_graph (temp_table_name text, start_rowset json, subrowsets json) returns setof endpoint.join_graph_row
@@ -411,38 +436,41 @@ as $$
         q text;
         ct integer;
     begin
-        -- raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
+        raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
         -- create temp table
         tmp := quote_ident(temp_table_name);
         execute 'create temp table '
             || tmp
-    || ' of endpoint.join_graph_row';
+            || ' of endpoint.join_graph_row';
 
         -- load up the starting relation
-        schema_name := quote_ident(start_rowset->>'schema_name');
-        relation_name := quote_ident(start_rowset->>'relation_name');
-        label := quote_ident(start_rowset->>'label');
-        join_local_field := quote_ident(start_rowset->>'join_local_field');
-        pk_field:= quote_ident(start_rowset->>'pk_field');
+        schema_name := start_rowset->>'schema_name';
+        relation_name := start_rowset->>'relation_name';
+        label := start_rowset->>'label';
+        join_local_field := start_rowset->>'join_local_field';
+        pk_field:= start_rowset->>'pk_field';
+
         exclude:= coalesce(start_rowset->>'exclude', 'false');
-
         position := coalesce(start_rowset->>'position', '0');
+        where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, ''); -- def sql injection
 
-        where_clause := coalesce ('where ' || (start_rowset->>'where_clause')::text, '');
-
-        -- raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, where_clause: %',
-        --    label, schema_name, relation_name, join_local_field, where_clause;
+        raise notice '#### construct_join_graph PHASE 1:  label: %, schema_name: %, relation_name: %, join_local_field: %, pk_field: %, exclude: %, position: %, where_clause: %',
+           label, schema_name, relation_name, join_local_field, pk_field, exclude, position, where_clause;
 
         q := 'insert into ' || tmp || ' (label, row_id, row, position, exclude)  '
-            || ' select distinct ''' || label || ''','
-            || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || pk_field || ''',' || label || '.' || pk_field || '::text), '
+            || ' select distinct ' || quote_literal(label) || ','
+            || '     meta.row_id('
+                || quote_literal(schema_name) || ','
+                || quote_literal(relation_name) || ','
+                || quote_literal(pk_field) || ','
+                || quote_ident(label) || '.' || quote_ident(pk_field) || '::text), '
             || '     row_to_json(' || label || ', true)::jsonb, '
             || '     ' || position || ', '
-            || '     ' || exclude
-            || ' from ' || schema_name || '.' || relation_name || ' ' || label
+            || '     ' || exclude::boolean
+            || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' ' || quote_ident(label)
             || ' ' || where_clause;
 
-            -- raise notice 'QUERY PHASE 1: %', q;
+        raise notice 'QUERY PHASE 1: %', q;
         execute q;
 
 
@@ -450,35 +478,48 @@ as $$
         for i in 0..(json_array_length(subrowsets) - 1) loop
             rowset := subrowsets->i;
 
-            schema_name := quote_ident(rowset->>'schema_name');
-            relation_name := quote_ident(rowset->>'relation_name');
-            label := quote_ident(rowset->>'label');
-            join_local_field:= quote_ident(rowset->>'join_local_field');
-            join_pk_field:= quote_ident(rowset->>'join_local_field');
+            schema_name := rowset->>'schema_name';
+            relation_name := rowset->>'relation_name';
+            label := rowset->>'label';
+            join_local_field:= rowset->>'join_local_field';
+            join_pk_field:= rowset->>'join_local_field';
 
-            related_label := quote_ident(rowset->>'related_label');
-            related_field := quote_ident(rowset->>'related_field');
+            related_label := rowset->>'related_label';
+            related_field := rowset->>'related_field';
 
             where_clause := coalesce ('where ' || (rowset->>'where_clause')::text, '');
-            exclude:= coalesce(rowset->>'exclude', 'false');
+            exclude:= coalesce(rowset->>'exclude', 'false')::boolean;
 
-            position := coalesce(rowset->>'position', '0');
+            position := coalesce((rowset->>'position')::integer, 0::integer);
 
-            -- raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
-            -- label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
+            raise notice '#### construct_join_graph PHASE 2:  label: %, schema_name: %, relation_name: %, join_local_field: %, related_label: %, related_field: %, where_clause: %',
+            label, schema_name, relation_name, join_local_field, related_label, related_field, where_clause;
 
 
-            q := 'insert into ' || tmp || ' ( label, row_id, row, position, exclude) '
-                || ' select distinct ''' || label || ''','
-                || '     meta.row_id(''' || schema_name || ''',''' || relation_name || ''',''' || join_pk_field || ''',' || label || '.' || join_pk_field || '::text), '
-                || '     row_to_json(' || label || ', true)::jsonb, '
-                || '     ' || position || ', '
-                || '     ' || exclude
-                || ' from ' || schema_name || '.' || relation_name || ' ' || label
-                || ' join ' || tmp || ' on ' || tmp || '.label = ''' || related_label || ''''
-                || '  and (' || tmp || '.row)->>''' || related_field || ''' = ' || label || '.' || join_local_field || '::text'
-                || ' ' || where_clause;
-            -- raise notice 'QUERY PHASE 2: %', q;
+            q := format('insert into %1$I ( label, row_id, row, position, exclude)
+                select distinct %2$I,
+                    meta.row_id(%3$L,%4$L,%5$L,%2$I.%7$I::text),
+                    row_to_json(%2$I, true)::jsonb,
+                    %8$s,
+                    %6$L::boolean
+                from %3$I.%4$I %2$I
+                join %1$I on %1$I.label = %9$L
+                and (%1$I.row)->>%10$L = %2$I.%11$I::text %12$s',
+                temp_table_name, -- 1
+                label,
+                schema_name,
+                relation_name, --4
+                join_pk_field,
+                exclude,
+                join_pk_field,
+                position, --8
+                related_label,
+                related_field,
+                join_local_field, --11
+                where_clause
+            );
+
+            raise notice 'QUERY PHASE 2: %', q;
             execute q;
 
         end loop;
