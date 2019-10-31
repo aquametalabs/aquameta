@@ -8,7 +8,7 @@ Aquameta is a web-based IDE for full-stack web development.  Developers can mana
 Under the hood, Aquameta is a "datafied" web stack, built entirely in PostgreSQL.  The structure of a typical web framework is represented in Aquameta as big database schema with 6 postgreSQL schemas containing ~60 tables, ~50 views and ~90 stored procedures.  Apps developed in Aquameta are represented entirely as relational data, and all development, at an atomic level, is some form of data manipulation.  Also in theory.  And mostly in practice.
 
 * [introduction](http://blog.aquameta.com/introducing-aquameta/)
-* [blog](http://blog.aquameta.com/)
+* [blog](http://blog.aquameta.com/) / [twitter](http://twitter.com/aquameta) / [youtube](https://www.youtube.com/user/bigcountry503/videos) / [twitch](http://twitch.tv/aquameta)
 * [demo video](https://www.youtube.com/watch?v=ZOpj8lvNJtg)
 * [get started](docs/quickstart.md)
 * [cheat sheet](docs/cheatsheet.md)
@@ -23,12 +23,12 @@ Core Extensions
 ---------------
 Aquameta contains seven core PostgreSQL extensions, which together make up the web stack:
 
-- [meta](src/pg-extension/meta) - Writable system catalog for PostgreSQL
-- [bundle](src/pg-extension/bundle) - A version control system similar to git but for database rows intead of files
+- [meta](https://github.com/aquametalabs/meta) - Writable system catalog for PostgreSQL
+- [bundle](src/pg-extension/bundle) - A version control system similar to git but for database rows instead of files
 - [filesystem](src/pg-extension/filesystem) - A bi-directional file system integration system
 - [event](src/pg-extension/event) - Pub/sub data change events API
-- [endpoint](src/pg-extension/endpoint) - Maps PostgreSQL permissions and data acccess to the web, as well as allowing resource hosting and a web socket event server
-- [widget](src/pg-extension/widget) - Modular web components that can be reused
+- [endpoint](src/pg-extension/endpoint) - REST endpoint handler plus resource hosting, templates and a WebSocket event server
+- [widget](src/pg-extension/widget) - Modular web user interface components made of HTML, CSS and Javascript
 - [semantics](src/pg-extension/semantics) - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
 
 
@@ -55,7 +55,7 @@ Technical goals of the project include:
 - Remote push/pull of commits to relational VCS
 - Access and manipulate the database as a file system from the command prompt
 - Access and manipulate the file system as relational data from the SQL prompt
-- Interal event system for pub/sub of changes to tables, columns or rows
+- Internal event system for pub/sub of changes to tables, columns or rows
 - Modular web interface components ("widgets") made of HTML, CSS, Javascript, that are self-contained, manage their own dependencies, accept input arguments, can instantiate other widgets, and can emit events that other widgets can subscribe to
 - "Semantic decoration" allows the user to associate UI components with schema components (relations, columns, data types), auto-generate simple CRUD UIs, and progressively enhance a UI by overriding sensible defaults with custom widgets
 - Pub/sub notification let peers download new content from each other as it comes available without polling
