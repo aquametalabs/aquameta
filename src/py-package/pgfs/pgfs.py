@@ -8,6 +8,9 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit
 from time import time, sleep
 import argparse, getpass
+import logging
+
+logging.basicConfig()
 
 class PostgresFS(LoggingMixIn, Operations):
     def __init__(self, database, port=5432, host='localhost', username=None, password=None):
