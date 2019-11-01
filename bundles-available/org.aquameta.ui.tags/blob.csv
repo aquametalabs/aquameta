@@ -3,6 +3,7 @@
 \\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2	.{{= name }} {\n}
 \\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab	var w = $("#"+id);
 \\x5b5e12674367523b93ffc4ee7058996b466f5dc1251760466544a785c53f1d8b	<option id="{{= id }}" class="{{= name }}" value="{{= value }}" {{? typeof selected != 'undefined' && selected }}selected="selected"{{?}}>\n    {{= label }}\n</option>
+\\x78900e1c20f125bccfcc6f98137f14b5985899d33e1adef5d8a28878db116c16	var w = $("#"+id);\n\n// if they passed in a row, attach it as jQuery data to the element\nif(typeof row != 'undefined') {\n    w.data('row', row);\n}
 \\xa11a75e0feeecc1a9eff682b06ef0b1461ed4ee7a4d6da4ae333bdc1041d9d51	option
 \\xa2ff2522382852a144365e46f2f8646319024abb7ae1aa9c97c24177c44e3deb	18251e25-cfca-4f4d-bde5-c9c5be89eaba
 \\xb4109920496eb265c91078c527592d80d8d7f49546c9c8231d5ef4f0fdb5cb13	<option id="{{= id }}" class="{{= name }}" value="{{= value }}">\n    {{= label }}\n</option>
