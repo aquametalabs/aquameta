@@ -4,6 +4,9 @@
  * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
+-- user should inherit all anonymous privileges
+grant anonymous to "user";
+
 -- schema usage privileges
 -- TODO: replace this with a single insert query into meta.schema_privilege
 grant usage on schema meta to "user";
