@@ -104,6 +104,7 @@ DEBIAN_FRONTEND=nointeractive \
 	llvm-6.0 \
 	nginx \
 	postgresql-11 \
+	postgresql-11-pgtap \
 	postgresql-11-python-multicorn \
 	postgresql-plpython-11 \
 	postgresql-server-dev-11 \
