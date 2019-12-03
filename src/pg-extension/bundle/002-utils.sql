@@ -84,7 +84,7 @@ begin
     execute format('alter table bundle.commit enable trigger all');
 
     -- set the origin for this bundle
-    execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid, checkout_commit_id) on commit drop');
+    execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid, checkout_commit_id uuid) on commit drop');
     execute format('copy origin_temp from ''%s/bundle.csv''', directory);
     execute format('insert into bundle.bundle_origin_csv(directory, bundle_id) select %L, id from origin_temp', directory);
     select id from origin_temp into bundle_id;
