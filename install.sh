@@ -63,7 +63,7 @@ echo "Installing dependencies via apt..."
 
 echo "Please choose:"
 echo "  a) Debian 9 apt repository"
-echo "  b) Ubuntu 18 apt repository"
+echo "  b) Ubuntu 18/19 apt repository"
 REPLY=
 while ! [[ $REPLY =~ ^[aAbB]$ ]]
 do
@@ -84,8 +84,8 @@ else
 fi
 
 # add postgresql official repository
-sudo apt-get install -y wget ca-certificates
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+apt-get install -y wget ca-certificates
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
 # update
