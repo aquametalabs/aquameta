@@ -785,24 +785,25 @@ $$ language sql;
  * (usually bundle.head_commit_id).
  * TODO: this could be optimized to one delete per relation
  */
-create or replace function bundle.commit_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
+create or replace function bundle.checkout_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
+declare
+        temprow record;
 begin
 	for temprow in
 		select rr.* from bundle.bundle b
 			join bundle.commit c on c.bundle_id = b.id
-			join bundle.rowset r on r.commit_id = c.id
+			join bundle.rowset r on r.id = c.rowset_id
 			join bundle.rowset_row rr on rr.rowset_id = r.id
 		where b.id = _bundle_id and c.id = _commit_id
 	loop
-		execute format ('delete from $I.$I where $I = $L', 
-			((((rr.row_id).pk_column_id).relation_id).schema_id).name,
-			(((rr.row_id).pk_column_id).relation_id).name,
-			((rr.row_id).pk_column_id).name,
-			(rr.row_id).pk_value;
+		execute format ('delete from %I.%I where %I = %L',
+			((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
+			(((temprow.row_id).pk_column_id).relation_id).name,
+			((temprow.row_id).pk_column_id).name,
+			(temprow.row_id).pk_value);
 	end loop;
-
-
-$$ language sql;
+end;
+$$ language plpgsql;
 
 ------------------------------------------------------------------------------
 -- STATUS FUNCTIONS
