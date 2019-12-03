@@ -546,7 +546,7 @@ $$ language plpgsql;
 
 
 -- checkout can only be run by superusers because it disables triggers, as described here: http://blog.endpoint.com/2012/10/postgres-system-triggers-error.html
-create or replace function checkout (in commit_id uuid) returns void as $$
+create or replace function checkout (in commit_id uuid, in comment text default null) returns void as $$
     declare
         commit_row record;
         bundle_name text;
@@ -691,6 +691,8 @@ create or replace function checkout (in commit_id uuid) returns void as $$
 
         return;
 
+        insert into bundle.checkout (commit_id, role_id, comment) values (commit_id, meta.role_id(current_user), comment);
+
     end;
 $$ language plpgsql;
 
@@ -773,6 +775,34 @@ create or replace function bundle.commit_delete(in _commit_id uuid) returns void
     delete from bundle.commit c where c.id = _commit_id;
 $$ language sql;
 
+
+------------------------------------------------------------------------------
+-- CHECKOUT DELETE
+------------------------------------------------------------------------------
+
+/*
+ * deletes the rows in the database that are tracked by the specified commit
+ * (usually bundle.head_commit_id).
+ * TODO: this could be optimized to one delete per relation
+ */
+create or replace function bundle.commit_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
+begin
+	for temprow in
+		select rr.* from bundle.bundle b
+			join bundle.commit c on c.bundle_id = b.id
+			join bundle.rowset r on r.commit_id = c.id
+			join bundle.rowset_row rr on rr.rowset_id = r.id
+		where b.id = _bundle_id and c.id = _commit_id
+	loop
+		execute format ('delete from $I.$I where $I = $L', 
+			((((rr.row_id).pk_column_id).relation_id).schema_id).name,
+			(((rr.row_id).pk_column_id).relation_id).name,
+			((rr.row_id).pk_column_id).name,
+			(rr.row_id).pk_value;
+	end loop;
+
+
+$$ language sql;
 
 ------------------------------------------------------------------------------
 -- STATUS FUNCTIONS

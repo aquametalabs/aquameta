@@ -110,6 +110,14 @@ create table commit (
 -- circular
 alter table bundle add head_commit_id uuid references commit(id) on delete set null;
 
+create table checkout (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    commit_id uuid references commit(id) on delete cascade,
+    time timestamp not null default now(),
+    role_id meta.role_id,
+    comment text
+);
+
 
 ------------------------------------------------------------------------------
 -- 2. HEAD
