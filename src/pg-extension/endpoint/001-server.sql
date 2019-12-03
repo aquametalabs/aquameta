@@ -1992,7 +1992,7 @@ $$ language sql;
 create table endpoint.session (
     id uuid not null default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null,
-    user_id uuid references endpoint.user(id)
+    user_id uuid references endpoint.user(id) on delete cascade
 );
 
 create function endpoint.session(session_id uuid)
