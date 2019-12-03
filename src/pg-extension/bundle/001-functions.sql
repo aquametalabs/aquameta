@@ -686,13 +686,11 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 || ' enable trigger all';
         end loop;
 
-        -- point head_commit_id to this commit
-        update bundle.bundle set head_commit_id = commit_id where id in (select bundle_id from bundle.commit c where c.id = commit_id);
+        -- point head_commit_id and checkout_commit_id to this commit
+        update bundle.bundle set head_commit_id = commit_id where id in (select bundle_id from bundle.commit c where c.id = commit_id); -- TODO: now that checkout_commit_id exists, do we still do this?
+        update bundle.bundle set checkout_commit_id = commit_id where id in (select bundle_id from bundle.commit c where c.id = commit_id);
 
         return;
-
-        insert into bundle.checkout (commit_id, role_id, comment) values (commit_id, meta.role_id(current_user), comment);
-
     end;
 $$ language plpgsql;
 
@@ -802,6 +800,8 @@ begin
 			((temprow.row_id).pk_column_id).name,
 			(temprow.row_id).pk_value);
 	end loop;
+
+	update bundle.bundle set checkout_commit_id = null where id = _bundle_id;
 end;
 $$ language plpgsql;
 

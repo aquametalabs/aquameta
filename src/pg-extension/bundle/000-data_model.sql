@@ -75,7 +75,8 @@ create trigger blob_hash_update
 create table bundle (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text,
-    -- head_commit_id uuid, (circular, added later)
+    -- head_commit_id uuid, -- (circular, added later)
+    -- checkout_commit_id uuid, -- (circular, added later)
     unique(name)
 );
 
@@ -109,14 +110,8 @@ create table commit (
 );
 -- circular
 alter table bundle add head_commit_id uuid references commit(id) on delete set null;
+alter table bundle add checkout_commit_id uuid references commit(id) on delete set null;
 
-create table checkout (
-    id uuid not null default public.uuid_generate_v4() primary key,
-    commit_id uuid references commit(id) on delete cascade,
-    time timestamp not null default now(),
-    role_id meta.role_id,
-    comment text
-);
 
 
 ------------------------------------------------------------------------------
