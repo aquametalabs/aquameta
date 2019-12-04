@@ -21,7 +21,7 @@ echo "\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  "
 echo " / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_"
 echo "(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /"
 echo "     \/    |__|          \/      \/     \/          \/ "
-echo "            [ version 0.2.0 - base install ]"
+echo "            [ version 0.2.0-rc7 - base install ]"
 echo ""
 echo "                 OBLIGATORY WARNING:"
 echo ""
@@ -62,7 +62,7 @@ DEST=${DEST:-$SRC}
 echo "Installing dependencies via apt..."
 
 echo "Please choose:"
-echo "  a) Debian 9 apt repository"
+echo "  a) Debian 9/10 apt repository"
 echo "  b) Ubuntu 18/19 apt repository"
 REPLY=
 while ! [[ $REPLY =~ ^[aAbB]$ ]]
@@ -84,7 +84,7 @@ else
 fi
 
 # add postgresql official repository
-apt-get install -y wget ca-certificates
+apt-get install -y gnupg wget ca-certificates
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
