@@ -1,10 +1,20 @@
 /*
 security policies for a hub.
-this is just a stub.
+
+other things to do:
+- in postgresql.conf, change listen_address = '*'
+- in pg_hba.conf add
+      host    all             all              0.0.0.0/0                       md5
+    - host    all             all              ::/0                            md5
+- open port 5432 to publc traffic
 */
 
--- 
+alter role anonymous password 'anonymous';
+
 create policy anonymous_core_bundles on bundle.bundle for select to anonymous
     using (name like 'org.aquameta.%');
+
+grant usage on schema bundle to anonymous;
+grant select on all tables in schema bundle to anonymous;
 
 grant select on table widget.widget to anonymous;
