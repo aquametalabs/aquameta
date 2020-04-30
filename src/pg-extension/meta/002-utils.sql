@@ -19,6 +19,9 @@ create or replace function meta.row_exists(in row_id meta.row_id, out answer boo
         -- raise warning '%s', stmt;
         execute stmt into answer;
 
+    exception
+        when undefined_table then
+            answer := false;
     end;
 $$ language plpgsql;
 

@@ -66,6 +66,7 @@ create or replace view ide.big_stage as
 select b.name, b.id as bundle_id, count(*) as row_count, ((h.row_id).pk_column_id).relation_id as relation_id, change_type
 from bundle.head_db_stage_changed h
 join bundle.bundle b on h.bundle_id = b.id
+where b.checkout_commit_id is not null
 group by b.name, b.id, ((row_id).pk_column_id).relation_id, change_type
 order by b.name;
 

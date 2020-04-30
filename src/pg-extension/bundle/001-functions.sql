@@ -160,7 +160,7 @@ create or replace function untrack_row (
 ) returns text
 as $$
     -- TODO: check to see if this row is not tracked by some other bundle?
-    delete from bundle.tracked_row_added 
+    delete from bundle.tracked_row_added
         where bundle_id = (select id from bundle.bundle where name=bundle_name)
         and row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
     select 'untracked: ' || bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
@@ -556,6 +556,14 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         commit_time timestamp;
     begin
         set local search_path=bundle,meta,public;
+        /* TODO
+        - check to see if this bundle is already checked out
+        - if yes, check to see if it has any uncommitted changes, either new tracked rows or already
+          tracked row changes
+          - if it does, fail, unless checkout was passed a (new) HARD boolean of true
+          - if it doesn't delete the existing checkout
+        - proceed.
+        */
 
         select b.name, c.id, c.message, c.time, (c.role_id).name
         into bundle_name, _commit_id, commit_message, commit_time, commit_role
