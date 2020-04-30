@@ -2267,8 +2267,8 @@ $$ language sql;
 
 create or replace function endpoint.template_render(
     template_id uuid,
-    route_args json default '{}',
-    url_args json default '[]'
+    route_args json default '{}', -- these are the args passed in from the template_route record
+    url_args json default '[]' -- these are args that matched a regex part in parentheses
 ) returns text as $$
     // fetch the template
     var template;
@@ -2287,7 +2287,7 @@ create or replace function endpoint.template_render(
     var context = {};
     // url_args is an array of vals extracted from the matching url_pattern
     context.url_args = url_args;
-    // route_args is an object passed in from route.args json
+    // route_args is an object passed in from template_route.args json
     for (var key in route_args) { context[key] = route_args[key]; }
     plv8.elog(NOTICE, 'context set to '+JSON.stringify(context));
 
@@ -2304,7 +2304,7 @@ create or replace function endpoint.template_render(
     eval( aq_template[0].code );
     // import template() funciton into context, so doT can see it
     context.template = AQ.Template.template;
-    plv8.elog(NOTICE, 'done with template: '+template);
+    plv8.elog(NOTICE, 'done with template: '+template_row.id);
 
 
     // render the template
