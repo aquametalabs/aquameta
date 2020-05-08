@@ -2,6 +2,7 @@
 0d06852c-82b8-410c-93bb-aa0c24ba16d9	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	2ca5f78b-7b00-42de-bded-df34e27b0f4d	\N	a8b8f6a1-089a-4361-89d0-ad4bdd635323	2017-12-29 13:54:07.081821	stub out the untracked row display
 1175f573-7be0-4373-ab13-50d1f9dd71e5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	9e9ff37f-c261-40e1-bd7c-d5dcfce516ef	\N	1d890d59-029b-4d79-994a-2c986147a2fe	2019-05-15 21:11:11.096958	database overview tab for endpoint routes and resources, bundle push and pull changes
 1d890d59-029b-4d79-994a-2c986147a2fe	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	5a26442a-d8fc-4fc3-bef1-330b7caf4e63	\N	ef01a52b-fed1-4068-9d19-dd2fcb2d5cc4	2019-04-24 16:31:27.836416	left a debugger call in there :(
+1dd2fad1-ef08-4ac6-bdf6-78a4275e9765	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	b19fc1f4-f9ec-4520-af08-bcf181ce5e60	\N	c0176843-c72c-4356-b761-2a3f848ec0de	2020-05-08 12:03:36.013918	lots of IDE changes!
 2ec9f8b2-d30a-4267-863e-f36667a57c8a	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	843e8f14-e2ab-42cb-9142-e7d6165fc48c	\N	ea88a679-30ce-40d6-8d80-bce37568b49c	2019-01-20 12:40:20.640802	rework / page
 32e2754f-2cd5-4de8-a4da-0073b0cb022d	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	1ef85234-0cec-4a64-830d-c21eb6d53d71	\N	89ac3c75-d87a-4373-9938-364191803c65	2019-01-28 05:30:06.286814	template / template_route editor
 3c975eb0-596c-4972-b48f-8a057271dffb	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	cb91831c-e9dc-4db2-804f-4618f4043e7b	\N	1d890d59-029b-4d79-994a-2c986147a2fe	2019-10-31 21:09:38.908102	stub UI for Database, and Users & Security
