@@ -64,7 +64,7 @@ create or replace function commit (bundle_name text, message text) returns void 
 
     raise notice 'bundle: Updating bundle.head_commit_id...';
     -- point HEAD at new commit
-    update bundle.bundle bundle set head_commit_id=new_commit_id where bundle.id=_bundle_id;
+    update bundle.bundle bundle set head_commit_id=new_commit_id, checkout_commit_id=new_commit_id where bundle.id=_bundle_id;
 
     raise notice 'bundle: Cleaning up after commit...';
     -- clear the stage
@@ -760,6 +760,8 @@ declare
     bundle_id uuid;
 begin
     insert into bundle.bundle (name) values (name) returning id into bundle_id;
+    -- TODO: should we make an initial commit and rowset for a newly created bundle?  if not, when checkout_commit_id is null, does that mean it is not checked out, or it is new, or both?  both is wrong.
+    -- insert into bundle.commit
     return bundle_id;
 end;
 $$ language plpgsql;
@@ -826,5 +828,3 @@ returns setof text as $$
         join bundle.head_db_stage_changed hds on hds.bundle_id = b.id
     order by b.name, hds.row_id::text;
 $$ language sql;
-
-

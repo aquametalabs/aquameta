@@ -306,9 +306,10 @@ begin
         where c.bundle_id=%2$L', source_schema_name, bundle_id);
 
     -- bundle.head_commit_id
+    /* note: we don't want to do this.  checkout sets head_commit_id */
+-- FIXME YES?????
     execute format ('update bundle.bundle
-        set head_commit_id = (
-            select b.head_commit_id
+        set head_commit_id = null, checkout_commit_id = null
             from %1$I.bundle b
             where b.id=%2$L
     ) where id=%2$L', source_schema_name, bundle_id);
