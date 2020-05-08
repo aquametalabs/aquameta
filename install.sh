@@ -221,6 +221,7 @@ sudo -u postgres psql -c "create extension endpoint" aquameta
 sudo -u postgres psql -c "create extension widget" aquameta
 sudo -u postgres psql -c "create extension semantics" aquameta
 sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
+sudo -u postgres psql -f $SRC/src/pg-extension/documentation/000-datamodel.sql aquameta
 
 
 
