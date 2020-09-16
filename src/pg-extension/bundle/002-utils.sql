@@ -19,13 +19,16 @@ begin
     end if;
 
     -- check that bundle has commits
+    -- TODO: is this really a problem?
     if not exists( select true from bundle.bundle b join bundle.commit c on c.bundle_id = b.id where b.name = bundle_name) then
         raise exception 'No commits found in bundle %', bundle_name;
     end if;
 
 
-    execute format('copy (select distinct * from bundle.bundle
-        where name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
+    -- copy bundle contents to csv files
+    -- checkout_commit_id is set to NULL explicitly, because it is only relevent to this current database
+    execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle.bundle b
+        where b.name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
 
     execute format('copy (select distinct c.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
@@ -69,6 +72,7 @@ create or replace function bundle.bundle_import_csv(directory text)
 as $$
 declare
     bundle_id uuid;
+    bundle_name text;
 begin
     -- triggers must be disabled because bundle and commit have circilar
     -- dependencies, and blob
@@ -89,6 +93,12 @@ begin
     execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid, checkout_commit_id uuid) on commit drop');
     execute format('copy origin_temp from ''%s/bundle.csv''', directory);
     execute format('insert into bundle.bundle_origin_csv(directory, bundle_id) select %L, id from origin_temp', directory);
+
+    -- make sure that checkout_commit_is null
+    select name from origin_temp into bundle_name;
+    update bundle.bundle set checkout_commit_id = NULL where name = bundle_name;
+
+    -- return bundle.id
     select id from origin_temp into bundle_id;
     return bundle_id;
 end
