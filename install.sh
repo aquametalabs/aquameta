@@ -364,7 +364,8 @@ sudo -u postgres psql -c "$REG_COMMAND" aquameta
 # finished!
 #############################################################################
 MACHINE_IP=`hostname --ip-address|cut -d ' ' -f1`
-EXTERNAL_IP=`dig +short myip.opendns.com @resolver1.opendns.com`
+# EXTERNAL_IP=`dig +short myip.opendns.com @resolver1.opendns.com`
+EXTERNAL_IP=`dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com`
 
 echo ""
 echo "Aquameta was successfully installed.  Next, login and configure your installation:"
