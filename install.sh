@@ -102,7 +102,6 @@ DEBIAN_FRONTEND=nointeractive \
 	libpcre3 \
 	libpcre3-dev \
 	llvm-6.0 \
-	nginx \
 	postgresql-11 \
 	postgresql-11-pgtap \
 	postgresql-11-python-multicorn \
@@ -289,19 +288,6 @@ cp $SRC/src/py-package/uwsgi-endpoint/uwsgi-emperor.ini /etc/aquameta
 
 systemctl enable aquameta.emperor.uwsgi.service
 systemctl restart aquameta.emperor.uwsgi.service
-
-
-
-#############################################################################
-# configure nginx and restart the service
-#############################################################################
-
-echo "Setting up nginx..."
-cp $SRC/src/py-package/uwsgi-endpoint/nginx/aquameta_endpoint.conf /etc/nginx/sites-available
-cd /etc/nginx/sites-enabled
-rm -f ./default
-ln -sf ../sites-available/aquameta_endpoint.conf
-systemctl restart nginx
 
 
 

@@ -10,7 +10,6 @@ def connect(request):
         'host':     environ['DB_HOST'],
         'user':     request.environ.get('DB_USER', 'anonymous'),
         'database': environ['DB_NAME'],
-        'port':     environ['DB_PORT']
     }
 
     return pg_connect(cursor_factory=NamedTupleCursor, **conn_info)

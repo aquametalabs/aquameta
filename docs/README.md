@@ -39,5 +39,4 @@
     * [semantics](../src/pg-extension/semantics/)
 * Server
     * uwsgi_endpoint
-    * nginx
 * pgfs

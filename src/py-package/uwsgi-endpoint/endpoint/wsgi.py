@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 try:
-    base_url = environ['BASE_URL']
+    endpoint_url = environ['ENDPOINT_URL']
 
 except KeyError as err:
     logging.error("You'll need to specify a %s environment variable." % str(err))
@@ -20,6 +20,6 @@ except KeyError as err:
 
 else:
     application = AuthMiddleware(DispatcherMiddleware(page_app, {
-        '%s' % base_url: data_app,
-        '%s/0.2/event' % base_url: events_app
+        '%s' % endpoint_url: data_app,
+        '%s/0.2/event' % endpoint_url: events_app
     }))
