@@ -55,6 +55,7 @@ Aquameta has been the life project of Eric Hanson for close to 20 years off-and-
 Technical goals of the project include:
 - Allow complete management of the database using only INSERT, UPDATE and DELETE commands (expose the DDL as DML)
 - Version control of relational data
+- Reified architecture, where the entire system is self-defined as data, and as such can evolve using only data manipulation
 - Remote push/pull of commits to relational VCS
 - Access and manipulate the database as a file system from the command prompt
 - Access and manipulate the file system as relational data from the SQL prompt
