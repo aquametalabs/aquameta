@@ -21,6 +21,7 @@ insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundl
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','stage_row_added'));
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','stage_row_deleted'));
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle_origin_csv'));
+insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle_origin_remote'));
 
 -- don't try to version control anything in the built-in system catalogs
 insert into bundle.ignored_schema(schema_id) values (meta.schema_id('pg_catalog'));
