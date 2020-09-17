@@ -217,3 +217,18 @@ select bundle.commit('org.aquameta.core.semantics','initial import');
 drop extension semantics;
 drop schema semantics;
 select bundle.checkout((select head_commit_id from bundle.bundle where name='org.aquameta.core.semantics'));
+
+
+
+
+
+
+/*
+Additional things I had to do to get things working after running this:
+- insall documentation "extension" even though it isn't an extension
+- install the ide./*sql stuff...
+- install and checkout all the core bundles, whose names collide with the core bundles created by this script, so those should be renamed
+- run the 001-anonymous-register.sql privilege and 002-user.sql privilege files
+- create a user....register_superuser() is broken...?
+- add default values for all primary key columns, which meta is somehow losing
+*/
