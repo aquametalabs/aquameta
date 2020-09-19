@@ -98,10 +98,133 @@ func main() {
     }
 
 
-    // resource handler
+    /*
+    * resource handler
+    *
+    * 1. count the number of matching paths in
+    *   - endpoint.resource
+    *   - endopint.resource_binary
+    *   - endpoint.template_route
+    * if count > 1, throw a 300 multiple choices
+    * if count < 1, throw 404 not found
+    *
+    * 2. grab the resource or template, serve the content
+    */
 
     resourceHandler := func(w http.ResponseWriter, req *http.Request) {
-        io.WriteString(w, "Hello from resourceHandler!\n" + req.Method + "\n")
+        // request string
+        path := strings.SplitN(req.RequestURI,"?", 2)[0]
+
+        // count matching endpoint.resource
+        const match_count_q = `
+            select r.id::text, 'resource' as resource_table
+            from endpoint.resource r
+            where path = %v
+            and active = true
+
+            union
+
+            select r.id::text, 'resource_binary'
+            from endpoint.resource_binary r
+            where path = %v
+            and active = true
+
+            union
+
+            select r.id::text, 'template'
+            from endpoint.template_route r
+            where %v ~ r.url_pattern`
+            // and active = true ?
+
+        matches, err := dbpool.Query(context.Background(), fmt.Sprintf(match_count_q, pq.QuoteLiteral(path), pq.QuoteLiteral(path), pq.QuoteLiteral(path)))
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Matches query failed: %v\n", err)
+            os.Exit(1)
+        }
+        defer matches.Close()
+
+        var id string
+        var resource_table string
+
+        var n int32
+        for matches.Next() {
+            err = matches.Scan(&id, &resource_table)
+            if err != nil {
+                return // FIXME
+            }
+            n++
+        }
+
+
+        // 300 Multiple Choices
+        if n > 1 {
+            http.Error(w, http.StatusText(http.StatusMultipleChoices), http.StatusMultipleChoices)
+            return // FIXME?
+        } else {
+            // 404 Not Found
+            if n < 1 {
+                http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+                return // FIXME?
+            }
+        }
+
+
+        var content string
+        var content_binary []byte
+        var mimetype string
+
+        switch resource_table {
+        case "resource":
+            const resource_q = `
+                select r.content, m.mimetype
+                from endpoint.resource r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
+                where r.id = %v`
+
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+                os.Exit(1)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            io.WriteString(w, content)
+
+        case "resource_binary":
+            const resource_q = `
+                select r.content, m.mimetype
+                from endpoint.resource_binary r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
+                where r.id = %v`
+
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(id))).Scan(&content_binary, &mimetype)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+                os.Exit(1)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            w.Write(content_binary)
+
+        case "template":
+            const resource_q = `
+                select
+                    endpoint.template_render(
+                        t.id,
+                        r.args::json,
+                        array_to_json( regexp_matches(%v, r.url_pattern) )
+                    ) as content,
+                    m.mimetype
+                from endpoint.template_route r
+                    join endpoint.template t on r.template_id = t.id
+                    join endpoint.mimetype m on t.mimetype_id = m.id`
+
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(path))).Scan(&content, &mimetype)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+                os.Exit(1)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            io.WriteString(w, content)
+        }
     }
 
 
