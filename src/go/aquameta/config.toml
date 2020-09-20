@@ -1,0 +1,18 @@
+# Aquameta Configuration
+
+[database]
+# PostgreSQL connection settings
+
+name = "aquameta"
+port = 5432
+user = "eric"
+password = ""
+
+
+[http]
+#  Web server settings
+
+protocol = "https" # http or https
+port = 443
+ssl_certificate = "server.crt" # can use absolute or relative paths, relative is relative to current working directory (?)
+ssl_key = "server.key"
