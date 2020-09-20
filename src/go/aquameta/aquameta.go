@@ -2,6 +2,7 @@ package main
 
 import (
     "io"
+    "io/ioutil"
     "context"
     "fmt"
     "os"
@@ -42,6 +43,8 @@ func main() {
     // authenticate
     //
 
+    // TODO
+
 
     //
     // request handlers
@@ -51,9 +54,6 @@ func main() {
     // endpoint handler
 
     apiHandler := func(w http.ResponseWriter, req *http.Request) {
-        // request strings
-        // full_path := req.URL.Path
-
         // api version, sub-path
         s := strings.SplitN(req.URL.Path,"/",4)
         version, apiPath := s[2], s[3]
@@ -61,10 +61,29 @@ func main() {
         // convert query string to JSON
         m, err := url.ParseQuery(req.URL.RawQuery)
         if err != nil { log.Fatal(err) }
-        js, err := json.Marshal(m)
+        q, err := json.Marshal(m)
         if err != nil { log.Fatal(err) }
+        queryStringJSON := string(q)
+        if queryStringJSON == "" { queryStringJSON = "{}" }
+        // qsJSON := strings.ReplaceAll(string(js), ",", ", ")
 
-        qsJSON := strings.ReplaceAll(string(js), ",", ", ")
+        /*
+        // convert req.Header JSON
+        headerJSON, err := json.Marshal(req.Header)
+        if err != nil { log.Fatal(err) }
+        log.Println(string(headerJSON))
+
+        // convert req.Header to bytes
+        headerBytes := bytes.Buffer{}
+        req.Header.Write(&headerBytes)
+        */
+
+
+        // read request body
+        r, err := ioutil.ReadAll(req.Body)
+        if err != nil { log.Fatal(err) }
+        requestBody := string(r)
+        if requestBody == "" { requestBody = "{}" }
 
         // result strings
         var status int
@@ -72,20 +91,22 @@ func main() {
         var mimetype string
         var response string
 
-        // query endpoint.request()
-        err = dbpool.QueryRow(
-            context.Background(),
-            fmt.Sprintf(
-                "select status, message, response, mimetype from endpoint.request(%v, %v, %v, %v,'{}'::json)",
+        var db_query = fmt.Sprintf(
+                "select status, message, response, mimetype from endpoint.request(%v, %v, %v, %v::json,%v::json)",
                 pq.QuoteLiteral(version),
                 pq.QuoteLiteral(req.Method),
                 pq.QuoteLiteral(apiPath),
-                pq.QuoteLiteral(qsJSON))).Scan(
-                    &status, &message, &response, &mimetype)
+                pq.QuoteLiteral(string(queryStringJSON)),
+                pq.QuoteLiteral(string(requestBody)))
+
+        // query endpoint.request()
+        err = dbpool.QueryRow(context.Background(), db_query).Scan( &status, &message, &response, &mimetype)
 
         if err != nil {
-            fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-            os.Exit(1)
+            log.Println(err)
+            log.Println("\n\n", db_query, "\n\n", req.Proto, req.RequestURI, "\nREQUEST BODY:\n"+string(requestBody), string(queryStringJSON))
+            // fmt.Fprintf(os.Stderr, "API request failed: %v\n", err)
+            return
         }
 
         // set mimetype
@@ -95,13 +116,12 @@ func main() {
         // url parts
         io.WriteString(w, "Hello from the REST API.  Here are some stats:\n")
         io.WriteString(w, "RequestURI: "+req.RequestURI+"\n")
-        io.WriteString(w, "full_path: "+full_path+"\n")
         io.WriteString(w, "version: "+version+"\n")
         io.WriteString(w, "apiPath: "+apiPath+"\n")
         io.WriteString(w, "RawQuery: "+req.URL.RawQuery+"\n")
         io.WriteString(w, "Proto: "+req.Proto+"\n\n\n")
 
-        io.WriteString(w, "qs: "+qsJSON+"\n\n\n")
+        io.WriteString(w, "qs: "+string(queryStringJSON)+"\n\n\n")
 
         io.WriteString(w, "status: "+fmt.Sprintf("%v",status)+"\n")
         io.WriteString(w, "message: "+message+"\n")
@@ -264,5 +284,7 @@ func main() {
     // start http server
     //
 
-    log.Fatal(http.ListenAndServe(":9000", nil))
+    // log.Fatal(http.ListenAndServe(":9000", nil))
+    // https://github.com/denji/golang-tls
+    log.Fatal(http.ListenAndServeTLS(":4443", "server.crt", "server.key", nil))
 }
