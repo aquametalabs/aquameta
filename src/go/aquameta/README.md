@@ -2,12 +2,14 @@
 
 The web server for Aquameta, implemented in Go.
 
+(Declarative docs, for how I would like it to work)
+
 ## Installation
 
 ### 1. Build the server by running `go build`
 ### 2. Install PostgreSQL
 ### 3. Install the Aquameta extensions
-### 4. Generate SSL certificate
+### 4. Generate SSL certificate (if desired)
 
 Generate private key (.key)
 
