@@ -226,13 +226,13 @@ func main() {
             io.WriteString(w, content)
 
         case "resource_binary":
-            const resource_q = `
+            const resource_binary_q = `
                 select r.content, m.mimetype
                 from endpoint.resource_binary r
                     join endpoint.mimetype m on r.mimetype_id = m.id
                 where r.id = %v`
 
-            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(id))).Scan(&content_binary, &mimetype)
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_binary_q, pq.QuoteLiteral(id))).Scan(&content_binary, &mimetype)
             if err != nil {
                 fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
                 os.Exit(1)
@@ -241,7 +241,7 @@ func main() {
             w.Write(content_binary)
 
         case "template":
-            const resource_q = `
+            const template_q = `
                 select
                     endpoint.template_render(
                         t.id,
@@ -253,7 +253,7 @@ func main() {
                     join endpoint.template t on r.template_id = t.id
                     join endpoint.mimetype m on t.mimetype_id = m.id`
 
-            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(path))).Scan(&content, &mimetype)
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(template_q, pq.QuoteLiteral(path))).Scan(&content, &mimetype)
             if err != nil {
                 fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
                 os.Exit(1)
