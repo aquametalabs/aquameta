@@ -8,32 +8,32 @@ import (
 )
 
 type tomlConfig struct {
-    DB database `toml:"database"`
-    Webserver webserver `toml:"webserver"`
-    Webrtc webrtc `toml:"webrtc"`
+    Database Database `toml:"Database"`
+    Webserver Webserver `toml:"Webserver"`
+    Webrtc Webrtc `toml:"Webrtc"`
 }
 
-type database struct {
+type Database struct {
     Connection string
 }
 
-type webserver struct {
+type Webserver struct {
     IP string
     Port int
 }
 
-type webrtc struct {
+type Webrtc struct {
     Stun string
 }
 
 
-func getConfig() tomlConfig {
+func GetConfig() tomlConfig {
     var config tomlConfig
     if _, err := toml.DecodeFile("config.toml", &config); err != nil {
         log.Fatal(err)
     }
 
-    fmt.Printf("Database: %s", config.DB.Connection)
+    fmt.Printf("Database: %s", config.Database.Connection)
     fmt.Printf("Webserver: %s", config.Webserver.IP)
 
     return config

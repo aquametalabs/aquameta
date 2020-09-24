@@ -3,26 +3,16 @@
 
 
 # PostgreSQL connection settings
-[database]
-Connection = "postgres://?path=/var/run/postgresql&database=aquameta"
+[Database]
+#Connection = "postgres://?path=/var/run/postgresql&database=aquameta"
+Connection = "postgres://?database=aquameta"
 
-[webserver]
+[Webserver]
 #  Web server settings
 IP = "0.0.0.0"
 Port = 443
 Protocol = "https" # http or https
 SSLCertificate = "server.crt" # can use absolute or relative paths, relative is relative to current working directory (?)
 SSLKey = "server.key"
-}
 
-[webrtc]
-
-
-type webserver struct {
-    IP string
-    Port int
-}
-
-type webrtc struct {
-    Stun string
-}
+[Webrtc]

@@ -17,20 +17,15 @@ import (
 )
 
 func main() {
-    //
-    // initial stuff?  cmd args and the like.
-    //
-
     fmt.Println("Aquameta daemon... ENGAGE!")
-
-
+    config := GetConfig()
 
     //
     // connect to database
     //
 
     // In any case, statement caching can be disabled by connecting with statement_cache_capacity=0.
-    dbpool, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+    dbpool, err := pgxpool.Connect(context.Background(), config.Database.Connection)
     if err != nil {
         fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
         os.Exit(1)
