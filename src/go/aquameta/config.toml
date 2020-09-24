@@ -10,9 +10,9 @@ Connection = "postgres://?database=aquameta"
 [Webserver]
 #  Web server settings
 IP = "0.0.0.0"
-Port = 443
+Port = "4443"
 Protocol = "https" # http or https
-SSLCertificate = "server.crt" # can use absolute or relative paths, relative is relative to current working directory (?)
-SSLKey = "server.key"
+SSLCertificateFile = "server.crt" # can use absolute or relative paths, relative is relative to current working directory (?)
+SSLKeyFile = "server.key"
 
 [Webrtc]

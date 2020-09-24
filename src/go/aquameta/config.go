@@ -19,7 +19,9 @@ type Database struct {
 
 type Webserver struct {
     IP string
-    Port int
+    Port string
+    SSLCertificateFile string
+    SSLKeyFile string
 }
 
 type Webrtc struct {
@@ -33,8 +35,8 @@ func GetConfig() tomlConfig {
         log.Fatal(err)
     }
 
-    fmt.Printf("Database: %s", config.Database.Connection)
-    fmt.Printf("Webserver: %s", config.Webserver.IP)
+    fmt.Printf("Database: %s\n", config.Database.Connection)
+    fmt.Printf("Webserver: %s:%s\n", config.Webserver.IP, config.Webserver.Port)
 
     return config
 

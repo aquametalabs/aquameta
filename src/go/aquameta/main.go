@@ -281,5 +281,9 @@ func main() {
 
     // log.Fatal(http.ListenAndServe(":9000", nil))
     // https://github.com/denji/golang-tls
-    log.Fatal(http.ListenAndServeTLS(":4443", "server.crt", "server.key", nil))
+    log.Fatal(http.ListenAndServeTLS(
+        config.Webserver.IP+":"+config.Webserver.Port,
+		 config.Webserver.SSLCertificateFile,
+		 config.Webserver.SSLKeyFile,
+		 nil))
 }
