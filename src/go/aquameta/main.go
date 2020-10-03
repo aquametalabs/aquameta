@@ -87,7 +87,7 @@ func main() {
         var response string
 
         var db_query = fmt.Sprintf(
-                "select status, message, response, mimetype from endpoint.request(%v, %v, %v, %v::json,%v::json)",
+                "select status, message, response, mimetype from endpoint.request(%v, %v, %v, %v::json, %v::json)",
                 pq.QuoteLiteral(version),
                 pq.QuoteLiteral(req.Method),
                 pq.QuoteLiteral(apiPath),
@@ -143,8 +143,16 @@ func main() {
     */
 
     resourceHandler := func(w http.ResponseWriter, req *http.Request) {
-        // request string
-        path := strings.SplitN(req.RequestURI,"?", 2)[0]
+        // path
+        // path := strings.SplitN(req.RequestURI,"?", 2)[0]
+        path, err := url.QueryUnescape(req.URL.Path)
+        if err != nil { log.Fatal(err) }
+
+        // query string
+        /*
+        m, err := url.ParseQuery(req.URL.RawQuery)
+        if err != nil { log.Fatal(err) }
+        */
 
         // count matching endpoint.resource
         const match_count_q = `
