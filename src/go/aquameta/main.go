@@ -247,9 +247,9 @@ func main() {
             const template_q = `
                 select
                     endpoint.template_render(
-                        t.id,
-                        r.args::json,
-                        array_to_json( regexp_matches(%v, r.url_pattern) )
+                        t.id::text, -- FIXME
+                        r.args::json::text, -- FIXME
+                        (array_to_json( regexp_matches(%v, r.url_pattern) ))::text -- FIXME
                     ) as content,
                     m.mimetype
                 from endpoint.template_route r

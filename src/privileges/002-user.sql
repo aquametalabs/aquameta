@@ -5,13 +5,15 @@
  ******************************************************************************/
 
 -- user should inherit all anonymous privileges
+begin;
+
 grant anonymous to "user";
 
 -- schema usage privileges
 -- TODO: replace this with a single insert query into meta.schema_privilege
 grant usage on schema meta to "user";
 grant usage on schema event to "user";
-grant usage on schema filesystem to "user";
+-- grant usage on schema filesystem to "user";
 grant usage on schema bundle to "user";
 grant usage on schema endpoint to "user";
 grant usage on schema widget to "user";
@@ -31,7 +33,7 @@ select schema_name, name, 'user', 'select'
 -- `user` can execute all functions in these schemas
 grant execute on all functions in schema meta to "user";
 grant execute on all functions in schema event to "user";
-grant execute on all functions in schema filesystem to "user";
+-- grant execute on all functions in schema filesystem to "user";
 grant execute on all functions in schema bundle to "user";
 grant execute on all functions in schema endpoint to "user";
 grant execute on all functions in schema widget to "user";
@@ -53,3 +55,5 @@ select 'user:' || schema_name || '/' || name, name, schema_name, 'user'
     from meta.table
     where schema_name != 'pg_catalog' and schema_name != 'information_schema';
 
+
+commit;

@@ -1,7 +1,8 @@
 EXTENSION = endpoint
-EXTVERSION = 0.2.0
+EXTVERSION = 0.3.0
 DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
+MODULES = endpoint
 
 $(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard *.sql)))
 	rm -f $@

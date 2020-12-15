@@ -169,7 +169,7 @@ create table endpoint.site_settings (
     site_title text,
     site_url text,
 
-    smtp_server_id uuid not null references email.smtp_server(id),
+    smtp_server_id uuid not null,
     auth_from_email text
 );
 
@@ -2039,6 +2039,7 @@ as $$
         insert into meta.role_inheritance (role_id, member_role_id) values (meta.role_id('user'), _role_id);
 
         -- Send email to {email}
+/*
         if send_email = true then
             perform email.send(
                 (select smtp_server_id from endpoint.site_settings where active=true),
@@ -2048,6 +2049,7 @@ as $$
                 'Use this code to activate your account ' || _user_row.activation_code
             );
         end if;
+*/
 
         code := 0;
         role_name := (_role_id).name;
@@ -2090,6 +2092,7 @@ as $$
         update meta.role set can_login = true where id = _role_id;
 
         -- 4. send email?
+/*
         if send_email then
             perform email.send(
                 (select smtp_server_id from endpoint.site_settings where active=true),
@@ -2099,6 +2102,7 @@ as $$
                 'Your account is now active.'
             );
         end if;
+*/
 
         return;
     end
@@ -2265,6 +2269,7 @@ $$ language sql;
  * Renders a template
  *******************************************************************************/
 
+/*
 create or replace function endpoint.template_render(
     template_id uuid,
     route_args json default '{}', -- these are the args passed in from the template_route record

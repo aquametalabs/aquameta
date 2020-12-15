@@ -1,4 +1,5 @@
-comment = 'Aquameta http endpoint request handler'
-default_version = '0.2.0'
+# endpoint extension
+comment = 'endpoint extension'
+default_version = '0.3.0'
 relocatable = false
 schema = 'endpoint'

@@ -1,6 +1,8 @@
 *.swp
 *.swo
 *.pyc
+
+# files created by `make` in each extension
 src/pg-extension/bundle/bundle--*.*.*.sql
 src/pg-extension/email/email--*.*.*.sql
 src/pg-extension/endpoint/endpoint--*.*.*.sql
@@ -10,3 +12,14 @@ src/pg-extension/meta/meta--*.*.*.sql
 src/pg-extension/widget/widget--*.*.*.sql
 src/pg-extension/semantics/semantics--*.*.*.sql
 src/pg-extension/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
+
+# files created by plgo
+src/pg-extension/endpoint/endpoint/build
+src/pg-extension/endpoint/003-plgo.sql
+src/pg-extension/endpoint/endpoint.h
+src/pg-extension/endpoint/endpoint.so
+
+# files created by go server
+src/go/aquameta/aquameta
+src/go/aquameta/server.crt
+src/go/aquameta/server.key

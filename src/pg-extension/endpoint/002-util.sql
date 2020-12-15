@@ -14,6 +14,7 @@
  * (once it exists), to determine if the file is binary based on it's extension
  */
 
+/*
 create function endpoint.import_directory_to_resource( directory text, base_path text )
 returns setof text as $$
 insert into endpoint.resource (path, mimetype_id, content)
@@ -36,6 +37,7 @@ from filesystem.file f
 where directory_id=directory
 returning path;
 $$ language sql;
+*/
 
 
 create function endpoint.get_mimetype_id(_mimetype text) returns uuid as $$
