@@ -2212,6 +2212,7 @@ $$;
  * endpoint.email
  ******************************************************************************/
 
+/*
 create function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
 
 # -- Import smtplib for the actual sending function
@@ -2230,6 +2231,7 @@ s.sendmail(from_email, to_email, msg.as_string())
 s.quit()
 
 $$ language plpythonu;
+*/
 
 
 
@@ -2320,6 +2322,7 @@ create or replace function endpoint.template_render(
     return html;
 $$ language plv8;
 
+*/
 
 
 /*******************************************************************************
