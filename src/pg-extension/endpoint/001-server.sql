@@ -1925,6 +1925,14 @@ language plpgsql;
 
 
 -- Trigger on endpoint.user for update
+
+/*
+
+this behavior appears to be wrong.  user should be considered a metadata table
+on role.  i could see creating a new role when you insert into user (which is
+what the insert trigger does) but switching a user from one role to the other
+should actually create that role.
+
 create or replace function endpoint.user_update() returns trigger as $$
 
     declare
@@ -1954,6 +1962,7 @@ create or replace function endpoint.user_update() returns trigger as $$
     end;
 $$
 language plpgsql;
+*/
 
 
 -- Trigger on endpoint.user for delete
