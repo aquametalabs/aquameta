@@ -1902,6 +1902,14 @@ create table endpoint.user (
 );
 
 
+/*
+
+regarding triggers on the user table:
+this behavior appears to be wrong.  user should be considered a metadata table
+on role.  i could see creating a new role when you insert into user (which is
+what the insert trigger does) but switching a user from one role to the other
+should actually create that role.
+
 -- Trigger on endpoint.user for insert
 create or replace function endpoint.user_insert() returns trigger as $$
 
@@ -1925,14 +1933,6 @@ language plpgsql;
 
 
 -- Trigger on endpoint.user for update
-
-/*
-
-this behavior appears to be wrong.  user should be considered a metadata table
-on role.  i could see creating a new role when you insert into user (which is
-what the insert trigger does) but switching a user from one role to the other
-should actually create that role.
-
 create or replace function endpoint.user_update() returns trigger as $$
 
     declare
@@ -1962,7 +1962,6 @@ create or replace function endpoint.user_update() returns trigger as $$
     end;
 $$
 language plpgsql;
-*/
 
 
 -- Trigger on endpoint.user for delete
@@ -1979,6 +1978,7 @@ language plpgsql;
 create trigger endpoint_user_insert_trigger before insert on endpoint.user for each row execute procedure endpoint.user_insert();
 create trigger endpoint_user_update_trigger before update on endpoint.user for each row execute procedure endpoint.user_update();
 create trigger endpoint_user_delete_trigger before delete on endpoint.user for each row execute procedure endpoint.user_delete();
+*/
 
 
 /******************************************************************************

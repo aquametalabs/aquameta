@@ -6,39 +6,262 @@ import (
     "context"
     "fmt"
     "os"
+    "os/exec"
     "log"
     "net/http"
     "net/url"
     "strings"
+    "time"
     "encoding/json"
+    "runtime"
 
     "github.com/lib/pq"
     "github.com/jackc/pgx/v4/pgxpool"
+    epg "github.com/aquametalabs/embedded-postgres"
 )
 
 func main() {
-    fmt.Println("Aquameta daemon... ENGAGE!")
+    fmt.Println("[ aquameta ] Aquameta daemon... ENGAGE!")
     config := GetConfig()
+    fmt.Printf("[ aquameta ] Webserver: %s:%s\n", config.Webserver.IP, config.Webserver.Port)
+    defer os.Exit(0)
+
+
+    // 
+    // initialize the database
+    // 
+
+    database := epg.NewDatabase(epg.DefaultConfig().
+        Username(config.Database.User).
+        Password(config.Database.Password).
+        // Host
+        Port(config.Database.Port).
+        Database(config.Database.DatabaseName).
+        Version(epg.V12).
+        RuntimePath(config.Database.RuntimePath).
+        StartTimeout(45 * time.Second))
+
+    //
+    // install postgres if it doesn't exist
+    //
+
+    create_database := false
+    if _, err := os.Stat(config.Database.RuntimePath); os.IsNotExist(err) {
+        create_database = true
+        fmt.Println("[ aquameta ] PostgreSQL installation does not exist, installing...")
+        if err := database.Install(); err != nil {
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install PostgreSQL: %v\n", err)
+            runtime.Goexit()
+        }
+        fmt.Println("[ aquameta ] PostgreSQL is not installed.")
+    } else {
+        fmt.Println("[ aquameta ] PostgreSQL is already installed, skipping installation.")
+    }
+
+
+    //
+    // start the database daemon
+    //
+
+    fmt.Println("[ aquameta ] Starting PostgreSQL daemon...")
+    if err := database.Start(); err != nil {
+        fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to start PostgreSQL: %v\n", err)
+        runtime.Goexit()
+    }
+    fmt.Println("[ aquameta ] PostgreSQL daemon started.")
+
+    //
+    // create the database
+    //
+
+    if create_database {
+        fmt.Println("[ aquameta ] PostgreSQL database does not exist, creating...")
+        if err := database.CreateDatabase(); err != nil {
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to create database: %v\n", err)
+            runtime.Goexit()
+        } else {
+            fmt.Println("[ aquameta ] PostgreSQL database created.")
+        }
+
+    }
+
+    defer func() {
+        if err := database.Stop(); err != nil {
+            fmt.Fprintf(os.Stderr, "[ aquameta ] SHEEEIT cant stop.")
+        } else {
+            fmt.Fprintf(os.Stdout, "[ aquameta ] Database stopped")
+        }
+    }()
+
+
+
+
 
     //
     // connect to database
     //
 
-    // In any case, statement caching can be disabled by connecting with statement_cache_capacity=0.
-    dbpool, err := pgxpool.Connect(context.Background(), config.Database.Connection)
+    connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", config.Database.User, config.Database.Password, config.Database.Host, config.Database.Port, config.Database.DatabaseName)
+    fmt.Println("[ aquameta ] Database: ", connectionString);
+
+    dbpool, err := pgxpool.Connect(context.Background(), connectionString)
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-        os.Exit(1)
+        fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to connect to database: %v\n", err)
+        runtime.Goexit()
     }
+    fmt.Println("[ aquameta ] Connected to database.")
     defer dbpool.Close()
 
+    //
+    // enable logging
+    //
+
+    dbpool.Query(context.Background(), "set log_min_messages=LOG")
+    dbpool.Query(context.Background(), "set log_statement='all'")
+    fmt.Println("[ aquameta ] Enabled logging....")
+
+
 
 
     //
-    // authenticate
+    // check that aquameta's required extensions are installed
     //
 
-    // TODO
+    db_query := fmt.Sprintf(`
+select count(*) as ct from pg_catalog.pg_available_extensions
+    where name='meta' and installed_version = '0.2'
+        or name='bundle' and installed_version = '0.2'
+        or name='endpoint' and installed_version = '0.3'
+    `)
+
+    var ct int
+    err = dbpool.QueryRow(context.Background(), db_query).Scan( &ct)
+    fmt.Println("[ aquameta ] Checking for Aquameta installatioin....")
+
+    if ct != 3 {
+        fmt.Println("[ aquameta ] Aquameta is not installed on this database.  Installing...")
+        exec.Command("/bin/sh", "-c", "cp ./extension/* " + config.Database.RuntimePath + "/share/postgresql/extension/").Run()
+        fmt.Println("[ aquameta ] Extensions copied to PostgreSQL's extensions directory.")
+
+        install_queries := [...]string{
+            "create extension if not exists hstore schema public",
+            "create extension if not exists dblink schema public",
+            "create extension if not exists \"uuid-ossp\"",
+            "create extension if not exists pgcrypto schema public",
+            "create extension if not exists postgres_fdw",
+            "create extension pg_catalog_get_defs schema pg_catalog",
+            "create extension meta",
+            "create extension bundle",
+            "create extension event",
+            "create extension endpoint",
+            "create extension widget",
+            "create extension semantics",
+            "create extension ide",
+            "create extension documentation"}
+
+        for i := 0; i < len(install_queries); i++ {
+            rows, err := dbpool.Query(context.Background(), install_queries[i])
+            if (err != nil) {
+                fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install Aquameta extensions: %v\n", err)
+                runtime.Goexit()
+            }
+            rows.Close()
+        }
+        fmt.Println("[ aquameta ] Aquameta extensions were successfully installed.")
+
+
+
+        //
+        // download and install bundles
+        //
+
+
+        // hub install over network
+/* offline only until hub is @v0.3.0
+        fmt.Println("[ aquameta ] Downloading Aquameta core bundles from hub.aquameta.com...")
+        hub_bundle_queries := [...]string{
+            "insert into bundle.remote_database (foreign_server_name, schema_name, host, port, dbname, username, password) values ('hub','hub','hub.aquameta.com',5432,'aquameta','anonymous','anonymous')",
+            "select bundle.remote_mount(id) from bundle.remote_database",
+            "select bundle.remote_pull_bundle(r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'",
+            "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" }
+
+        for i := 0; i < len(bundle_queries); i++ {
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Setup query: %s\n", bundle_queries[i])
+            rows, err := dbpool.Query(context.Background(), bundle_queries[i])
+            if (err != nil) {
+                fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install Aquameta bundles: %v\n", err)
+                runtime.Goexit()
+            }
+            rows.Close()
+        }
+*/
+
+        // install from local filesystem
+        fmt.Println("[ aquameta ] Installing core bundles from source")
+        core_bundles := [...]string{
+            "org.aquameta.core.docs",
+            "org.aquameta.core.endpoint",
+            "org.aquameta.core.ide",
+            "org.aquameta.core.mimetypes",
+            "org.aquameta.core.semantics",
+            "org.aquameta.core.widget",
+            "org.aquameta.games.snake",
+            "org.aquameta.templates.simple",
+            "org.aquameta.ui.admin",
+            "org.aquameta.ui.auth",
+            "org.aquameta.ui.bundle",
+            "org.aquameta.ui.dev",
+            "org.aquameta.ui.event",
+            "org.aquameta.ui.fsm",
+            "org.aquameta.ui.layout",
+            "org.aquameta.ui.tags"}
+
+        for i := 0; i < len(core_bundles); i++ {
+            q := "select bundle.bundle_import_csv('/opt/aquameta/bundles-enabled/"+core_bundles[i]+"')"
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Import query: %s\n", q)
+            rows, err := dbpool.Query(context.Background(), q)
+            if (err != nil) {
+                fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install Aquameta bundles: %v\n", err)
+                runtime.Goexit()
+            }
+            rows.Close()
+        }
+
+
+        //
+        // check out core bundles
+        //
+
+        fmt.Println("[ aquameta ] Checking out core bundles...")
+        rows, err := dbpool.Query(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id")
+        if (err != nil) {
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to checkout core bundles: %v\n", err)
+            runtime.Goexit()
+        }
+        rows.Close()
+
+
+        //
+        // create superuser
+        //
+
+        fmt.Println("[ aquameta ] Setting up permissions...")
+
+        superuser_query := fmt.Sprintf("insert into endpoint.user (email, name, active, role_id) values (%s, %s, true, meta.role_id(%s))",
+            pq.QuoteLiteral(config.User.Email),
+            pq.QuoteLiteral(config.User.Name),
+            pq.QuoteLiteral(config.Database.User))
+        rows, err = dbpool.Query(context.Background(), superuser_query)
+        if (err != nil) {
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to create superuser: %v\n", err)
+            runtime.Goexit()
+        }
+        rows.Close()
+
+        fmt.Println("[ aquameta ] Installation complete!")
+
+
+    }
 
 
     //
@@ -177,8 +400,8 @@ func main() {
 
         matches, err := dbpool.Query(context.Background(), fmt.Sprintf(match_count_q, pq.QuoteLiteral(path), pq.QuoteLiteral(path), pq.QuoteLiteral(path)))
         if err != nil {
-            fmt.Fprintf(os.Stderr, "Matches query failed: %v\n", err)
-            os.Exit(1)
+            fmt.Fprintf(os.Stderr, "[ aquameta ] Matches query failed: %v\n", err)
+            runtime.Goexit()
         }
         defer matches.Close()
 
@@ -223,7 +446,7 @@ func main() {
             err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
             if err != nil {
                 fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-                os.Exit(1)
+                runtime.Goexit()
             }
             w.Header().Set("Content-Type", mimetype)
             io.WriteString(w, content)
@@ -238,7 +461,7 @@ func main() {
             err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_binary_q, pq.QuoteLiteral(id))).Scan(&content_binary, &mimetype)
             if err != nil {
                 fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-                os.Exit(1)
+                runtime.Goexit()
             }
             w.Header().Set("Content-Type", mimetype)
             w.Write(content_binary)
@@ -289,6 +512,9 @@ func main() {
 
     // log.Fatal(http.ListenAndServe(":9000", nil))
     // https://github.com/denji/golang-tls
+
+    fmt.Println("[ aquameta ] Starting HTTP server...")
+
     log.Fatal(http.ListenAndServeTLS(
         config.Webserver.IP+":"+config.Webserver.Port,
 		 config.Webserver.SSLCertificateFile,

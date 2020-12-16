@@ -1,7 +1,6 @@
 package main
 
 import (
-    "fmt"
     "log"
 
     "github.com/BurntSushi/toml"
@@ -9,12 +8,23 @@ import (
 
 type tomlConfig struct {
     Database Database `toml:"Database"`
+    User User `toml:"User"`
     Webserver Webserver `toml:"Webserver"`
     Webrtc Webrtc `toml:"Webrtc"`
 }
 
 type Database struct {
-    Connection string
+    User string
+    Password string
+    Host string
+    Port uint32
+    DatabaseName string
+    RuntimePath string
+}
+
+type User struct {
+    Name string
+    Email string
 }
 
 type Webserver struct {
@@ -35,23 +45,5 @@ func GetConfig() tomlConfig {
         log.Fatal(err)
     }
 
-    fmt.Printf("Database: %s\n", config.Database.Connection)
-    fmt.Printf("Webserver: %s:%s\n", config.Webserver.IP, config.Webserver.Port)
-
     return config
-
-/*
-    fmt.Printf("Title: %s\n", config.Title)
-    fmt.Printf("Owner: %s (%s, %s), Born: %s\n",
-        config.Owner.Name, config.Owner.Org, config.Owner.Bio,
-        config.Owner.DOB)
-    fmt.Printf("Database: %s %v (Max conn. %d), Enabled? %v\n",
-        config.DB.Server, config.DB.Ports, config.DB.ConnMax,
-        config.DB.Enabled)
-    for serverName, server := range config.Servers {
-        fmt.Printf("Server: %s (%s, %s)\n", serverName, server.IP, server.DC)
-    }
-    fmt.Printf("Client data: %v\n", config.Clients.Data)
-    fmt.Printf("Client hosts: %v\n", config.Clients.Hosts)
-*/
 }

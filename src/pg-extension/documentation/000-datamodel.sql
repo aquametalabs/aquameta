@@ -5,10 +5,7 @@
  * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
-
-create schema documentation; -- TODO: remove this
 set search_path=documentation;
-
 
 
 ------------------------------------------------------------------------------

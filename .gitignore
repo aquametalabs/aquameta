@@ -12,6 +12,8 @@ src/pg-extension/meta/meta--*.*.*.sql
 src/pg-extension/widget/widget--*.*.*.sql
 src/pg-extension/semantics/semantics--*.*.*.sql
 src/pg-extension/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
+src/pg-extension/documentation/documentation--*.*.*.sql
+src/pg-extension/ide/ide--*.*.*.sql
 
 # files created by plgo
 src/pg-extension/endpoint/endpoint/build
@@ -23,3 +25,8 @@ src/pg-extension/endpoint/endpoint.so
 src/go/aquameta/aquameta
 src/go/aquameta/server.crt
 src/go/aquameta/server.key
+src/go/aquameta/postgres
+src/go/aquameta/logfile
+
+# path where extension files are copied after making them
+src/go/aquameta/extension

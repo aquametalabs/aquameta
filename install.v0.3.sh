@@ -69,10 +69,11 @@ cd $SRC/src/pg-extension/meta && make && make install
 cd $SRC/src/pg-extension/bundle && make && make install
 cd $SRC/src/pg-extension/event && make && make install
 # build the plgo part of extension
-cd $SRC/src/pg-extension/endpoint/endpoint && /home/eric/go/bin/plgo . && \
-    cp build/endpoint.so .. && \
-    cp build/endpoint.h .. && \
-    cp build/endpoint--0.1.sql ../003-plgo.sql
+# (disabled because for now we're just not using templates)
+# cd $SRC/src/pg-extension/endpoint/endpoint && /home/eric/go/bin/plgo . && \
+#     cp build/endpoint.so .. && \
+#     cp build/endpoint.h .. && \
+#     cp build/endpoint--0.1.sql ../003-plgo.sql
 cd $SRC/src/pg-extension/endpoint && make && make install with_llvm=no
 cd $SRC/src/pg-extension/widget && make && make install
 cd $SRC/src/pg-extension/semantics && make && make install
@@ -113,8 +114,10 @@ sudo -u postgres psql -c "create extension event" aquameta
 sudo -u postgres psql -c "create extension endpoint" aquameta
 sudo -u postgres psql -c "create extension widget" aquameta
 sudo -u postgres psql -c "create extension semantics" aquameta
-sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
-sudo -u postgres psql -f $SRC/src/pg-extension/documentation/000-datamodel.sql aquameta
+sudo -u postgres psql -c "create extension ide" aquameta
+sudo -u postgres psql -c "create extension documentation" aquameta
+# sudo -u postgres psql -f $SRC/src/sql/ide/000-ide.sql aquameta
+# sudo -u postgres psql -f $SRC/src/pg-extension/documentation/000-datamodel.sql aquameta
 
 
 

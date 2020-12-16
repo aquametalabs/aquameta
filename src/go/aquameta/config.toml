@@ -4,8 +4,16 @@
 
 # PostgreSQL connection settings
 [Database]
-#Connection = "postgres://?path=/var/run/postgresql&database=aquameta"
-Connection = "postgres://?database=aquameta"
+User = "eric"
+Password = "whatevz"
+Host = "localhost"
+Port = 9876
+DatabaseName = "aquameta"
+RuntimePath = "./postgres"
+
+[User]
+Name = "Eric Hanson"
+Email = "eric@aquameta.com"
 
 [Webserver]
 #  Web server settings
