@@ -5,13 +5,14 @@ Overview
 --------
 Aquameta is a web-based IDE for full-stack web development.  Developers can manage HTML, CSS, Javascript, database schema, views, templates, routes, tests and documentation, and do version control, branching, pushing, pulling, user management and permissions, all from a single web-based IDE.  In theory.  And mostly in practice.
 
-Under the hood, Aquameta is a "datafied" web stack, built entirely in PostgreSQL.  The structure of a typical web framework is represented in Aquameta as big database schema with 6 postgreSQL schemas containing ~60 tables, ~50 views and ~90 stored procedures.  Apps developed in Aquameta are represented entirely as relational data, and all development, at an atomic level, is some form of data manipulation.  Also in theory.  And mostly in practice.
+Under the hood, Aquameta is a "datafied" web stack, built entirely in PostgreSQL.  The structure of a typical web framework is represented in Aquameta as big database schema with 6 PostgreSQL schemas containing ~60 tables, ~50 views and ~90 stored procedures.  Apps developed in Aquameta are represented entirely as relational data, and all development, at an atomic level, is some form of data manipulation.  Also in theory.  And mostly in practice.
 
 <!--
 * [introduction](http://blog.aquameta.com/introducing-aquameta/)
 * [blog](http://blog.aquameta.com/) / [twitter](http://twitter.com/aquameta) / [youtube](https://www.youtube.com/user/bigcountry503/videos) / [twitch](http://twitch.tv/aquameta)
 -->
 
+* [FLOSS TWiT.tv intro](https://www.youtube.com/watch?v=G0C8AsXNPAU)
 * [demo video](https://www.youtube.com/watch?v=ZOpj8lvNJtg)
 * [get started](docs/quickstart.md)
 * [cheat sheet](docs/cheatsheet.md)
