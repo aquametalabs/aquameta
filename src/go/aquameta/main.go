@@ -7,6 +7,7 @@ import (
     "fmt"
     "os"
     "os/exec"
+    "os/signal"
     "log"
     "net/http"
     "net/url"
@@ -17,29 +18,45 @@ import (
 
     "github.com/lib/pq"
     "github.com/jackc/pgx/v4/pgxpool"
-    epg "github.com/aquametalabs/embedded-postgres"
+    embeddedPostgres "github.com/aquametalabs/embedded-postgres"
+    "github.com/webview/webview"
 )
 
 func main() {
     fmt.Println("[ aquameta ] Aquameta daemon... ENGAGE!")
     config := GetConfig()
     fmt.Printf("[ aquameta ] Webserver: %s:%s\n", config.Webserver.IP, config.Webserver.Port)
-    defer os.Exit(0)
+
 
 
     // 
     // initialize the database
     // 
 
-    database := epg.NewDatabase(epg.DefaultConfig().
+    epg := embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
         Username(config.Database.User).
         Password(config.Database.Password).
         // Host
         Port(config.Database.Port).
         Database(config.Database.DatabaseName).
-        Version(epg.V12).
+        Version(embeddedPostgres.V12).
         RuntimePath(config.Database.RuntimePath).
         StartTimeout(45 * time.Second))
+
+    // trap ctrl-c
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    go func(){
+        for sig := range c {
+            if epg.IsStarted() {
+                epg.Stop()
+                runtime.Goexit()
+                os.Exit(0)
+            }
+            fmt.Printf("[ aquameta ] EYYYYYYYYYYYYYY stop it. %s", sig)
+            runtime.Goexit()
+        }
+    }()
 
     //
     // install postgres if it doesn't exist
@@ -48,14 +65,14 @@ func main() {
     create_database := false
     if _, err := os.Stat(config.Database.RuntimePath); os.IsNotExist(err) {
         create_database = true
-        fmt.Println("[ aquameta ] PostgreSQL installation does not exist, installing...")
-        if err := database.Install(); err != nil {
+        fmt.Println("[ aquameta ] PostgreSQL server is not installed.  Installing...")
+        if err := epg.Install(); err != nil {
             fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install PostgreSQL: %v\n", err)
             runtime.Goexit()
         }
-        fmt.Println("[ aquameta ] PostgreSQL is not installed.")
+        fmt.Println("[ aquameta ] PostgreSQL server installed at %s", config.Database.RuntimePath)
     } else {
-        fmt.Println("[ aquameta ] PostgreSQL is already installed, skipping installation.")
+        fmt.Println("[ aquameta ] PostgreSQL is already installed (%s).", config.Database.RuntimePath)
     }
 
 
@@ -63,8 +80,8 @@ func main() {
     // start the database daemon
     //
 
-    fmt.Println("[ aquameta ] Starting PostgreSQL daemon...")
-    if err := database.Start(); err != nil {
+    fmt.Println("[ aquameta ] Starting PostgreSQL server...")
+    if err := epg.Start(); err != nil {
         fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to start PostgreSQL: %v\n", err)
         runtime.Goexit()
     }
@@ -76,7 +93,7 @@ func main() {
 
     if create_database {
         fmt.Println("[ aquameta ] PostgreSQL database does not exist, creating...")
-        if err := database.CreateDatabase(); err != nil {
+        if err := epg.CreateDatabase(); err != nil {
             fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to create database: %v\n", err)
             runtime.Goexit()
         } else {
@@ -86,7 +103,7 @@ func main() {
     }
 
     defer func() {
-        if err := database.Stop(); err != nil {
+        if err := epg.Stop(); err != nil {
             fmt.Fprintf(os.Stderr, "[ aquameta ] SHEEEIT cant stop.")
         } else {
             fmt.Fprintf(os.Stdout, "[ aquameta ] Database stopped")
@@ -128,15 +145,15 @@ func main() {
     //
 
     db_query := fmt.Sprintf(`
-select count(*) as ct from pg_catalog.pg_available_extensions
-    where name='meta' and installed_version = '0.2'
-        or name='bundle' and installed_version = '0.2'
-        or name='endpoint' and installed_version = '0.3'
+select count(*) as ct from pg_catalog.pg_extension
+    where (extname='meta' and extversion = '0.2.0')
+        or (extname='bundle' and extversion = '0.2.0')
+        or (extname='endpoint' and extversion = '0.3.0')
     `)
 
     var ct int
     err = dbpool.QueryRow(context.Background(), db_query).Scan( &ct)
-    fmt.Println("[ aquameta ] Checking for Aquameta installatioin....")
+    fmt.Println("[ aquameta ] Checking for Aquameta installation....")
 
     if ct != 3 {
         fmt.Println("[ aquameta ] Aquameta is not installed on this database.  Installing...")
@@ -214,7 +231,13 @@ select count(*) as ct from pg_catalog.pg_available_extensions
             "org.aquameta.ui.event",
             "org.aquameta.ui.fsm",
             "org.aquameta.ui.layout",
-            "org.aquameta.ui.tags"}
+            "org.aquameta.ui.tags",
+
+            "com.aquameta.datasphere",
+            "com.aquameta.greatsphere",
+            "com.aquameta.helix",
+            "com.aquameta.cred.erichanson"}
+//            "com.aquameta.app.wikiviews"}
 
         for i := 0; i < len(core_bundles); i++ {
             q := "select bundle.bundle_import_csv('/opt/aquameta/bundles-enabled/"+core_bundles[i]+"')"
@@ -269,7 +292,7 @@ select count(*) as ct from pg_catalog.pg_available_extensions
     //
 
 
-    // endpoint handler
+    // endpoint API handler
 
     apiHandler := func(w http.ResponseWriter, req *http.Request) {
         // api version, sub-path
@@ -366,6 +389,22 @@ select count(*) as ct from pg_catalog.pg_available_extensions
     */
 
     resourceHandler := func(w http.ResponseWriter, req *http.Request) {
+        /*
+        w.Header().Set("Access-Control-Allow-Origin", "https://cdn.jsdelivr.net")
+        w.Header().Set("Access-Control-Allow-Origin", "http://cdn.jsdelivr.net")
+        w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1")
+        w.Header().Set("Access-Control-Allow-Origin", "https://127.0.0.1")
+        w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+"
+        if (*req).Method == "OPTIONS" {
+            return
+        }
+        */
+
+        log.Println(req.Proto, req.Method, req.RequestURI)
+
+
         // path
         // path := strings.SplitN(req.RequestURI,"?", 2)[0]
         path, err := url.QueryUnescape(req.URL.Path)
@@ -510,14 +549,35 @@ select count(*) as ct from pg_catalog.pg_available_extensions
     // start http server
     //
 
-    // log.Fatal(http.ListenAndServe(":9000", nil))
-    // https://github.com/denji/golang-tls
-
     fmt.Println("[ aquameta ] Starting HTTP server...")
 
-    log.Fatal(http.ListenAndServeTLS(
-        config.Webserver.IP+":"+config.Webserver.Port,
-		 config.Webserver.SSLCertificateFile,
-		 config.Webserver.SSLKeyFile,
-		 nil))
+    go func() {
+        if( config.Webserver.Protocol == "http" ) {
+            log.Fatal(http.ListenAndServe(config.Webserver.IP+":"+config.Webserver.Port, nil))
+        } else {
+            if( config.Webserver.Protocol == "https" ){
+                // https://github.com/denji/golang-tls
+                log.Fatal(http.ListenAndServeTLS(
+                    config.Webserver.IP+":"+config.Webserver.Port,
+                    config.Webserver.SSLCertificateFile,
+                    config.Webserver.SSLKeyFile,
+                    nil))
+            } else {
+                log.Fatal("Unrecognized protocol: "+config.Webserver.Protocol)
+            }
+        }
+    }()
+
+    //
+    // start gui
+    //
+
+    debug := true
+    w := webview.New(debug)
+    defer w.Destroy()
+    w.SetTitle("Aquameta Yo")
+    w.SetSize(800, 600, webview.HintNone)
+    w.Navigate(config.Webserver.Protocol+"://127.0.0.1:"+config.Webserver.Port+"/")
+    w.Run()
+
 }

@@ -28,6 +28,7 @@ type User struct {
 }
 
 type Webserver struct {
+    Protocol string
     IP string
     Port string
     SSLCertificateFile string

@@ -9,4 +9,5 @@ require (
 	github.com/aquametalabs/embedded-postgres v1.3.0
 	github.com/jackc/pgx/v4 v4.10.0
 	github.com/lib/pq v1.9.0
+	github.com/webview/webview v0.0.0-20200724072439-e0c01595b361
 )

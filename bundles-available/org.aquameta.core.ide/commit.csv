@@ -1,3 +1,4 @@
+0168c585-f388-45d1-a1b7-4e5c07f086ad	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	0a072629-425e-469b-84bf-bede1d397e14	\N	e9980627-4bd2-4efe-b340-a9e832b22339	2020-12-16 18:59:07.494137	fix bug in /bundle resource
 017a5626-a556-4fac-a156-629be666b1e2	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	0694f1b1-5a64-4321-ae84-4d98f7115763	\N	2ec9f8b2-d30a-4267-863e-f36667a57c8a	2019-01-21 16:39:32.404581	use auth:auth_manager on /dev
 0d06852c-82b8-410c-93bb-aa0c24ba16d9	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	2ca5f78b-7b00-42de-bded-df34e27b0f4d	\N	a8b8f6a1-089a-4361-89d0-ad4bdd635323	2017-12-29 13:54:07.081821	stub out the untracked row display
 1175f573-7be0-4373-ab13-50d1f9dd71e5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	9e9ff37f-c261-40e1-bd7c-d5dcfce516ef	\N	1d890d59-029b-4d79-994a-2c986147a2fe	2019-05-15 21:11:11.096958	database overview tab for endpoint routes and resources, bundle push and pull changes
@@ -28,6 +29,7 @@ ac3dc61b-d9db-46cf-a1df-01a960121447	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	3fa7ce
 b204e9ce-4e4a-47f4-be26-9dcd837470ea	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	08648cc8-c840-44a7-81df-e01e5dd7ef51	\N	b3acd0c0-e4b1-46b6-9976-3867df608584	2017-08-23 20:13:33.228299	add some metadata to the widget dom element, for bundle awareness
 b386545c-dc39-4c68-8eb0-eb2b350820b5	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	6dc587d2-b9fc-4f54-8484-aa696dee0334	\N	6839c938-13ea-40c1-ab8a-ad3a061ab3cb	2019-01-19 17:42:21.701579	move commit_dialog_*
 b3acd0c0-e4b1-46b6-9976-3867df608584	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	d80d560e-8cdc-420c-b972-c33c9071b8e6	\N	8a855bb2-cd5d-4adf-aceb-630bbe8773cd	2017-08-16 15:25:28.542818	move dev environment to /dev, and add a home page
+b78f8e41-e2f4-4451-bde9-9f07de2b71ab	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	43cbc87b-5d12-45fd-b1fc-1946f44adb2d	\N	0168c585-f388-45d1-a1b7-4e5c07f086ad	2020-12-16 19:43:22.069391	localize semantic.min.js
 b8afcbf3-7d01-410c-a105-1187da5bfada	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	9163d660-52a4-417f-b4cb-f4de05902b85	\N	c52c87b9-b626-4e35-a601-6f74ab8963d3	2018-12-02 00:17:53.982915	stage all button, remove references to core:
 bbbcb497-b098-46d7-a3b9-746d54b32ae8	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	df72d8e0-386b-4f41-967d-892705c1ccf0	\N	b386545c-dc39-4c68-8eb0-eb2b350820b5	2019-01-19 17:54:43.059063	vim adds carraige returns at end of files -- pgfs does not like this
 c0176843-c72c-4356-b761-2a3f848ec0de	47f8c9ba-d69b-4fe5-9c4b-5d54b300f78c	ecce2415-9afb-40d3-9425-a33c81aba310	\N	e8efc8be-8afd-4c00-933e-3088383926d9	2019-12-06 07:40:31.022041	bug fix, ui tweaks
