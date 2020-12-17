@@ -21,6 +21,8 @@ Status
 ------
 Aquameta is an experimental project, still in early stages of development.  It is not suitable for production development and should not be used in an untrusted or mission-critical environment.
 
+Aquameta v0.3 is under development, a complete rewrite in Go.
+
 
 Core Extensions
 ---------------
@@ -41,16 +43,20 @@ Aquameta is most easily installed on a Ubuntu 18 or Debian 9 or 10 instance; its
 
 To install, setup a clean Ubuntu 18 or Debian 9 or 10 instance.  You can run on bare metal, or using a virtual machine such as [VirtualBox](https://linuxhint.com/install_ubuntu_18-04_virtualbox/) on Mac OSX and Windows, or [KVM](https://linuxconfig.org/install-and-set-up-kvm-on-ubuntu-18-04-bionic-beaver-linux) on Linux.
 
-Once your Linux machine is setup, acquire the Aquameta package by either downloading the latest [release](https://github.com/aquametalabs/aquameta/releases), or to try the bleeding edge version, clone the repository.  Then run the install script:
+Once your Linux machine is setup, download the [release](https://github.com/aquametalabs/aquameta/releases), and run the install script:
 
-1. `git clone https://github.com/aquametalabs/aquameta.git`
-2. `cd aquameta`
-3. `./install.sh`
+1. `sudo -iu root`
+2. `cd /opt`
+3. `wget https://github.com/aquametalabs/aquameta/archive/v0.2.0.tar.gz`
+4. `cd aquameta`
+5. `./install.sh`
+
+Follow the prompts to install and configure Aquameta.
 
 
 About
 -----
-Aquameta has been the life project of Eric Hanson for close to 20 years off-and-on.  Functional prototypes have been developed in XML, RDF and MySQL, but PostgreSQL is the first database discovered that has the functionality necessary to achieve something close to practical, and huge advances in web technology like WebRTC, ES6 modules, and more have shown some light at the end of the tunnel.
+Aquameta has been the life project of Eric Hanson for close to 20 years off-and-on.  Functional prototypes have been developed in XML, RDF and MySQL, but PostgreSQL is the first database discovered that has the functionality necessary to achieve something close to practical.
 
 Technical goals of the project include:
 - Allow complete management of the database using only INSERT, UPDATE and DELETE commands (expose the DDL as DML)
@@ -66,9 +72,10 @@ Technical goals of the project include:
 - Users communicate with each other by exchanging structured, relational data
 - Decentralized P2P network with no single point of failure
 - Decentralize the web
+- Datafy the programming stack
 - Deprecate the file system
 
-Human goals
+Human goals:
 - Teach people to speak the language of data
 - Convert word-based knowledge and information to structured knowledge and information
 - Stretch a net of approximate categorization across our earth
