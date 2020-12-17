@@ -1,24 +1,24 @@
 package main
 
 import (
+    "context"
+    "encoding/json"
+    "fmt"
     "io"
     "io/ioutil"
-    "context"
-    "fmt"
-    "os"
-    "os/exec"
-    "os/signal"
     "log"
     "net/http"
     "net/url"
+    "os"
+    "os/exec"
+    "os/signal"
+    "runtime"
     "strings"
     "time"
-    "encoding/json"
-    "runtime"
 
-    "github.com/lib/pq"
-    "github.com/jackc/pgx/v4/pgxpool"
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
+    "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/lib/pq"
     "github.com/webview/webview"
 )
 
@@ -31,7 +31,7 @@ func main() {
 
     // 
     // initialize the database
-    // 
+   //
 
     epg := embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
         Username(config.Database.User).
@@ -51,10 +51,10 @@ func main() {
             if epg.IsStarted() {
                 epg.Stop()
                 runtime.Goexit()
-                os.Exit(0)
             }
             fmt.Printf("[ aquameta ] EYYYYYYYYYYYYYY stop it. %s", sig)
             runtime.Goexit()
+            os.Exit(0)
         }
     }()
 
@@ -62,9 +62,9 @@ func main() {
     // install postgres if it doesn't exist
     //
 
-    create_database := false
+    createDatabase := false
     if _, err := os.Stat(config.Database.RuntimePath); os.IsNotExist(err) {
-        create_database = true
+        createDatabase = true
         fmt.Println("[ aquameta ] PostgreSQL server is not installed.  Installing...")
         if err := epg.Install(); err != nil {
             fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install PostgreSQL: %v\n", err)
@@ -91,7 +91,7 @@ func main() {
     // create the database
     //
 
-    if create_database {
+    if createDatabase {
         fmt.Println("[ aquameta ] PostgreSQL database does not exist, creating...")
         if err := epg.CreateDatabase(); err != nil {
             fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to create database: %v\n", err)
@@ -249,7 +249,6 @@ select count(*) as ct from pg_catalog.pg_extension
             }
             rows.Close()
         }
-
 
         //
         // check out core bundles
@@ -484,7 +483,7 @@ select count(*) as ct from pg_catalog.pg_extension
 
             err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resource_q, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
             if err != nil {
-                fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+                fmt.Printf("QueryRow failed: %v\n", err)
                 runtime.Goexit()
             }
             w.Header().Set("Content-Type", mimetype)
@@ -572,8 +571,7 @@ select count(*) as ct from pg_catalog.pg_extension
     // start gui
     //
 
-    debug := true
-    w := webview.New(debug)
+    w := webview.New(true)
     defer w.Destroy()
     w.SetTitle("Aquameta Yo")
     w.SetSize(800, 600, webview.HintNone)
