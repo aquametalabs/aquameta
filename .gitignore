@@ -30,3 +30,7 @@ src/go/aquameta/logfile
 
 # path where extension files are copied after making them
 src/go/aquameta/extension
+
+# xgo distribution files
+src/go/aquameta/build
+src/go/aquameta/dist
