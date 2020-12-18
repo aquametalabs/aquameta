@@ -2,6 +2,7 @@
 *.swp
 *.swo
 *.pyc
+.idea
 
 # files created by `make` in each extension
 extensions/bundle/bundle--*.*.*.sql
@@ -25,3 +26,4 @@ extensions/endpoint/endpoint.so
 certificates/
 aquameta
 postgres/
+config.toml

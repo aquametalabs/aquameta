@@ -25,16 +25,11 @@ echo ""
 # set working directory and destination directory
 SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-
-# TODO: Use pg_config to guess destination directory, prompt for override.
-# Split out the install step, to optionally use different extensions directory.
-
-
 #############################################################################
 # prompt for $DEST location
 #############################################################################
-read -p "Installation directory [$SRC]: " DEST
-DEST=${DEST:-$SRC}
+# read -p "Installation directory [$SRC]: " DEST
+# DEST=${DEST:-$SRC}
 
 #############################################################################
 # aquameta postgresql extensions
@@ -42,10 +37,10 @@ DEST=${DEST:-$SRC}
 
 # install extensions into PostgreSQL's extensions/ directory
 echo "Building core PostgreSQL extensions..."
-cd $SRC/../extensions/pg_catalog_get_defs && make && make install
-cd $SRC/../extensions/meta && make && make install
-cd $SRC/../extensions/bundle && make && make install
-cd $SRC/../extensions/event && make && make install
+cd $SRC/../extensions/pg_catalog_get_defs && make
+cd $SRC/../extensions/meta && make
+cd $SRC/../extensions/bundle && make
+cd $SRC/../extensions/event && make
 
 # build the plgo part of extension
 # (disabled because for now we're just not using templates)
@@ -53,9 +48,11 @@ cd $SRC/../extensions/event && make && make install
 #     cp build/endpoint.so .. && \
 #     cp build/endpoint.h .. && \
 #     cp build/endpoint--0.1.sql ../003-plgo.sql
-# cd $SRC/extensions/endpoint && make && make install with_llvm=no
+# cd $SRC/extensions/endpoint && make with_llvm=no
 
-cd $SRC/../extensions/endpoint && make && make install
-cd $SRC/../extensions/widget && make && make install
-cd $SRC/../extensions/semantics && make && make install
+cd $SRC/../extensions/endpoint && make
+cd $SRC/../extensions/widget && make
+cd $SRC/../extensions/semantics && make
+cd $SRC/../extensions/documentation && make
+cd $SRC/../extensions/ide && make
 
