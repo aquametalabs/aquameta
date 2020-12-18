@@ -28,13 +28,13 @@ Core Extensions
 ---------------
 Aquameta contains seven core PostgreSQL extensions, which together make up the web stack:
 
-- [meta](https://github.com/aquametalabs/meta) - Writable system catalog for PostgreSQL
-- [bundle](src/pg-extension/bundle) - A version control system similar to git but for database rows instead of files
-- [filesystem](src/pg-extension/filesystem) - A bi-directional file system integration system
-- [event](src/pg-extension/event) - Pub/sub data change events API
-- [endpoint](src/pg-extension/endpoint) - REST endpoint handler plus resource hosting, templates and a WebSocket event server
-- [widget](src/pg-extension/widget) - Modular web user interface components made of HTML, CSS and Javascript
-- [semantics](src/pg-extension/semantics) - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
+- [meta](extensions/meta) - Writable system catalog for PostgreSQL
+- [bundle](extensions/bundle) - A version control system similar to git but for database rows instead of files
+- [filesystem](extensions/filesystem) - A bi-directional file system integration system
+- [event](extensions/event) - Pub/sub data change events API
+- [endpoint](extensions/endpoint) - REST endpoint handler plus resource hosting, templates and a WebSocket event server
+- [widget](extensions/widget) - Modular web user interface components made of HTML, CSS and Javascript
+- [semantics](extensions/semantics) - A metadata layer on top of the database schema, for binding columns and relations to widgets, decorating keys, etc.
 
 
 Installation

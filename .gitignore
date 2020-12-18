@@ -1,3 +1,4 @@
+# generated files
 *.swp
 *.swo
 *.pyc
@@ -21,14 +22,6 @@ extensions/endpoint/003-plgo.sql
 extensions/endpoint/endpoint.h
 extensions/endpoint/endpoint.so
 
-# go server ignores
-go/aquameta
-go/server.crt
-go/server.key
-go/postgres
-go/logfile
-go/extension
-
-# xgo distribution files
-go/build
-go/dist
+certificates/
+aquameta
+postgres/
