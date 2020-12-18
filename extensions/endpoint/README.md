@@ -11,10 +11,10 @@ API version and resource path, then makes a query to the endpoint.request
 function in the database.
 
 ### URLS
-* /endpoint/0.2/row
-* /endpoint/0.2/relation
-* /endpoint/0.2/function
-* /endpoint/0.2/field
+* /endpoint/0.3/row
+* /endpoint/0.3/relation
+* /endpoint/0.3/function
+* /endpoint/0.3/field
 
 ## Database functions
 The entry point is a request function that the uWSGI server uses to pass on th

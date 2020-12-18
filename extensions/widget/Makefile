@@ -1,5 +1,5 @@
 EXTENSION = widget
-EXTVERSION = 0.2.0
+EXTVERSION = 0.3.0
 DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
 

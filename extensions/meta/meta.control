@@ -1,4 +1,4 @@
 comment = 'writable system catalog'
-default_version = '0.2.0'
+default_version = '0.3.0'
 relocatable = false
 schema = 'meta'

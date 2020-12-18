@@ -9,7 +9,7 @@ create schema endpoint_test;
 set search_path=endpoint_test,public;
 
 -- test remote
-insert into endpoint.remote_endpoint(id,url, name) 
+insert into endpoint.remote_endpoint(id,url, name)
 values ('67f7d009-52d8-4a01-9b13-00188c904249', 'http://demo.aquameta.org/endpoint', 'Test Server');
 
 -------------------------------------------------------------------------------
