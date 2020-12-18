@@ -1,7 +1,7 @@
 /*******************************************************************************
  * endpoint - client
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyriright (c) 2020 - Aquameta, LLC - http://aquameta.org/
  ******************************************************************************/
 
 set search_path=endpoint;
@@ -33,7 +33,7 @@ create table remote_endpoint (
 create or replace function endpoint.client_rows_select(remote_endpoint_id uuid, relation_id meta.relation_id, args text[] default '{}', arg_vals text[] default '{}', out response http_client.http_response)
 as $$
 
--- /endpoint/0.2/relation/widget/input?meta_data=true
+-- /endpoint/0.3/relation/widget/input?meta_data=true
 select http_client.http_get (
     (select url from endpoint.remote_endpoint where id=remote_endpoint_id)
         || '/relation'
@@ -49,7 +49,7 @@ $$ language sql;
 /*******************************************************************************
 * FUNCTION client_row_select
 *******************************************************************************/
--- endpoint/0.2/relation/widget/input?meta_data=true&where=%7B%22name%22%3A%22id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%2212345%22%7D
+-- endpoint/0.3/relation/widget/input?meta_data=true&where=%7B%22name%22%3A%22id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%2212345%22%7D
 create or replace function endpoint.client_row_select(remote_endpoint_id uuid, row_id meta.row_id, out response http_client.http_response)
 as $$
 
@@ -148,7 +148,7 @@ $$ language sql;
  *
  *
  * JOIN GRAPH CLIENT
- * 
+ *
  * A multidimensional structure made up of rows from various tables connected
  * by their foreign keys, for non-tabular query results made up of rows, but
  * serialized into a table of type join_graph_row.
@@ -169,7 +169,7 @@ create or replace function endpoint.join_graph_to_json(join_graph_table text, ou
 as $$
 begin
      -- build json object
-    execute 'select json_agg(row_to_json(jgt))::jsonb from (select * from ' || quote_ident(join_graph_table) || ' jgt2 order by jgt2.position) jgt' 
+    execute 'select json_agg(row_to_json(jgt))::jsonb from (select * from ' || quote_ident(join_graph_table) || ' jgt2 order by jgt2.position) jgt'
     into join_graph_json;
 end;
 $$ language plpgsql;
@@ -180,7 +180,7 @@ $$ language plpgsql;
 /*******************************************************************************
 * FUNCTION endpoint_response_to_joingraph
 *
-* This guy converts a endpoint's JSON response (as returned by say 
+* This guy converts a endpoint's JSON response (as returned by say
 * endpoint.client_rows_select()) into our new join-graph format.  Long-term
 * endpoint.rows_select should start producing join-graph formatted results that
 * contain row_ids and a general overhaul.  This is the shim til we get there.

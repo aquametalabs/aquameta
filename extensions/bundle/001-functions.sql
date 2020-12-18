@@ -2,7 +2,7 @@
  * Bundle
  * Data Version Control System
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyriright (c) 2020 - Aquameta, LLC - http://aquameta.org/
  ******************************************************************************/
 
 /*
