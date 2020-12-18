@@ -25,22 +25,22 @@ import (
 func main() {
     fmt.Println("[ aquameta ] Aquameta daemon... ENGAGE!")
     config := GetConfig()
-    fmt.Printf("[ aquameta ] Webserver: %s:%s\n", config.Webserver.IP, config.Webserver.Port)
+    fmt.Printf("[ aquameta ] WebServer: %s:%s\n", config.WebServer.IP, config.WebServer.Port)
 
 
 
     // 
     // initialize the database
-   //
+    //
 
     epg := embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
-        Username(config.Database.User).
+        Username(config.Database.Role).
         Password(config.Database.Password).
         // Host
         Port(config.Database.Port).
         Database(config.Database.DatabaseName).
         Version(embeddedPostgres.V12).
-        RuntimePath(config.Database.RuntimePath).
+        RuntimePath(config.Database.EmbeddedPostgresRuntimePath).
         StartTimeout(45 * time.Second))
 
     // trap ctrl-c
@@ -63,16 +63,16 @@ func main() {
     //
 
     createDatabase := false
-    if _, err := os.Stat(config.Database.RuntimePath); os.IsNotExist(err) {
+    if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
         createDatabase = true
         fmt.Println("[ aquameta ] PostgreSQL server is not installed.  Installing...")
         if err := epg.Install(); err != nil {
             fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to install PostgreSQL: %v\n", err)
             runtime.Goexit()
         }
-        fmt.Println("[ aquameta ] PostgreSQL server installed at %s", config.Database.RuntimePath)
+        fmt.Println("[ aquameta ] PostgreSQL server installed at %s", config.Database.EmbeddedPostgresRuntimePath)
     } else {
-        fmt.Println("[ aquameta ] PostgreSQL is already installed (%s).", config.Database.RuntimePath)
+        fmt.Println("[ aquameta ] PostgreSQL is already installed (%s).", config.Database.EmbeddedPostgresRuntimePath)
     }
 
 
@@ -118,7 +118,7 @@ func main() {
     // connect to database
     //
 
-    connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", config.Database.User, config.Database.Password, config.Database.Host, config.Database.Port, config.Database.DatabaseName)
+    connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", config.Database.Role, config.Database.Password, config.Database.Host, config.Database.Port, config.Database.DatabaseName)
     fmt.Println("[ aquameta ] Database: ", connectionString);
 
     dbpool, err := pgxpool.Connect(context.Background(), connectionString)
@@ -157,7 +157,7 @@ select count(*) as ct from pg_catalog.pg_extension
 
     if ct != 3 {
         fmt.Println("[ aquameta ] Aquameta is not installed on this database.  Installing...")
-        exec.Command("/bin/sh", "-c", "cp ./extension/* " + config.Database.RuntimePath + "/share/postgresql/extension/").Run()
+        exec.Command("/bin/sh", "-c", "cp ./extension/* " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
         fmt.Println("[ aquameta ] Extensions copied to PostgreSQL's extensions directory.")
 
         install_queries := [...]string{
@@ -240,6 +240,7 @@ select count(*) as ct from pg_catalog.pg_extension
 //            "com.aquameta.app.wikiviews"}
 
         for i := 0; i < len(core_bundles); i++ {
+            // FIXME - use binary location?
             q := "select bundle.bundle_import_csv('/opt/aquameta/bundles-enabled/"+core_bundles[i]+"')"
             fmt.Fprintf(os.Stderr, "[ aquameta ] Import query: %s\n", q)
             rows, err := dbpool.Query(context.Background(), q)
@@ -270,9 +271,9 @@ select count(*) as ct from pg_catalog.pg_extension
         fmt.Println("[ aquameta ] Setting up permissions...")
 
         superuser_query := fmt.Sprintf("insert into endpoint.user (email, name, active, role_id) values (%s, %s, true, meta.role_id(%s))",
-            pq.QuoteLiteral(config.User.Email),
-            pq.QuoteLiteral(config.User.Name),
-            pq.QuoteLiteral(config.Database.User))
+            pq.QuoteLiteral(config.AquametaUser.Email),
+            pq.QuoteLiteral(config.AquametaUser.Name),
+            pq.QuoteLiteral(config.Database.Role))
         rows, err = dbpool.Query(context.Background(), superuser_query)
         if (err != nil) {
             fmt.Fprintf(os.Stderr, "[ aquameta ] Unable to create superuser: %v\n", err)
@@ -551,18 +552,18 @@ select count(*) as ct from pg_catalog.pg_extension
     fmt.Println("[ aquameta ] Starting HTTP server...")
 
     go func() {
-        if( config.Webserver.Protocol == "http" ) {
-            log.Fatal(http.ListenAndServe(config.Webserver.IP+":"+config.Webserver.Port, nil))
+        if( config.WebServer.Protocol == "http" ) {
+            log.Fatal(http.ListenAndServe(config.WebServer.IP+":"+config.WebServer.Port, nil))
         } else {
-            if( config.Webserver.Protocol == "https" ){
+            if( config.WebServer.Protocol == "https" ){
                 // https://github.com/denji/golang-tls
                 log.Fatal(http.ListenAndServeTLS(
-                    config.Webserver.IP+":"+config.Webserver.Port,
-                    config.Webserver.SSLCertificateFile,
-                    config.Webserver.SSLKeyFile,
+                    config.WebServer.IP+":"+config.WebServer.Port,
+                    config.WebServer.SSLCertificateFile,
+                    config.WebServer.SSLKeyFile,
                     nil))
             } else {
-                log.Fatal("Unrecognized protocol: "+config.Webserver.Protocol)
+                log.Fatal("Unrecognized protocol: "+config.WebServer.Protocol)
             }
         }
     }()
@@ -575,7 +576,7 @@ select count(*) as ct from pg_catalog.pg_extension
     defer w.Destroy()
     w.SetTitle("Aquameta Yo")
     w.SetSize(800, 600, webview.HintNone)
-    w.Navigate(config.Webserver.Protocol+"://127.0.0.1:"+config.Webserver.Port+"/")
+    w.Navigate(config.WebServer.Protocol+"://127.0.0.1:"+config.WebServer.Port+"/")
     w.Run()
 
 }

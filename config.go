@@ -8,35 +8,30 @@ import (
 
 type tomlConfig struct {
     Database Database `toml:"Database"`
-    User User `toml:"User"`
-    Webserver Webserver `toml:"Webserver"`
-    Webrtc Webrtc `toml:"Webrtc"`
+    AquametaUser AquametaUser `toml:"AquametaUser"`
+    WebServer WebServer `toml:"WebServer"`
 }
 
 type Database struct {
-    User string
+    Role string
     Password string
     Host string
     Port uint32
     DatabaseName string
-    RuntimePath string
+    EmbeddedPostgresRuntimePath string
 }
 
-type User struct {
+type AquametaUser struct {
     Name string
     Email string
 }
 
-type Webserver struct {
+type WebServer struct {
     Protocol string
     IP string
     Port string
     SSLCertificateFile string
     SSLKeyFile string
-}
-
-type Webrtc struct {
-    Stun string
 }
 
 

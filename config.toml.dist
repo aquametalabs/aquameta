@@ -1,0 +1,35 @@
+# Aquameta Configuration
+
+[Database]
+    Mode = "embedded"               # { embedded | standalone } - if embedded, aquameta will create a new PostgreSQL
+                                    # server instance. If "standalone", use an existing server managed by Aquameta.
+
+    # the path where the embedded postgresql instance will be installed (if applicable)
+    EmbeddedPostgresRuntimePath = "./postgres"
+
+    # connection settings
+    Host = "localhost"              # host
+    Port = 9876                     # instance will open (sometimes 5432)
+    DatabaseName = "aquameta"       # name of the database to be created where Aquameta will be installed
+
+    # authentication settings
+    Role = "youruser"
+    Password = "whatevz"            # FIXME - we probably want to use local trust auth instead
+
+
+[AquametaUser]                      # Record to create in `endpoint.user` table
+    Name = "Your Name"
+    Email = "your.email@example.com"
+
+
+
+[WebServer]
+    Protocol = "http"               # { http | https }
+    IP = "127.0.0.1"                # IP to bind to
+    Port = "4444"                   # Port to open
+
+    # only used w/ https
+    SSLCertificateFile = "certificates/server.crt"
+    SSLKeyFile = "certificates/server.key"
+
+
