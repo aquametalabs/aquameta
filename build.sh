@@ -23,7 +23,7 @@ echo "\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  "
 echo " / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_"
 echo "(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /"
 echo "     \/    |__|          \/      \/     \/          \/ "
-echo "            [ version 0.2.0-rc7 - base install ]"
+echo "            [ version 0.3.0 - base install ]"
 echo ""
 echo "                 OBLIGATORY WARNING:"
 echo ""
@@ -64,34 +64,26 @@ DEST=${DEST:-$SRC}
 
 # install extensions into PostgreSQL's extensions/ directory
 echo "Building core PostgreSQL extensions..."
-cd $SRC/src/pg-extension/pg_catalog_get_defs && make && make install
-cd $SRC/src/pg-extension/meta && make && make install
-cd $SRC/src/pg-extension/bundle && make && make install
-cd $SRC/src/pg-extension/event && make && make install
+cd $SRC/extensions/pg_catalog_get_defs && make && make install
+cd $SRC/extensions/meta && make && make install
+cd $SRC/extensions/bundle && make && make install
+cd $SRC/extensions/event && make && make install
 # build the plgo part of extension
 # (disabled because for now we're just not using templates)
 # cd $SRC/src/pg-extension/endpoint/endpoint && /home/eric/go/bin/plgo . && \
 #     cp build/endpoint.so .. && \
 #     cp build/endpoint.h .. && \
 #     cp build/endpoint--0.1.sql ../003-plgo.sql
-cd $SRC/src/pg-extension/endpoint && make && make install with_llvm=no
-cd $SRC/src/pg-extension/widget && make && make install
-cd $SRC/src/pg-extension/semantics && make && make install
+# cd $SRC/extensions/endpoint && make && make install with_llvm=no
+cd $SRC/extensions/endpoint && make && make install
+cd $SRC/extensions/widget && make && make install
+cd $SRC/extensions/semantics && make && make install
 
 
 
 #############################################################################
 # build the aquameta database
 #############################################################################
-
-echo "Configuring PostgreSQL..."
-# enable peer authentication
-#### TEMP sudo sed -i "s/^local   all.*$/local all all trust/" /etc/postgresql/12/main/pg_hba.conf
-#### TEMP systemctl restart postgresql.service
-
-# create aquameta database
-sudo -u postgres createdb aquameta
-sudo -u postgres psql -c "alter database aquameta set bytea_output to 'hex'" aquameta
 
 # create dependency extensions required by aquameta
 echo "Installing dependency extensions..."

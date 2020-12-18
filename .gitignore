@@ -3,34 +3,32 @@
 *.pyc
 
 # files created by `make` in each extension
-src/pg-extension/bundle/bundle--*.*.*.sql
-src/pg-extension/email/email--*.*.*.sql
-src/pg-extension/endpoint/endpoint--*.*.*.sql
-src/pg-extension/event/event--*.*.*.sql
-src/pg-extension/filesystem/filesystem--*.*.*.sql
-src/pg-extension/meta/meta--*.*.*.sql
-src/pg-extension/widget/widget--*.*.*.sql
-src/pg-extension/semantics/semantics--*.*.*.sql
-src/pg-extension/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
-src/pg-extension/documentation/documentation--*.*.*.sql
-src/pg-extension/ide/ide--*.*.*.sql
+extensions/bundle/bundle--*.*.*.sql
+extensions/email/email--*.*.*.sql
+extensions/endpoint/endpoint--*.*.*.sql
+extensions/event/event--*.*.*.sql
+extensions/filesystem/filesystem--*.*.*.sql
+extensions/meta/meta--*.*.*.sql
+extensions/widget/widget--*.*.*.sql
+extensions/semantics/semantics--*.*.*.sql
+extensions/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
+extensions/documentation/documentation--*.*.*.sql
+extensions/ide/ide--*.*.*.sql
 
 # files created by plgo
-src/pg-extension/endpoint/endpoint/build
-src/pg-extension/endpoint/003-plgo.sql
-src/pg-extension/endpoint/endpoint.h
-src/pg-extension/endpoint/endpoint.so
+extensions/endpoint/endpoint/build
+extensions/endpoint/003-plgo.sql
+extensions/endpoint/endpoint.h
+extensions/endpoint/endpoint.so
 
-# files created by go server
-src/go/aquameta/aquameta
-src/go/aquameta/server.crt
-src/go/aquameta/server.key
-src/go/aquameta/postgres
-src/go/aquameta/logfile
-
-# path where extension files are copied after making them
-src/go/aquameta/extension
+# go server ignores
+go/aquameta
+go/server.crt
+go/server.key
+go/postgres
+go/logfile
+go/extension
 
 # xgo distribution files
-src/go/aquameta/build
-src/go/aquameta/dist
+go/build
+go/dist

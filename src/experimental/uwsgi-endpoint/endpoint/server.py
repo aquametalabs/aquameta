@@ -33,7 +33,7 @@ except KeyError as err:
 else:
     application = AuthMiddleware(DispatcherMiddleware(page_app, {
         '%s' % endpoint_url: data_app,
-#        '%s/0.2/event' % endpoint_url: events_app
+#        '%s/0.3/event' % endpoint_url: events_app
     }))
 
 run_simple('0.0.0.0', 9000, application, use_reloader=True, use_debugger=True)

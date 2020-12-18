@@ -27,7 +27,7 @@ def request_method(cmd, cursor):
     post_data = json.dumps(cmd['data'])
 
     logging.info('websocket endpoint request: %s, %s, %s, %s, %s' % (
-        '0.2',          # API version               - 0.1, 0.2, etc.
+        '0.3',          # API version               - 0.1, 0.3, etc.
         cmd['verb'],    # HTTP method               - GET, POST, PATCH, DELETE
         cmd['uri'],     # selector                  - '/relation/widget/dependency_js'
         query_data,     # query string arguments    - including event.session id
