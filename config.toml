@@ -12,7 +12,7 @@ DatabaseName = "aquameta"
 RuntimePath = "./postgres"
 
 [User]
-Name = "Eric Hanson"
+Name = "Hanson"
 Email = "eric@aquameta.com"
 
 [Webserver]
@@ -20,7 +20,7 @@ Email = "eric@aquameta.com"
 IP = "127.0.0.1"
 Port = "4444"
 Protocol = "http" # http or https
-SSLCertificateFile = "server.crt" # can use absolute or relative paths, relative is relative to current working directory (?)
-SSLKeyFile = "server.key"
+SSLCertificateFile = "certificates/server.crt"
+SSLKeyFile = "certificates/server.key"
 
 [Webrtc]
