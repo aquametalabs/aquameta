@@ -26,8 +26,11 @@ func main() {
     log.SetPrefix("[ aquameta ] ")
     log.Print("Aquameta daemon... ENGAGE!")
 
-    // get configuration
-    config := GetConfig()
+    config, err := getConfig()
+    if err != nil {
+        log.Printf("Could not load configuration: %s", err)
+        log.Print("No configuration file found.  Launching Bootloader.")
+    }
     workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
     if err != nil { log.Fatal(err) }
 
@@ -68,6 +71,7 @@ func main() {
     // install postgres if it doesn't exist
     //
 
+    /*
     createDatabase := false
     if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
         createDatabase = true
@@ -80,6 +84,7 @@ func main() {
         log.Printf("PostgreSQL is already installed (%s).", config.Database.EmbeddedPostgresRuntimePath)
     }
 
+*/
 
     //
     // start the database daemon
@@ -91,6 +96,16 @@ func main() {
     }
     log.Print("PostgreSQL daemon started.")
 
+    defer func() {
+        if err := epg.Stop(); err != nil {
+            log.Fatalf("Database halt failed: %v", err)
+        } else {
+            log.Print("Database stopped")
+        }
+    }()
+
+
+/*
     //
     // create the database
     //
@@ -105,15 +120,7 @@ func main() {
 
     }
 
-    defer func() {
-        if err := epg.Stop(); err != nil {
-            log.Fatalf("Database halt failed: %v", err)
-        } else {
-            log.Print("Database stopped")
-        }
-    }()
-
-
+*/
 
     //
     // connect to database
@@ -153,7 +160,7 @@ select count(*) as ct from pg_catalog.pg_extension
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan( &ct)
     log.Print("Checking for Aquameta installation....")
 
-    if ct != 3 {
+    if ct != 3 && false {
         log.Print("Aquameta is not installed on this database.  Installing...")
         exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
         exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
@@ -218,6 +225,7 @@ select count(*) as ct from pg_catalog.pg_extension
             "org.aquameta.core.mimetypes",
             "org.aquameta.core.semantics",
             "org.aquameta.core.widget",
+            "org.aquameta.core.bootloader",
             "org.aquameta.games.snake",
             "org.aquameta.templates.simple",
             "org.aquameta.ui.admin",
@@ -563,9 +571,12 @@ select count(*) as ct from pg_catalog.pg_extension
 
     w := webview.New(true)
     defer w.Destroy()
-    w.SetTitle("Aquameta v0.3.0")
-    w.SetSize(800, 600, webview.HintNone)
-    w.Navigate(config.WebServer.Protocol+"://"+config.WebServer.IP+":"+config.WebServer.Port+"/")
+    w.SetTitle("Aquameta Boot Loader")
+    w.SetSize(800, 500, webview.HintNone)
+    w.Navigate(config.WebServer.Protocol+"://"+config.WebServer.IP+":"+config.WebServer.Port+"/boot")
     w.Run()
 
+    epg.Stop()
+
+    log.Fatal("Good day.")
 }

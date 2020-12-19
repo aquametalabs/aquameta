@@ -26,4 +26,6 @@ extensions/endpoint/endpoint.so
 certificates/
 aquameta
 postgres/
-config.toml
+
+boot.conf
+

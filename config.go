@@ -1,8 +1,6 @@
 package main
 
 import (
-    "log"
-
     "github.com/BurntSushi/toml"
 )
 
@@ -35,11 +33,11 @@ type WebServer struct {
 }
 
 
-func GetConfig() tomlConfig {
+func getConfig() (tomlConfig, error) {
     var config tomlConfig
-    if _, err := toml.DecodeFile("config.toml", &config); err != nil {
-        log.Fatal(err)
+    if _, err := toml.DecodeFile("boot.conf", &config); err != nil {
+        return config, err
     }
 
-    return config
+    return config, nil
 }
