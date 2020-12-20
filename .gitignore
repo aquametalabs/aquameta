@@ -25,7 +25,4 @@ extensions/endpoint/endpoint.so
 
 certificates/
 aquameta
-postgres/
-
-boot.conf
-
+bootloader.db/

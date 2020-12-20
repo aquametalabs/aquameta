@@ -7,10 +7,11 @@ import (
 type tomlConfig struct {
     Database Database `toml:"Database"`
     AquametaUser AquametaUser `toml:"AquametaUser"`
-    WebServer WebServer `toml:"WebServer"`
+    HTTPServer HTTPServer `toml:"HTTPServer"`
 }
 
 type Database struct {
+    Mode string
     Role string
     Password string
     Host string
@@ -24,7 +25,7 @@ type AquametaUser struct {
     Email string
 }
 
-type WebServer struct {
+type HTTPServer struct {
     Protocol string
     IP string
     Port string
@@ -33,9 +34,9 @@ type WebServer struct {
 }
 
 
-func getConfig() (tomlConfig, error) {
+func getConfig(configFile string) (tomlConfig, error) {
     var config tomlConfig
-    if _, err := toml.DecodeFile("boot.conf", &config); err != nil {
+    if _, err := toml.DecodeFile(configFile, &config); err != nil {
         return config, err
     }
 

@@ -4,6 +4,10 @@ import (
     "context"
     "encoding/json"
     "fmt"
+    embeddedPostgres "github.com/aquametalabs/embedded-postgres"
+    "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/lib/pq"
+    "github.com/webview/webview"
     "io"
     "io/ioutil"
     "log"
@@ -11,49 +15,20 @@ import (
     "net/url"
     "os"
     "os/exec"
-    "os/signal"
     "path/filepath"
     "strings"
     "time"
-
-    embeddedPostgres "github.com/aquametalabs/embedded-postgres"
-    "github.com/jackc/pgx/v4/pgxpool"
-    "github.com/lib/pq"
-    "github.com/webview/webview"
 )
 
 func main() {
     log.SetPrefix("[ aquameta ] ")
     log.Print("Aquameta daemon... ENGAGE!")
-
-    config, err := getConfig()
-    if err != nil {
-        log.Printf("Could not load configuration: %s", err)
-        log.Print("No configuration file found.  Launching Bootloader.")
-    }
     workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil { log.Fatal(err) }
-
-    // display startup information
-    log.Printf("WebServer: %s:%s", config.WebServer.IP, config.WebServer.Port)
-
-
-
+    var epg embeddedPostgres.EmbeddedPostgres
     //
-    // initialize the database
-    //
-
-    epg := embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
-        Username(config.Database.Role).
-        Password(config.Database.Password).
-        // Host
-        Port(config.Database.Port).
-        Database(config.Database.DatabaseName).
-        Version(embeddedPostgres.V12).
-        RuntimePath(config.Database.EmbeddedPostgresRuntimePath).
-        StartTimeout(45 * time.Second))
-
     // trap ctrl-c
+    //
+    /*
     c := make(chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
     go func(){
@@ -66,61 +41,98 @@ func main() {
             log.Fatalf("%s - Good day.", sig)
         }
     }()
+    */
+
 
     //
-    // install postgres if it doesn't exist
+    // load config
     //
 
-    /*
-    createDatabase := false
-    if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
-        createDatabase = true
-        log.Print("PostgreSQL server is not installed.  Installing...")
-        if err := epg.Install(); err != nil {
-            log.Fatalf("Unable to install PostgreSQL: %v", err)
+    configFile := workingDirectory+"/conf/boot.toml"
+    bootloaderConfigFile := workingDirectory+"/conf/bootloader.toml"
+    // TODO: allow override configFile w/ cmd-line args
+    // TODO: constants
+
+    config, err := getConfig(configFile)
+    if err != nil {
+        log.Printf("Could not load boot configuration file %s: %s", configFile, err)
+        log.Printf("Loading default Bootloader configuration instead from %s", bootloaderConfigFile)
+
+        blconfig, err := getConfig(bootloaderConfigFile); if err != nil {
+            log.Fatalf("Could not load bootloader config %s: %s", bootloaderConfigFile, err)
         }
-        log.Printf("PostgreSQL server installed at %s", config.Database.EmbeddedPostgresRuntimePath)
-    } else {
-        log.Printf("PostgreSQL is already installed (%s).", config.Database.EmbeddedPostgresRuntimePath)
+        config = blconfig
     }
 
-*/
-
     //
-    // start the database daemon
+    // setup embedded database
     //
 
-    log.Print("Starting PostgreSQL server...")
-    if err := epg.Start(); err != nil {
-        log.Fatalf("Unable to start PostgreSQL: %v", err)
-    }
-    log.Print("PostgreSQL daemon started.")
+    if config.Database.Mode == "embedded" {
+        //
+        // initialize epg w/ config settings
+        //
 
-    defer func() {
-        if err := epg.Stop(); err != nil {
-            log.Fatalf("Database halt failed: %v", err)
-        } else {
-            log.Print("Database stopped")
+        // TODO: NewDatabase() should be called NewServer() or some such... refactor epg
+        epg = *embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
+            Username(config.Database.Role).
+            Password(config.Database.Password).
+            // Host
+            Port(config.Database.Port).
+            Database(config.Database.DatabaseName).
+            Version(embeddedPostgres.V12).
+            RuntimePath(config.Database.EmbeddedPostgresRuntimePath).
+            StartTimeout(45 * time.Second))
+
+        //
+        // install postgres if it doesn't exist
+        //
+
+        createDatabase := false
+        if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
+            log.Printf("PostgreSQL server not found at %s.  Installing...", config.Database.EmbeddedPostgresRuntimePath)
+            createDatabase = true // TODO: this is a hack, we need a epg.DatabaseExists() method...
+
+            if err := epg.Install(); err != nil {
+                log.Fatalf("Unable to install PostgreSQL: %v", err)
+            }
+            log.Printf("PostgreSQL server installed at %s", config.Database.EmbeddedPostgresRuntimePath)
         }
-    }()
 
+        //
+        // start the database daemon
+        //
 
-/*
-    //
-    // create the database
-    //
-
-    if createDatabase {
-        log.Print("PostgreSQL database does not exist, creating...")
-        if err := epg.CreateDatabase(); err != nil {
-            log.Fatalf("Unable to create database: %v", err)
-        } else {
-            log.Print("PostgreSQL database created.")
+        log.Printf("Starting PostgreSQL server from %s...", config.Database.EmbeddedPostgresRuntimePath)
+        if err := epg.Start(); err != nil {
+            log.Fatalf("Unable to start PostgreSQL: %v", err)
         }
+        log.Print("PostgreSQL server started.")
 
+        defer func() {
+            log.Print("Stopping PostgreSQL Server...")
+            if err := epg.Stop(); err != nil {
+                log.Fatalf("Database halt failed: %v", err)
+            } else {
+                log.Print("Database stopped")
+            }
+        }()
+
+        //
+        // CREATE DATABASE
+        //
+
+        if createDatabase {
+            if err := epg.CreateDatabase(); err != nil {
+                // TODO: create epg.DatabaseExists() method
+                // log.Fatalf("Unable to create database: %v", err)
+            } else {
+                log.Print("PostgreSQL server installed to %s", config.Database.EmbeddedPostgresRuntimePath)
+            }
+        }
     }
 
-*/
+
 
     //
     // connect to database
@@ -149,18 +161,13 @@ func main() {
     // check that aquameta's required extensions are installed
     //
 
-    dbQuery := fmt.Sprintf(`
-select count(*) as ct from pg_catalog.pg_extension
-    where (extname='meta' and extversion = '0.2.0')
-        or (extname='bundle' and extversion = '0.2.0')
-        or (extname='endpoint' and extversion = '0.3.0')
-    `)
+    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint')")
 
     var ct int
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan( &ct)
     log.Print("Checking for Aquameta installation....")
 
-    if ct != 3 && false {
+    if ct != 3 {
         log.Print("Aquameta is not installed on this database.  Installing...")
         exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
         exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
@@ -219,13 +226,13 @@ select count(*) as ct from pg_catalog.pg_extension
         // install from local filesystem
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
+            "org.aquameta.core.bootloader",
             "org.aquameta.core.docs",
             "org.aquameta.core.endpoint",
             "org.aquameta.core.ide",
             "org.aquameta.core.mimetypes",
             "org.aquameta.core.semantics",
             "org.aquameta.core.widget",
-            "org.aquameta.core.bootloader",
             "org.aquameta.games.snake",
             "org.aquameta.templates.simple",
             "org.aquameta.ui.admin",
@@ -390,19 +397,6 @@ select count(*) as ct from pg_catalog.pg_extension
     */
 
     resourceHandler := func(w http.ResponseWriter, req *http.Request) {
-        /*
-        w.Header().Set("Access-Control-Allow-Origin", "https://cdn.jsdelivr.net")
-        w.Header().Set("Access-Control-Allow-Origin", "http://cdn.jsdelivr.net")
-        w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1")
-        w.Header().Set("Access-Control-Allow-Origin", "https://127.0.0.1")
-        w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-        w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-"
-        if (*req).Method == "OPTIONS" {
-            return
-        }
-        */
-
         log.Println(req.Proto, req.Method, req.RequestURI)
 
 
@@ -546,21 +540,21 @@ select count(*) as ct from pg_catalog.pg_extension
     // start http server
     //
 
-    log.Print("Starting HTTP server...")
+    log.Printf("Starting HTTP server (%s://%s:%s/) ...", config.HTTPServer.Protocol, config.HTTPServer.IP, config.HTTPServer.Port)
 
     go func() {
-        if config.WebServer.Protocol == "http" {
-            log.Fatal(http.ListenAndServe(config.WebServer.IP+":"+config.WebServer.Port, nil))
+        if config.HTTPServer.Protocol == "http" {
+            log.Fatal(http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil))
         } else {
-            if config.WebServer.Protocol == "https" {
+            if config.HTTPServer.Protocol == "https" {
                 // https://github.com/denji/golang-tls
                 log.Fatal(http.ListenAndServeTLS(
-                    config.WebServer.IP+":"+config.WebServer.Port,
-                    config.WebServer.SSLCertificateFile,
-                    config.WebServer.SSLKeyFile,
+                    config.HTTPServer.IP+":"+config.HTTPServer.Port,
+                    config.HTTPServer.SSLCertificateFile,
+                    config.HTTPServer.SSLKeyFile,
                     nil))
             } else {
-                log.Fatal("Unrecognized protocol: "+config.WebServer.Protocol)
+                log.Fatal("Unrecognized protocol: "+config.HTTPServer.Protocol)
             }
         }
     }()
@@ -573,10 +567,12 @@ select count(*) as ct from pg_catalog.pg_extension
     defer w.Destroy()
     w.SetTitle("Aquameta Boot Loader")
     w.SetSize(800, 500, webview.HintNone)
-    w.Navigate(config.WebServer.Protocol+"://"+config.WebServer.IP+":"+config.WebServer.Port+"/boot")
+    w.Navigate(config.HTTPServer.Protocol+"://"+config.HTTPServer.IP+":"+config.HTTPServer.Port+"/boot")
     w.Run()
 
-    epg.Stop()
+    if config.Database.Mode == "embedded" {
+        epg.Stop()
+    }
 
     log.Fatal("Good day.")
 }
