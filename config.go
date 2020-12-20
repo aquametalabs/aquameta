@@ -25,6 +25,7 @@ type AquametaUser struct {
     Email string
 }
 
+// TODO: This belongs in the database
 type HTTPServer struct {
     Protocol string
     IP string

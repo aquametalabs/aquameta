@@ -15,6 +15,7 @@ import (
     "net/url"
     "os"
     "os/exec"
+    "os/signal"
     "path/filepath"
     "strings"
     "time"
@@ -22,13 +23,13 @@ import (
 
 func main() {
     log.SetPrefix("[ aquameta ] ")
-    log.Print("Aquameta daemon... ENGAGE!")
+    log.Print("Aquameta server... ENGAGE!")
     workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
     var epg embeddedPostgres.EmbeddedPostgres
+
     //
     // trap ctrl-c
     //
-    /*
     c := make(chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
     go func(){
@@ -38,10 +39,9 @@ func main() {
                 epg.Stop()
 
             }
-            log.Fatalf("%s - Good day.", sig)
+            log.Fatalf("SIG %s - Good day.", sig)
         }
     }()
-    */
 
 
     //
@@ -304,6 +304,8 @@ func main() {
     // endpoint API handler
 
     apiHandler := func(w http.ResponseWriter, req *http.Request) {
+        log.Println(req.Proto, req.Method, req.RequestURI)
+
         // api version, sub-path
         s := strings.SplitN(req.URL.Path,"/",4)
         version, apiPath := s[2], s[3]
