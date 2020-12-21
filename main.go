@@ -214,7 +214,6 @@ func main() {
         // hub install over network
         log.Print("Downloading Aquameta core bundles from hub.aquameta.com...")
         bundleQueries := [...]string{
-            "insert into bundle.remote_database (foreign_server_name, schema_name, host, port, dbname, username, password) values ('hub','hub','hub.aquameta.com',5432,'aquameta','anonymous','anonymous')",
             "select bundle.remote_mount(id) from bundle.remote_database",
             "select bundle.remote_pull_bundle(r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'",
             "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" }
@@ -228,6 +227,15 @@ func main() {
             rows.Close()
         }
 */
+
+        //
+        // setup hub remote 
+        //
+        hubRemoteQuery := "insert into bundle.remote_database (foreign_server_name, schema_name, host, port, dbname, username, password) values ('hub','hub','hub.aquameta.com',5432,'aquameta','anonymous','anonymous')"
+        _, err := dbpool.Query(context.Background(), hubRemoteQuery)
+        if err != nil {
+            log.Fatalf("Unable to add bundle.remote_database: %v", err)
+        }
 
         // install from local filesystem
         log.Print("Installing core bundles from source")
@@ -548,7 +556,7 @@ func main() {
     // start http server
     //
 
-    log.Printf("Starting HTTP server\n\n%s://%s:%s/%s\n\n",
+    log.Printf("Starting HTTP server\n\n%s://%s:%s%s\n\n",
         config.HTTPServer.Protocol,
         config.HTTPServer.IP,
         config.HTTPServer.Port,
@@ -571,17 +579,17 @@ func main() {
         }
 //    }()
 
+    //
+    // start gui
+    //
+
+    /*
     log.Printf("HTTP server started, startup URL:\n\n%s://%s:%s%s\n\n",
         config.HTTPServer.Protocol,
         config.HTTPServer.IP,
         config.HTTPServer.Port,
         config.HTTPServer.StartupURL)
 
-    //
-    // start gui
-    //
-
-    /*
     w := webview.New(true)
     defer w.Destroy()
     w.SetTitle("Aquameta Boot Loader")
