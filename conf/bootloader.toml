@@ -1,4 +1,15 @@
-# Aquameta Configuration
+# Aquameta Bootloader Config
+#
+# This boot config starts the bootloader, which is a fallback mode, used when
+# Aquameta doesn't have a conf/boot.toml config file.  It can also be started
+# with `./aquameta bootloader`, or `./aquameta -c conf/bootloader.toml` which
+# are equivalent.
+#
+# The bootloader is a bootstrapping GUI, used to create a conf/boot.toml file
+# during "normal" boot.  It lets the user setup a boot database including
+# setting up a new PostgreSQL server instance, connecting to an existing
+# PostgreSQL instance, configuring which HTTP Server settings to boot with,
+# etc.
 
 [Database]
     Mode = "embedded"               # { embedded | standalone } - if embedded, aquameta will create a new PostgreSQL
@@ -10,15 +21,15 @@
     # connection settings
     Host = "127.0.0.1"                        # host
     Port = 9876                     # instance will open (sometimes 5432)
-    DatabaseName = "bootloader"       # name of the database to be created where Aquameta will be installed
+    DatabaseName = "bootloader"     # name of the database to be created where Aquameta will be installed
 
     # authentication settings
     Role = "bootloader"
-    Password = "bootloader"            # FIXME - we probably want to use peer auth over unix sockets instead if possible?
+    Password = "bootloader"         # FIXME - we probably want to use peer auth over unix sockets instead if possible?
 
 
 [AquametaUser]                      # Record to create in `endpoint.user` table
-    Name = "Bootloader User"
+    Name = "Joe Bootloader"
     Email = ""
 
 
@@ -29,7 +40,7 @@
     Port = "4444"                   # Port to open
 
     # only used w/ https
-    SSLCertificateFile = "certificates/server.crt"
-    SSLKeyFile = "certificates/server.key"
+    # SSLCertificateFile = "certificates/server.crt"
+    # SSLKeyFile = "certificates/server.key"
 
-
+    StartupURL = "/boot"            # URL to open at startup

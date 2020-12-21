@@ -32,6 +32,7 @@ type HTTPServer struct {
     Port string
     SSLCertificateFile string
     SSLKeyFile string
+    StartupURL string
 }
 
 

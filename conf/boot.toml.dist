@@ -1,15 +1,17 @@
-# Aquameta Configuration
+# Boot Configuration
+#
+# A sample config file for booting to a non-managed, standalone database.
 
 [Database]
-    Mode = "embedded"               # { embedded | standalone } - if embedded, aquameta will create a new PostgreSQL
+    Mode = "standalone"               # { embedded | standalone } - if embedded, aquameta will create a new PostgreSQL
                                     # server instance. If "standalone", use an existing server managed by Aquameta.
 
-    # the path where the embedded postgresql instance will be installed (if applicable)
-    EmbeddedPostgresRuntimePath = "./postgres"
+    # the path where the embedded postgresql instance will be installed (embedded only)
+    # EmbeddedPostgresRuntimePath = "./postgres"
 
     # connection settings
     Host = "localhost"              # host
-    Port = 9876                     # instance will open (sometimes 5432)
+    Port = 5432                     # instance will open (sometimes 5432)
     DatabaseName = "aquameta"       # name of the database to be created where Aquameta will be installed
 
     # authentication settings
@@ -29,7 +31,8 @@
     Port = "4444"                   # Port to open
 
     # only used w/ https
-    SSLCertificateFile = "certificates/server.crt"
-    SSLKeyFile = "certificates/server.key"
+    # SSLCertificateFile = "certs/server.crt"
+    # SSLKeyFile = "certs/server.key"
 
+    StartupURL = "/"                # URL to open at startup
 

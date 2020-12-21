@@ -7,7 +7,6 @@ import (
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
     "github.com/jackc/pgx/v4/pgxpool"
     "github.com/lib/pq"
-    "github.com/webview/webview"
     "io"
     "io/ioutil"
     "log"
@@ -51,11 +50,11 @@ func main() {
     configFile := workingDirectory+"/conf/boot.toml"
     bootloaderConfigFile := workingDirectory+"/conf/bootloader.toml"
     // TODO: allow override configFile w/ cmd-line args
-    // TODO: constants
+    // TODO: constants for filenames
 
     config, err := getConfig(configFile)
     if err != nil {
-        log.Printf("Could not load boot configuration file %s: %s", configFile, err)
+        log.Printf("Could not load boot configuration file: %s", err)
         log.Printf("Loading default Bootloader configuration instead from %s", bootloaderConfigFile)
 
         blconfig, err := getConfig(bootloaderConfigFile); if err != nil {
@@ -73,7 +72,7 @@ func main() {
         // initialize epg w/ config settings
         //
 
-        // TODO: NewDatabase() should be called NewServer() or some such... refactor epg
+        // TODO: NewDatabase() should be called NewPGServer() or some such... refactor epg
         epg = *embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
             Username(config.Database.Role).
             Password(config.Database.Password).
@@ -84,14 +83,21 @@ func main() {
             RuntimePath(config.Database.EmbeddedPostgresRuntimePath).
             StartTimeout(45 * time.Second))
 
-        //
-        // install postgres if it doesn't exist
-        //
-
-        createDatabase := false
+        // has an embedded postgres already been installed?
+        log.Printf("Checking for existing embedded server at %s", config.Database.EmbeddedPostgresRuntimePath)
+        epgFilesExist := true
         if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
-            log.Printf("PostgreSQL server not found at %s.  Installing...", config.Database.EmbeddedPostgresRuntimePath)
-            createDatabase = true // TODO: this is a hack, we need a epg.DatabaseExists() method...
+            // TODO: we probably want some more robust inspection of the directory.
+            // Check that it has the binary, and a data directory, and generally looks sane.
+            // If it doesn't, QUIT!  (Do NOT install the db here, it might be some other directory
+            // that would get overwritten.
+            log.Printf("Embedded PostgreSQL server found at %s.", config.Database.EmbeddedPostgresRuntimePath)
+            epgFilesExist = false
+        }
+
+        // if directory doesn't exist, generate an embedded database there
+        if !epgFilesExist {
+            log.Printf("Embedded PostgreSQL server not found at %s.  Installing...", config.Database.EmbeddedPostgresRuntimePath)
 
             if err := epg.Install(); err != nil {
                 log.Fatalf("Unable to install PostgreSQL: %v", err)
@@ -122,7 +128,7 @@ func main() {
         // CREATE DATABASE
         //
 
-        if createDatabase {
+        if !epgFilesExist {
             if err := epg.CreateDatabase(); err != nil {
                 // TODO: create epg.DatabaseExists() method
                 // log.Fatalf("Unable to create database: %v", err)
@@ -542,9 +548,13 @@ func main() {
     // start http server
     //
 
-    log.Printf("Starting HTTP server (%s://%s:%s/) ...", config.HTTPServer.Protocol, config.HTTPServer.IP, config.HTTPServer.Port)
+    log.Printf("Starting HTTP server\n\n%s://%s:%s/%s\n\n",
+        config.HTTPServer.Protocol,
+        config.HTTPServer.IP,
+        config.HTTPServer.Port,
+        config.HTTPServer.StartupURL)
 
-    go func() {
+//    go func() { // make the HTTPServer the main thread since GUI is disabled
         if config.HTTPServer.Protocol == "http" {
             log.Fatal(http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil))
         } else {
@@ -559,18 +569,27 @@ func main() {
                 log.Fatal("Unrecognized protocol: "+config.HTTPServer.Protocol)
             }
         }
-    }()
+//    }()
+
+    log.Printf("HTTP server started, startup URL:\n\n%s://%s:%s%s\n\n",
+        config.HTTPServer.Protocol,
+        config.HTTPServer.IP,
+        config.HTTPServer.Port,
+        config.HTTPServer.StartupURL)
 
     //
     // start gui
     //
 
+    /*
     w := webview.New(true)
     defer w.Destroy()
     w.SetTitle("Aquameta Boot Loader")
     w.SetSize(800, 500, webview.HintNone)
     w.Navigate(config.HTTPServer.Protocol+"://"+config.HTTPServer.IP+":"+config.HTTPServer.Port+"/boot")
     w.Run()
+    
+     */
 
     if config.Database.Mode == "embedded" {
         epg.Stop()
