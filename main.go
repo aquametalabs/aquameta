@@ -21,6 +21,15 @@ import (
 )
 
 func main() {
+log.Print("                                           __")
+log.Print("_____    ________ _______    _____   _____/  |______")
+log.Print("\\__  \\  / ____/  |  \\__  \\  /     \\_/ __ \\   __\\__  \\")
+log.Print(" / __ \\< <_|  |  |  // __ \\|  Y Y  \\  ___/|  |  / __ \\_")
+log.Print("(____  /\\__   |____/(____  /__|_|  /\\___  >__| (____  /")
+log.Print("     \\/    |__|          \\/      \\/     \\/          \\/")
+log.Print("                 [ version 0.3.0 ]")
+
+
     log.SetPrefix("[ aquameta ] ")
     log.Print("Aquameta server... ENGAGE!")
     workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))

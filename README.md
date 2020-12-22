@@ -12,7 +12,7 @@ START!
 git clone https://github.com/aquametalabs/aquameta.git
 cd aquameta
 go build
-./scripts/build-extensions.sh
+./scripts/make_extensions.sh
 ./aquameta
 ```
 
