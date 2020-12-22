@@ -399,6 +399,28 @@ func main() {
     }
 
 
+    bootloaderHandler := func(w http.ResponseWriter, req *http.Request) {
+
+        log.Println(req.Proto, req.Method, req.RequestURI)
+
+        // halt
+        if req.RequestURI == "/bootloader/halt" {
+            log.Fatal("Bootloader has requested that I halt, so I will halt.")
+            if epg.IsStarted() {
+                log.Print("Stopping PostgreSQL")
+                epg.Stop()
+            }
+
+            log.Fatal("Good day.")
+        }
+
+        // write config
+        if req.RequestURI == "/bootloader/configure" {
+            log.Println("Ok I will write out the specified .conf file to disk")
+        }
+    }
+
+
     /*
     * resource handler
     *
@@ -414,7 +436,6 @@ func main() {
 
     resourceHandler := func(w http.ResponseWriter, req *http.Request) {
         log.Println(req.Proto, req.Method, req.RequestURI)
-
 
         // path
         // path := strings.SplitN(req.RequestURI,"?", 2)[0]
@@ -547,6 +568,9 @@ func main() {
     // attach handlers
     //
 
+    // TODO: configure these in the database??
+
+    http.HandleFunc("/bootloader/", bootloaderHandler)
     http.HandleFunc("/endpoint/", apiHandler)
     http.HandleFunc("/event/", eventHandler)
     http.HandleFunc("/", resourceHandler)
