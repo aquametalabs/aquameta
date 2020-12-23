@@ -25,26 +25,39 @@
 create or replace function bundle.remote_mount (
     foreign_server_name text,
     schema_name text,
-    host text,
-    port integer,
-    dbname text,
+    connection_string text,
     username text,
     password text
 )
 returns boolean as
 $$
+declare
+    user_map_options text;
 begin
+
+    /*
+    TODO: 
+    there isn't a nice way to do this without writing a whole connection string parser.
+    for unix socket connections, you need to not specify a password, but that means we have
+    to detect whether or not the specified host is a unix socket.
+	https://github.com/aquametalabs/aquameta/issues/224#issuecomment-750311286
+    */
+
     execute format(
         'create server %I
             foreign data wrapper postgres_fdw
-            options (host %L, port %L, dbname %L, fetch_size ''1000'', extensions %L)',
-
-        foreign_server_name, host, port, dbname, 'uuid-ossp'
+            options (%s, fetch_size ''1000'', extensions %L)',
+        foreign_server_name, connection_string, 'uuid-ossp'
     );
 
+    user_map_options := format('user %L', username);
+    if password is not null then
+        user_map_options := user_map_options || format(', password %L', password);
+    end if;
+
     execute format(
-        'create user mapping for public server %I options (user %L, password %L)',
-        foreign_server_name, username, password
+        'create user mapping for public server %I options (%s)',
+        foreign_server_name, user_map_options
     );
 
     execute format(
@@ -64,15 +77,12 @@ end;
 $$ language plpgsql;
 
 
-
 create or replace function bundle.remote_mount( remote_database_id uuid ) returns boolean as $$
 begin
     execute format ('select bundle.remote_mount(
         foreign_server_name,
         schema_name,
-        host,
-        port,
-        dbname,
+        connection_string,
         username,
         password)
     from bundle.remote_database
@@ -195,11 +205,11 @@ as $$
 declare
     bundle_filter_stmt text;
     remote_schema_name text;
-    remote_host text;
+    remote_connection_string text;
 begin
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into remote_schema_name, remote_host;
+	into remote_schema_name, remote_connection_string;
 
     return query execute format('
         select a.id as a_bundle_id, a.name as a_name, a.head_commit_id as a_head_commit_id, a.commits as a_commits,
@@ -219,16 +229,16 @@ returns bundle.commit
 as $$
 declare
     source_schema_name text;
-    source_host text;
+    source_connection_string text;
     source_bundle_name text;
     source_bundle_id uuid;
 begin
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, source_host;
+	into source_schema_name, source_connection_string;
     -- source
     execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
-    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_host;
+    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_connection_string;
 
     execute format ('select c.* from %1$I.bundle b join %1$I.commit c on c.bundle_id = b.id where b.id = %2$L and c.id not in (select c.id from bundle.commit c)',
         remote
@@ -245,18 +255,18 @@ create or replace function bundle.remote_pull_bundle( remote_database_id uuid, b
 returns boolean as $$
 declare
     source_schema_name text;
-    source_host text;
     dest_schema_name text;
     source_bundle_name text;
     source_bundle_id uuid;
+    connection_string text;
 begin
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, source_host;
+	into source_schema_name, connection_string;
 
     -- source
     execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
-    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_host;
+    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, connection_string;
 
     --------------- transfer --------------
     -- rowset
@@ -327,19 +337,19 @@ create or replace function bundle.remote_push_bundle( remote_database_id uuid, b
 returns boolean as $$
 declare
     remote_schema_name text;
-    remote_host text;
+    remote_connection_string text;
     source_bundle_name text;
 begin
     
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into remote_schema_name, remote_host;
+	into remote_schema_name, remote_connection_string;
 
     select name from bundle.bundle where id = bundle_id
     into source_bundle_name;
 
-    raise notice 'Pushing bundle % (%) from %...', source_bundle_name, bundle_id, remote_host;
+    raise notice 'Pushing bundle % (%) from %...', source_bundle_name, bundle_id, remote_connection_string;
     raise notice '...bundle';
     execute format ('insert into %1$I.bundle (id,name)
         select b.id, b.name from bundle.bundle b
@@ -369,7 +379,7 @@ create or replace function bundle.remote_pull_commits( remote_database_id uuid, 
 returns boolean as $$
 declare
 	dest_schema_name text;
-	source_host text;
+	source_connection_string text;
 	source_schema_name text;
 	source_bundle_name text;
 	source_bundle_id uuid;
@@ -378,9 +388,9 @@ declare
     rowset_count integer;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, source_host;
+	into source_schema_name, source_connection_string;
 
     -- dest_schema_name
     select 'bundle' into dest_schema_name;
@@ -404,7 +414,7 @@ begin
 
     -- notice
     raise notice 'Pulling % new commits for % (%) from %...', 
-        new_commits_count, source_bundle_name, source_bundle_id, source_host;
+        new_commits_count, source_bundle_name, source_bundle_id, source_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
 
@@ -476,7 +486,7 @@ create or replace function bundle.remote_push_commits( remote_database_id uuid, 
 returns boolean as $$
 declare
 	dest_schema_name text;
-	remote_host text;
+	remote_connection_string text;
 	remote_schema_name text;
 	remote_bundle_name text;
 	remote_bundle_id uuid;
@@ -484,10 +494,10 @@ declare
     new_commits_count integer;
     rowset_count integer;
 begin
-    -- remote_schema_name, remote_host
-    select schema_name, host from bundle.remote_database
+    -- remote_schema_name, connection_string
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into remote_schema_name, remote_host;
+	into remote_schema_name, remote_connection_string;
 
     -- dest_schema_name
     select 'bundle' into dest_schema_name;
@@ -514,7 +524,7 @@ begin
 
     -- notice
     raise notice 'Pushing % new commits for % (%) from %...', 
-        new_commits_count, remote_bundle_name, remote_bundle_id, remote_host;
+        new_commits_count, remote_bundle_name, remote_bundle_id, remote_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
 

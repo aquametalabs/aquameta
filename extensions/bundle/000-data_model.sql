@@ -672,9 +672,7 @@ create table remote_database (
     id uuid not null default public.uuid_generate_v4() primary key,
     foreign_server_name text,
     schema_name text,
-    host text,
-    port integer,
-    dbname text,
+    connection_string text,
     username text,
     password text
 );
@@ -687,15 +685,17 @@ create table remote_database (
 -- it came.   We use this on push and pull, import and export.
 ------------------------------------------------------------------------------
 
-create table bundle_origin_csv (
+create table bundle_csv (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
     directory text not null
 );
 
 
-create table bundle_origin_remote (
+create table bundle_remote_database (
     id uuid not null default public.uuid_generate_v4() primary key,
+    -- question: do we want name?  "origin" would be a typical name in git terms, but also looking at the remote_db's connection string is a pretty good name...
+    name text not null default '[ unnamed ]',
     bundle_id uuid references bundle(id) on delete cascade,
     remote_database_id uuid references remote_database(id) on delete cascade
 );
@@ -724,5 +724,5 @@ select pg_catalog.pg_extension_config_dump('stage_row_added','');
 select pg_catalog.pg_extension_config_dump('stage_row_deleted','');
 select pg_catalog.pg_extension_config_dump('trackable_nontable_relation','');
 select pg_catalog.pg_extension_config_dump('tracked_row_added','');
-select pg_catalog.pg_extension_config_dump('bundle_origin_csv','');
-select pg_catalog.pg_extension_config_dump('bundle_origin_remote','');
+select pg_catalog.pg_extension_config_dump('bundle_csv','');
+select pg_catalog.pg_extension_config_dump('bundle_remote_database','');

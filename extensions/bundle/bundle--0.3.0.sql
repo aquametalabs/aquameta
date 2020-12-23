@@ -106,7 +106,6 @@ create table commit (
     parent_id uuid references commit(id),
     -- TODO: merge_parent_id uuid references commit(id),
     time timestamp not null default now(),
-    user_email text,
     message text
 );
 -- circular
@@ -673,9 +672,7 @@ create table remote_database (
     id uuid not null default public.uuid_generate_v4() primary key,
     foreign_server_name text,
     schema_name text,
-    host text,
-    port integer,
-    dbname text,
+    connection_string text,
     username text,
     password text
 );
@@ -688,15 +685,17 @@ create table remote_database (
 -- it came.   We use this on push and pull, import and export.
 ------------------------------------------------------------------------------
 
-create table bundle_origin_csv (
+create table bundle_csv (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
     directory text not null
 );
 
 
-create table bundle_origin_remote (
+create table bundle_remote_database (
     id uuid not null default public.uuid_generate_v4() primary key,
+    -- question: do we want name?  "origin" would be a typical name in git terms, but also looking at the remote_db's connection string is a pretty good name...
+    name text not null default '[ unnamed ]',
     bundle_id uuid references bundle(id) on delete cascade,
     remote_database_id uuid references remote_database(id) on delete cascade
 );
@@ -725,8 +724,8 @@ select pg_catalog.pg_extension_config_dump('stage_row_added','');
 select pg_catalog.pg_extension_config_dump('stage_row_deleted','');
 select pg_catalog.pg_extension_config_dump('trackable_nontable_relation','');
 select pg_catalog.pg_extension_config_dump('tracked_row_added','');
-select pg_catalog.pg_extension_config_dump('bundle_origin_csv','');
-select pg_catalog.pg_extension_config_dump('bundle_origin_remote','');
+select pg_catalog.pg_extension_config_dump('bundle_csv','');
+select pg_catalog.pg_extension_config_dump('bundle_remote_database','');
 /*******************************************************************************
  * Bundle
  * Data Version Control System
@@ -787,8 +786,8 @@ create or replace function commit (bundle_name text, message text) returns void 
 
     raise notice 'bundle: Creating the commit...';
     -- create the commit
-    insert into bundle.commit (bundle_id, parent_id, rowset_id, message, user_email)
-    values (_bundle_id, (select head_commit_id from bundle.bundle b where b.id=_bundle_id), new_rowset_id, message, select coalesce((select email from endpoint.currentuser), ''))
+    insert into bundle.commit (bundle_id, parent_id, rowset_id, message)
+    values (_bundle_id, (select head_commit_id from bundle.bundle b where b.id=_bundle_id), new_rowset_id, message)
     returning id into new_commit_id;
 
     raise notice 'bundle: Updating bundle.head_commit_id...';
@@ -1651,7 +1650,7 @@ begin
     -- set the origin for this bundle
     execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid, checkout_commit_id uuid) on commit drop');
     execute format('copy origin_temp from ''%s/bundle.csv''', directory);
-    execute format('insert into bundle.bundle_origin_csv(directory, bundle_id) select %L, id from origin_temp', directory);
+    execute format('insert into bundle.bundle_csv(directory, bundle_id) select %L, id from origin_temp', directory);
 
     -- make sure that checkout_commit_is null
     select name from origin_temp into bundle_name;
@@ -1788,26 +1787,39 @@ $$ language plpgsql;
 create or replace function bundle.remote_mount (
     foreign_server_name text,
     schema_name text,
-    host text,
-    port integer,
-    dbname text,
+    connection_string text,
     username text,
     password text
 )
 returns boolean as
 $$
+declare
+    user_map_options text;
 begin
+
+    /*
+    TODO: 
+    there isn't a nice way to do this without writing a whole connection string parser.
+    for unix socket connections, you need to not specify a password, but that means we have
+    to detect whether or not the specified host is a unix socket.
+	https://github.com/aquametalabs/aquameta/issues/224#issuecomment-750311286
+    */
+
     execute format(
         'create server %I
             foreign data wrapper postgres_fdw
-            options (host %L, port %L, dbname %L, fetch_size ''1000'', extensions %L)',
-
-        foreign_server_name, host, port, dbname, 'uuid-ossp'
+            options (%s, fetch_size ''1000'', extensions %L)',
+        foreign_server_name, connection_string, 'uuid-ossp'
     );
 
+    user_map_options := format('user %L', username);
+    if password is not null then
+        user_map_options := user_map_options || format(', password %L', password);
+    end if;
+
     execute format(
-        'create user mapping for public server %I options (user %L, password %L)',
-        foreign_server_name, username, password
+        'create user mapping for public server %I options (%s)',
+        foreign_server_name, user_map_options
     );
 
     execute format(
@@ -1827,15 +1839,12 @@ end;
 $$ language plpgsql;
 
 
-
 create or replace function bundle.remote_mount( remote_database_id uuid ) returns boolean as $$
 begin
     execute format ('select bundle.remote_mount(
         foreign_server_name,
         schema_name,
-        host,
-        port,
-        dbname,
+        connection_string,
         username,
         password)
     from bundle.remote_database
@@ -1958,11 +1967,11 @@ as $$
 declare
     bundle_filter_stmt text;
     remote_schema_name text;
-    remote_host text;
+    remote_connection_string text;
 begin
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into remote_schema_name, remote_host;
+	into remote_schema_name, remote_connection_string;
 
     return query execute format('
         select a.id as a_bundle_id, a.name as a_name, a.head_commit_id as a_head_commit_id, a.commits as a_commits,
@@ -1982,16 +1991,16 @@ returns bundle.commit
 as $$
 declare
     source_schema_name text;
-    source_host text;
+    source_connection_string text;
     source_bundle_name text;
     source_bundle_id uuid;
 begin
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, source_host;
+	into source_schema_name, source_connection_string;
     -- source
     execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
-    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_host;
+    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_connection_string;
 
     execute format ('select c.* from %1$I.bundle b join %1$I.commit c on c.bundle_id = b.id where b.id = %2$L and c.id not in (select c.id from bundle.commit c)',
         remote
@@ -2008,18 +2017,18 @@ create or replace function bundle.remote_pull_bundle( remote_database_id uuid, b
 returns boolean as $$
 declare
     source_schema_name text;
-    source_host text;
     dest_schema_name text;
     source_bundle_name text;
     source_bundle_id uuid;
+    connection_string text;
 begin
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, source_host;
+	into source_schema_name, connection_string;
 
     -- source
     execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
-    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_host;
+    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, connection_string;
 
     --------------- transfer --------------
     -- rowset
@@ -2090,19 +2099,19 @@ create or replace function bundle.remote_push_bundle( remote_database_id uuid, b
 returns boolean as $$
 declare
     remote_schema_name text;
-    remote_host text;
+    remote_connection_string text;
     source_bundle_name text;
 begin
     
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into remote_schema_name, remote_host;
+	into remote_schema_name, remote_connection_string;
 
     select name from bundle.bundle where id = bundle_id
     into source_bundle_name;
 
-    raise notice 'Pushing bundle % (%) from %...', source_bundle_name, bundle_id, remote_host;
+    raise notice 'Pushing bundle % (%) from %...', source_bundle_name, bundle_id, remote_connection_string;
     raise notice '...bundle';
     execute format ('insert into %1$I.bundle (id,name)
         select b.id, b.name from bundle.bundle b
@@ -2132,7 +2141,7 @@ create or replace function bundle.remote_pull_commits( remote_database_id uuid, 
 returns boolean as $$
 declare
 	dest_schema_name text;
-	source_host text;
+	source_connection_string text;
 	source_schema_name text;
 	source_bundle_name text;
 	source_bundle_id uuid;
@@ -2141,9 +2150,9 @@ declare
     rowset_count integer;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, host from bundle.remote_database
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, source_host;
+	into source_schema_name, source_connection_string;
 
     -- dest_schema_name
     select 'bundle' into dest_schema_name;
@@ -2167,7 +2176,7 @@ begin
 
     -- notice
     raise notice 'Pulling % new commits for % (%) from %...', 
-        new_commits_count, source_bundle_name, source_bundle_id, source_host;
+        new_commits_count, source_bundle_name, source_bundle_id, source_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
 
@@ -2239,7 +2248,7 @@ create or replace function bundle.remote_push_commits( remote_database_id uuid, 
 returns boolean as $$
 declare
 	dest_schema_name text;
-	remote_host text;
+	remote_connection_string text;
 	remote_schema_name text;
 	remote_bundle_name text;
 	remote_bundle_id uuid;
@@ -2247,10 +2256,10 @@ declare
     new_commits_count integer;
     rowset_count integer;
 begin
-    -- remote_schema_name, remote_host
-    select schema_name, host from bundle.remote_database
+    -- remote_schema_name, connection_string
+    select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into remote_schema_name, remote_host;
+	into remote_schema_name, remote_connection_string;
 
     -- dest_schema_name
     select 'bundle' into dest_schema_name;
@@ -2277,7 +2286,7 @@ begin
 
     -- notice
     raise notice 'Pushing % new commits for % (%) from %...', 
-        new_commits_count, remote_bundle_name, remote_bundle_id, remote_host;
+        new_commits_count, remote_bundle_name, remote_bundle_id, remote_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
 
@@ -2374,8 +2383,8 @@ insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundl
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','stage_field_changed'));
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','stage_row_added'));
 insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','stage_row_deleted'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle_origin_csv'));
-insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle_origin_remote'));
+insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle_csv'));
+insert into bundle.ignored_relation(relation_id) values (meta.relation_id('bundle','bundle_remote_database'));
 
 -- don't try to version control anything in the built-in system catalogs
 insert into bundle.ignored_schema(schema_id) values (meta.schema_id('pg_catalog'));
