@@ -240,7 +240,20 @@ log.Print("                 [ version 0.3.0 ]")
         //
         // setup hub remote 
         //
-        hubRemoteQuery := "insert into bundle.remote_database (foreign_server_name, schema_name, host, port, dbname, username, password) values ('hub','hub','hub.aquameta.com',5432,'aquameta','anonymous','anonymous')"
+        hubRemoteQuery := `insert into bundle.remote_database (
+            foreign_server_name,
+            schema_name,
+            connection_string,
+            username,
+            password)
+        values (
+            'hub',
+            'hub',
+            'dbname ''aquameta'', host ''hub.aquameta.com'', port ''5432''',
+            'anonymous',
+            'anonymous'
+        )`
+
         _, err := dbpool.Query(context.Background(), hubRemoteQuery)
         if err != nil {
             log.Fatalf("Unable to add bundle.remote_database: %v", err)
