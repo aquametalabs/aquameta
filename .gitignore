@@ -5,17 +5,17 @@
 .idea
 
 # files created by `make` in each extension
-extensions/bundle/bundle--*.*.*.sql
-extensions/email/email--*.*.*.sql
-extensions/endpoint/endpoint--*.*.*.sql
-extensions/event/event--*.*.*.sql
-extensions/filesystem/filesystem--*.*.*.sql
-extensions/meta/meta--*.*.*.sql
-extensions/widget/widget--*.*.*.sql
-extensions/semantics/semantics--*.*.*.sql
-extensions/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
-extensions/documentation/documentation--*.*.*.sql
-extensions/ide/ide--*.*.*.sql
+# extensions/bundle/bundle--*.*.*.sql
+# extensions/email/email--*.*.*.sql
+# extensions/endpoint/endpoint--*.*.*.sql
+# extensions/event/event--*.*.*.sql
+# extensions/filesystem/filesystem--*.*.*.sql
+# extensions/meta/meta--*.*.*.sql
+# extensions/widget/widget--*.*.*.sql
+# extensions/semantics/semantics--*.*.*.sql
+# extensions/pg_catalog_get_defs/pg_catalog_get_defs--*.*.*.sql
+# extensions/documentation/documentation--*.*.*.sql
+# extensions/ide/ide--*.*.*.sql
 
 # files created by plgo
 extensions/endpoint/endpoint/build

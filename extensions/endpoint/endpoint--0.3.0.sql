@@ -1,7 +1,7 @@
 /******************************************************************************
  * Default permissions
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 set search_path=endpoint;
 
@@ -29,7 +29,7 @@ $$;
  * Join graph thing
  * Authentication handlers
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /******************************************************************************
@@ -458,7 +458,6 @@ as $$
 
         rowset json;
         q text;
-        ct integer;
     begin
         raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
         -- create temp table
@@ -1451,7 +1450,6 @@ create function endpoint.anonymous_rows_select_function(
 ) returns record as $$
 
     declare
-        _mimetype alias for mimetype;
         columns_json text;
         function_args text;
         suffix text;
@@ -2384,7 +2382,7 @@ $$ language plv8;
  * ENDPOINT SERVER
  * Filesystem import functions
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /*

@@ -2,7 +2,7 @@
  * IDE
  * User interface for Aquameta.
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 create or replace view ide.bundle_contained_relation as
 select *, count(*) as count from (

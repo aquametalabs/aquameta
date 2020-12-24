@@ -153,7 +153,7 @@ from bundle.bundle bundle
 -- 3. IGNORED
 -- Ignored rows do not show up in untracked_row and are not available for
 -- adding to staged_row_new.  The user inserts into ignored_row a row that they
--- don't want to continue to be hasseled about adding to the stage.
+-- don't want to continue to be hassled about adding to the stage.
 ------------------------------------------------------------------------------
 create table ignored_row (
     id uuid not null default public.uuid_generate_v4() primary key,
@@ -180,7 +180,7 @@ create table ignored_column (
 -- 4. STAGED CHANGES
 --
 -- The tables where users add changes to be included in the next commit:  New
--- rows, deletd rows and changed fields.
+-- rows, deleted rows and changed fields.
 ------------------------------------------------------------------------------
 
 -- a row not in the current commit, but is marked to be added to the next commit
@@ -199,7 +199,7 @@ create table stage_row_deleted (
     unique (bundle_id, rowset_row_id)
 ); -- TODO: check that rows inserted into this table ARE in the head commit's rowset
 
--- a field that is marked to be different from the current commmit in the next
+-- a field that is marked to be different from the current commit in the next
 -- commit, with it's value
 create table stage_field_changed (
     id uuid not null default public.uuid_generate_v4() primary key,
@@ -385,7 +385,7 @@ from bundle.stage_row sr
 ATTEMPT TO OPTIMIZE STAGE_ROW_FIELD, ended in tears.
 
 ok.
-1. for all the rows in stage_row, aggregate each relation, it's pk column, and the pk's of each row.
+1. for all the rows in stage_row, aggregate each relation, it's pk column, and the pks of each row.
 2. for each relation in the above, select * from that relation where pk in keys into a json_agg
 3. convert the json_agg to field_id and value, one per row
 
@@ -563,7 +563,7 @@ create table trackable_nontable_relation (
 
 
 -- Relations that are not specifically ignored, and not in a ignored schema
--- TODO: why does this have schema_id and pk_column_id?  should just be a realtion_id no?
+-- TODO: why does this have schema_id and pk_column_id?  should just be a relation_id no?
 create or replace view trackable_relation as
     select relation_id, schema_id, primary_key_column_id from (
        -- every single table
@@ -730,7 +730,7 @@ select pg_catalog.pg_extension_config_dump('bundle_remote_database','');
  * Bundle
  * Data Version Control System
  *
- * Copyriright (c) 2020 - Aquameta, LLC - http://aquameta.org/
+ * Copyright (c) 2020 - Aquameta, LLC - http://aquameta.org/
  ******************************************************************************/
 
 /*
@@ -832,13 +832,13 @@ $$ language sql;
 create or replace function commit_log (in bundle_name text, out commit_id uuid, out message text, out count bigint)
 returns setof record
 as $$
-select c.id as commit_id, message, count(*)
-    from bundle b
+select c.id as commit_id, c.message, count(*)
+    from bundle.bundle b
         join bundle.commit c on c.bundle_id = b.id
         join bundle.rowset r on c.rowset_id=r.id
         join bundle.rowset_row rr on rr.rowset_id = r.id
     where b.name = bundle_name
-    group by b.id, c.id, message
+    group by b.id, c.id, c.message
 $$ language sql;
 
 
@@ -1143,7 +1143,7 @@ $$ language sql;
 -- user stories:
 --
 -- 1. user downloads a new bundle, checking out where everything is fresh and
--- new.  we don't run into any collissions and just plop it all into place.
+-- new.  we don't run into any collisions and just plop it all into place.
 --
 -- 2. user tries to check out a bundle when his working copy is different from
 -- previous commit.  this would be indicated by rows in offstage_row_deleted and
@@ -1559,7 +1559,7 @@ $$ language sql;
 /*******************************************************************************
  * Bundle Utilities
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 -- export
@@ -1584,7 +1584,7 @@ begin
 
 
     -- copy bundle contents to csv files
-    -- checkout_commit_id is set to NULL explicitly, because it is only relevent to this current database
+    -- checkout_commit_id is set to NULL explicitly, because it is only relevant to this current database
     execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle.bundle b
         where b.name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
 
@@ -1632,7 +1632,7 @@ declare
     bundle_id uuid;
     bundle_name text;
 begin
-    -- triggers must be disabled because bundle and commit have circilar
+    -- triggers must be disabled because bundle and commit have circular
     -- dependencies, and blob
     execute format('alter table bundle.bundle disable trigger all');
     execute format('alter table bundle.commit disable trigger all');
@@ -1763,7 +1763,7 @@ $$ language plpgsql;
 /*******************************************************************************
  * Bundle Remotes
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /*******************************************************************************
@@ -1894,7 +1894,6 @@ create or replace function bundle.remote_is_online( remote_database_id uuid ) re
 declare
     _schema_name text;
     _foreign_server_name text;
-    is_online boolean;
 begin
     select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
 
@@ -1918,7 +1917,7 @@ returns table (
     id uuid, name text, head_commit_id uuid, commits json
 )
 as $$
-declare 
+declare
     bundle_filter_stmt text;
 begin
     bundle_filter_stmt := '';
@@ -1965,7 +1964,6 @@ create or replace function bundle.remote_commits_diff(
 )
 as $$
 declare
-    bundle_filter_stmt text;
     remote_schema_name text;
     remote_connection_string text;
 begin
@@ -2017,7 +2015,6 @@ create or replace function bundle.remote_pull_bundle( remote_database_id uuid, b
 returns boolean as $$
 declare
     source_schema_name text;
-    dest_schema_name text;
     source_bundle_name text;
     source_bundle_id uuid;
     connection_string text;
@@ -2102,7 +2099,7 @@ declare
     remote_connection_string text;
     source_bundle_name text;
 begin
-    
+
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
     select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
@@ -2133,7 +2130,7 @@ language plpgsql;
 /*
  * bundle.remote_pull_commits
  *
- * transfer from remote all the commits that are not in the local repostiory for specified bundle
+ * transfer from remote all the commits that are not in the local repository for specified bundle
  *
  */
 
@@ -2147,7 +2144,6 @@ declare
 	source_bundle_id uuid;
 	new_commit_ids text;
     new_commits_count integer;
-    rowset_count integer;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
     select schema_name, connection_string from bundle.remote_database
@@ -2170,12 +2166,12 @@ begin
         ', source_schema_name, bundle_id)
         into new_commits_count, new_commit_ids;
 
-        if new_commits_count = 0 then 
+        if new_commits_count = 0 then
             new_commit_ids = quote_literal(false);
         end if;
 
     -- notice
-    raise notice 'Pulling % new commits for % (%) from %...', 
+    raise notice 'Pulling % new commits for % (%) from %...',
         new_commits_count, source_bundle_name, source_bundle_id, source_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
@@ -2218,7 +2214,7 @@ begin
             join %1$I.rowset_row rr on rr.rowset_id = r.id
             join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
         where c.bundle_id=%3$L
-            and c.id in (%4$s)', 
+            and c.id in (%4$s)',
         source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
 
     -- commit
@@ -2240,7 +2236,7 @@ $$ language plpgsql;
 /*
  * bundle.remote_push_commits()
  *
- * transfer from remote all the commits that are not in the local repostiory for specified bundle
+ * transfer from remote all the commits that are not in the local repository for specified bundle
  *
  */
 
@@ -2254,7 +2250,6 @@ declare
 	remote_bundle_id uuid;
 	new_commit_ids text;
     new_commits_count integer;
-    rowset_count integer;
 begin
     -- remote_schema_name, connection_string
     select schema_name, connection_string from bundle.remote_database
@@ -2279,13 +2274,13 @@ begin
         ', remote_schema_name, bundle_id)
         into new_commits_count, new_commit_ids;
 
-        if new_commits_count = 0 then 
+        if new_commits_count = 0 then
             new_commit_ids = quote_literal(false);
         end if;
 
 
     -- notice
-    raise notice 'Pushing % new commits for % (%) from %...', 
+    raise notice 'Pushing % new commits for % (%) from %...',
         new_commits_count, remote_bundle_name, remote_bundle_id, remote_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
@@ -2334,7 +2329,7 @@ begin
             join bundle.rowset_row rr on rr.rowset_id = r.id
             join bundle.rowset_row_field f on f.rowset_row_id = rr.id
         where c.bundle_id=%2$L
-            and c.id in (%3$s)', 
+            and c.id in (%3$s)',
         remote_schema_name, bundle_id, new_commit_ids);
 
     -- commit
@@ -2366,7 +2361,7 @@ select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle.bundle b
  *
  * Relations that are not available for version control.
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 set search_path=bundle;
