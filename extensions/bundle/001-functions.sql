@@ -2,7 +2,7 @@
  * Bundle
  * Data Version Control System
  *
- * Copyriright (c) 2020 - Aquameta, LLC - http://aquameta.org/
+ * Copyright (c) 2020 - Aquameta, LLC - http://aquameta.org/
  ******************************************************************************/
 
 /*
@@ -104,13 +104,13 @@ $$ language sql;
 create or replace function commit_log (in bundle_name text, out commit_id uuid, out message text, out count bigint)
 returns setof record
 as $$
-select c.id as commit_id, message, count(*)
-    from bundle b
+select c.id as commit_id, c.message, count(*)
+    from bundle.bundle b
         join bundle.commit c on c.bundle_id = b.id
         join bundle.rowset r on c.rowset_id=r.id
         join bundle.rowset_row rr on rr.rowset_id = r.id
     where b.name = bundle_name
-    group by b.id, c.id, message
+    group by b.id, c.id, c.message
 $$ language sql;
 
 
@@ -415,7 +415,7 @@ $$ language sql;
 -- user stories:
 --
 -- 1. user downloads a new bundle, checking out where everything is fresh and
--- new.  we don't run into any collissions and just plop it all into place.
+-- new.  we don't run into any collisions and just plop it all into place.
 --
 -- 2. user tries to check out a bundle when his working copy is different from
 -- previous commit.  this would be indicated by rows in offstage_row_deleted and

@@ -1,7 +1,7 @@
 /******************************************************************************
  * Anonymous Permissions - Invite Only
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 -----------------------

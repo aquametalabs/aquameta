@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Bundle Remotes
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /*******************************************************************************
@@ -132,7 +132,6 @@ create or replace function bundle.remote_is_online( remote_database_id uuid ) re
 declare
     _schema_name text;
     _foreign_server_name text;
-    is_online boolean;
 begin
     select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
 
@@ -156,7 +155,7 @@ returns table (
     id uuid, name text, head_commit_id uuid, commits json
 )
 as $$
-declare 
+declare
     bundle_filter_stmt text;
 begin
     bundle_filter_stmt := '';
@@ -203,7 +202,6 @@ create or replace function bundle.remote_commits_diff(
 )
 as $$
 declare
-    bundle_filter_stmt text;
     remote_schema_name text;
     remote_connection_string text;
 begin
@@ -255,7 +253,6 @@ create or replace function bundle.remote_pull_bundle( remote_database_id uuid, b
 returns boolean as $$
 declare
     source_schema_name text;
-    dest_schema_name text;
     source_bundle_name text;
     source_bundle_id uuid;
     connection_string text;
@@ -340,7 +337,7 @@ declare
     remote_connection_string text;
     source_bundle_name text;
 begin
-    
+
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
     select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
@@ -371,7 +368,7 @@ language plpgsql;
 /*
  * bundle.remote_pull_commits
  *
- * transfer from remote all the commits that are not in the local repostiory for specified bundle
+ * transfer from remote all the commits that are not in the local repository for specified bundle
  *
  */
 
@@ -385,7 +382,6 @@ declare
 	source_bundle_id uuid;
 	new_commit_ids text;
     new_commits_count integer;
-    rowset_count integer;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
     select schema_name, connection_string from bundle.remote_database
@@ -408,12 +404,12 @@ begin
         ', source_schema_name, bundle_id)
         into new_commits_count, new_commit_ids;
 
-        if new_commits_count = 0 then 
+        if new_commits_count = 0 then
             new_commit_ids = quote_literal(false);
         end if;
 
     -- notice
-    raise notice 'Pulling % new commits for % (%) from %...', 
+    raise notice 'Pulling % new commits for % (%) from %...',
         new_commits_count, source_bundle_name, source_bundle_id, source_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
@@ -456,7 +452,7 @@ begin
             join %1$I.rowset_row rr on rr.rowset_id = r.id
             join %1$I.rowset_row_field f on f.rowset_row_id = rr.id
         where c.bundle_id=%3$L
-            and c.id in (%4$s)', 
+            and c.id in (%4$s)',
         source_schema_name, dest_schema_name, bundle_id, new_commit_ids);
 
     -- commit
@@ -478,7 +474,7 @@ $$ language plpgsql;
 /*
  * bundle.remote_push_commits()
  *
- * transfer from remote all the commits that are not in the local repostiory for specified bundle
+ * transfer from remote all the commits that are not in the local repository for specified bundle
  *
  */
 
@@ -492,7 +488,6 @@ declare
 	remote_bundle_id uuid;
 	new_commit_ids text;
     new_commits_count integer;
-    rowset_count integer;
 begin
     -- remote_schema_name, connection_string
     select schema_name, connection_string from bundle.remote_database
@@ -517,13 +512,13 @@ begin
         ', remote_schema_name, bundle_id)
         into new_commits_count, new_commit_ids;
 
-        if new_commits_count = 0 then 
+        if new_commits_count = 0 then
             new_commit_ids = quote_literal(false);
         end if;
 
 
     -- notice
-    raise notice 'Pushing % new commits for % (%) from %...', 
+    raise notice 'Pushing % new commits for % (%) from %...',
         new_commits_count, remote_bundle_name, remote_bundle_id, remote_connection_string;
 
     -- raise notice 'new_commit_ids: %', new_commit_ids;
@@ -572,7 +567,7 @@ begin
             join bundle.rowset_row rr on rr.rowset_id = r.id
             join bundle.rowset_row_field f on f.rowset_row_id = rr.id
         where c.bundle_id=%2$L
-            and c.id in (%3$s)', 
+            and c.id in (%3$s)',
         remote_schema_name, bundle_id, new_commit_ids);
 
     -- commit

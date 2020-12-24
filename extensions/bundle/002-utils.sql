@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Bundle Utilities
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 -- export
@@ -26,7 +26,7 @@ begin
 
 
     -- copy bundle contents to csv files
-    -- checkout_commit_id is set to NULL explicitly, because it is only relevent to this current database
+    -- checkout_commit_id is set to NULL explicitly, because it is only relevant to this current database
     execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle.bundle b
         where b.name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
 
@@ -74,7 +74,7 @@ declare
     bundle_id uuid;
     bundle_name text;
 begin
-    -- triggers must be disabled because bundle and commit have circilar
+    -- triggers must be disabled because bundle and commit have circular
     -- dependencies, and blob
     execute format('alter table bundle.bundle disable trigger all');
     execute format('alter table bundle.commit disable trigger all');

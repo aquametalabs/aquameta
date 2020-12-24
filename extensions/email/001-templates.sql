@@ -2,7 +2,7 @@
  * EMAIL
  * Simple templating language - uses python's string.Template lib
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /******************************************************************************

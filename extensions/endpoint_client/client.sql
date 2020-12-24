@@ -1,7 +1,7 @@
 /*******************************************************************************
  * endpoint - client
  *
- * Copyriright (c) 2020 - Aquameta, LLC - http://aquameta.org/
+ * Copyright (c) 2020 - Aquameta, LLC - http://aquameta.org/
  ******************************************************************************/
 
 set search_path=endpoint;

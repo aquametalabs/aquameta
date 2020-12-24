@@ -2,7 +2,7 @@
  * Meta Helper Utilities
  * Handy functions for working with meta-related stuff.
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 create or replace function meta.row_exists(in row_id meta.row_id, out answer boolean) as $$
     declare

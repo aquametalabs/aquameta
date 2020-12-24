@@ -18,7 +18,7 @@ The runtime server for Aquameta, providing the following:
 
 If `config.toml` is configured to use the `https` protocol, SSL certificates
    need to be generated. Currently, webview doesn't allow unsigned
-   certificates, so probalby just use `http`.
+   certificates, so probably just use `http`.
 
 ```
 openssl genrsa -out server.key 2048

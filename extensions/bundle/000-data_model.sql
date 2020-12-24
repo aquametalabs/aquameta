@@ -2,7 +2,7 @@
  * Bundle
  * Data Version Control System
  * 
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 
@@ -19,7 +19,7 @@
  *        commit right now
  *     7. status - summarizes the status of the head commit, working copy db, and
  *        stage
- *     8. untracked - rows which are not in any head commit, and availble for
+ *     8. untracked - rows which are not in any head commit, and available for
  *        stage_row_add()
  *     9. remotes - pushing and pulling to other databases
  *
@@ -153,7 +153,7 @@ from bundle.bundle bundle
 -- 3. IGNORED
 -- Ignored rows do not show up in untracked_row and are not available for
 -- adding to staged_row_new.  The user inserts into ignored_row a row that they
--- don't want to continue to be hasseled about adding to the stage.
+-- don't want to continue to be hassled about adding to the stage.
 ------------------------------------------------------------------------------
 create table ignored_row (
     id uuid not null default public.uuid_generate_v4() primary key,
@@ -180,7 +180,7 @@ create table ignored_column (
 -- 4. STAGED CHANGES
 --
 -- The tables where users add changes to be included in the next commit:  New
--- rows, deletd rows and changed fields.
+-- rows, deleted rows and changed fields.
 ------------------------------------------------------------------------------
 
 -- a row not in the current commit, but is marked to be added to the next commit
@@ -199,7 +199,7 @@ create table stage_row_deleted (
     unique (bundle_id, rowset_row_id)
 ); -- TODO: check that rows inserted into this table ARE in the head commit's rowset
 
--- a field that is marked to be different from the current commmit in the next
+-- a field that is marked to be different from the current commit in the next
 -- commit, with it's value
 create table stage_field_changed (
     id uuid not null default public.uuid_generate_v4() primary key,
@@ -385,7 +385,7 @@ from bundle.stage_row sr
 ATTEMPT TO OPTIMIZE STAGE_ROW_FIELD, ended in tears.
 
 ok.
-1. for all the rows in stage_row, aggregate each relation, it's pk column, and the pk's of each row.
+1. for all the rows in stage_row, aggregate each relation, it's pk column, and the pks of each row.
 2. for each relation in the above, select * from that relation where pk in keys into a json_agg
 3. convert the json_agg to field_id and value, one per row
 
@@ -563,7 +563,7 @@ create table trackable_nontable_relation (
 
 
 -- Relations that are not specifically ignored, and not in a ignored schema
--- TODO: why does this have schema_id and pk_column_id?  should just be a realtion_id no?
+-- TODO: why does this have schema_id and pk_column_id?  should just be a relation_id no?
 create or replace view trackable_relation as
     select relation_id, schema_id, primary_key_column_id from (
        -- every single table

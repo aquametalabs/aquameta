@@ -2,7 +2,7 @@
  * Email
  * Send email via external SMTP server
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /******************************************************************************

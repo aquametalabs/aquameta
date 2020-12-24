@@ -2,7 +2,7 @@
  * ENDPOINT SERVER
  * Filesystem import functions
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /*

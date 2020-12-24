@@ -2,7 +2,7 @@
  * Bundle
  * Data Version Control System
  * 
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 
@@ -19,7 +19,7 @@
  *        commit right now
  *     7. status - summarizes the status of the head commit, working copy db, and
  *        stage
- *     8. untracked - rows which are not in any head commit, and availble for
+ *     8. untracked - rows which are not in any head commit, and available for
  *        stage_row_add()
  *     9. remotes - pushing and pulling to other databases
  *

@@ -5,7 +5,7 @@
  * Join graph thing
  * Authentication handlers
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /******************************************************************************
@@ -434,7 +434,6 @@ as $$
 
         rowset json;
         q text;
-        ct integer;
     begin
         raise notice '######## CONSTRUCT_JSON_GRAPH % % %', temp_table_name, start_rowset, subrowsets;
         -- create temp table

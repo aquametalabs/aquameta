@@ -2,7 +2,7 @@
  * Widget
  * Modular user interface component system
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /*******************************************************************************

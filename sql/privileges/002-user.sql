@@ -1,7 +1,7 @@
 /******************************************************************************
  * User Privileges
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 -- user should inherit all anonymous privileges

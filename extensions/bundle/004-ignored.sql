@@ -3,7 +3,7 @@
  *
  * Relations that are not available for version control.
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 set search_path=bundle;

@@ -2,7 +2,7 @@
  * Meta Catalog
  * A writable system catalog for PostgreSQL
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /******************************************************************************
@@ -1783,9 +1783,6 @@ $$ language plpgsql;
 
 
 create function meta.policy_role_update() returns trigger as $$
-    declare
-        schema_name text;
-        relation_name text;
     begin
         perform meta.require_one(public.hstore(NEW), array['policy_name', 'policy_id']);
         perform meta.require_one(public.hstore(NEW), array['role_name', 'role_id']);
@@ -2072,7 +2069,7 @@ create function meta.stmt_extension_set_version(
 $$ language sql;
 
 
-create function meta.stmt_extension_drop(schema_name text, name text) returns text as $$
+create function meta.stmt_extension_drop(name text) returns text as $$
     select 'drop extension ' || quote_ident(name);
 $$ language sql;
 
@@ -2118,7 +2115,7 @@ $$ language plpgsql;
 
 create function meta.extension_delete() returns trigger as $$
     begin
-        execute meta.stmt_extension_drop(OLD.schema_name, OLD.name);
+        execute meta.stmt_extension_drop(OLD.name);
         return OLD;
     end;
 $$ language plpgsql;

@@ -30,22 +30,22 @@ People say the dawn of the Information Age was about wires and semiconductors.  
 
 From my seat, Edgar Codd kind of figured it all out.
 
-The year was 1969, and Edgar F. (Ted) Codd revealed his conception of the Relational Model, a general purpose algebra for data management.  If correct, his model, he proported, should be able to go into any domain of complexity and serve as an adequate abstraction for representing it, slicing and dicing it in infinite ways, and generally making sense of it.
+The year was 1969, and Edgar F. (Ted) Codd revealed his conception of the Relational Model, a general purpose algebra for data management.  If correct, his model, he purported, should be able to go into any domain of complexity and serve as an adequate abstraction for representing it, slicing and dicing it in infinite ways, and generally making sense of it.
 
 The relational model, and the relational databases that followed, were the foundation of the information age, at least to a person interested in data.  50 years later, it remains the most popular model for databases -- and certainly not without a fight.
 
 It sure looks like Codd got something right.  The humble relational database is still king of the information jungle.  If history is any indicator, it is the best tool us crazy humans have found for making sense of things.
 
-Well, Aquameta is about making sense of things.  It is a tool for interacting with the world through the lense of data.
+Well, Aquameta is about making sense of things.  It is a tool for interacting with the world through the lens of data.
 
-The world could learn a lot from old Edgar F. Codd about how to make sense of things.  Us data hackers really have a special power, and it's high time we show we show the rest of the world how it's done.
+The world could learn a lot from old Edgar F. Codd about how to make sense of things.  Us data hackers really have a special power, and it's high time we show the rest of the world how it's done.
 
-Aquameta is a tool for seeing the world through the lense of data.  It's designed to make the language of data as accessible as possible, without dumbing it down.  To programmers, you might think of Aquameta as a "PostgreSQL Admin GUI".  But this ain't your grandma's PGAdmin.  (Sorry PGAdmin! :))
+Aquameta is a tool for seeing the world through the lens of data.  It's designed to make the language of data as accessible as possible, without dumbing it down.  To programmers, you might think of Aquameta as a "PostgreSQL Admin GUI".  But this ain't your grandma's PGAdmin.  (Sorry PGAdmin! :))
 
 Here's why.
 
 
-First Princples
+First Principles
 ---------------
 
 Under the hood, Aquameta has really internalized Codd's Relational Model -- to an arguably absurd degree.
@@ -58,11 +58,11 @@ Aquameta is the result of many years of exploring the outcomes of this thought e
 
 Through this process of exploring a "datafied" web stack, we have climbed many mountains, explored many valleys, seen the lay of the land, and can say with 100% certainty:
 
-This is the new hottness.  This is where the industry inevitably MUST go if we want to leave the bad old days behind.
+This is the new hotness.  This is where the industry inevitably MUST go if we want to leave the bad old days behind.
 
 You know that feeling that an experienced programmer has about the industry?  That feeling that says something is deeply flawed about how we develop software?  That feel is true and correct!  Here's why:
 
-The software industry doesn't have a shared information model whose foundation is a mathematical algebra. Instead we have syntax.  Lots of it!  We have files, and directories.  The files plus syntax paradigm can't manage the complexity we're throwing at it, and the consequences of this evolutionary misstep are everywhere -- once you see it.
+The software industry doesn't have a shared information model whose foundation is a mathematical algebra.  Instead we have syntax.  Lots of it!  We have files, and directories.  The files plus syntax paradigm can't manage the complexity we're throwing at it, and the consequences of this evolutionary misstep are everywhere -- once you see it.
 
 Come take a look.
 
@@ -87,7 +87,7 @@ endpoint.request('GET','/index.html','...query string args...`,`...post vars...`
 PostgreSQL handles it from there.
 
 
-Aquameta contains five core PostgreSQL extensions, which together proport themselves to be a web development stack:
+Aquameta contains five core PostgreSQL extensions, which together purport themselves to be a web development stack:
 
 - [meta](extensions/meta) - Writable system catalog for PostgreSQL, making most database admin tasks possible as data manipulation.
 - [bundle](extensions/bundle) - Version control system similar to `git` but for database rows instead of files.
@@ -98,9 +98,9 @@ Aquameta contains five core PostgreSQL extensions, which together proport themse
 
 Poke around the [schemas]() to see how things look, [endpoint]() is a good place to start.
 
-Aquameta is a very unopinionated stack, except for that one big opinion about everything being data.  From there, our tables are intended to just express "how the web works" and leave the rest up to you.  You can use any client-side framework you please, and the backend supports several different [procedural languages]().
+Aquameta is a very unopinionated stack, except for that one big opinion about everything being data.  From there, our tables are intended to just express "how the web works" and leave the rest up to you.  You can use any client-side framework you please, and the backend supports several [procedural languages]().
 
-It's tuples all the way down.  Well, that's the idea anyway.  Of course there is still the Operating System down below PostgreSQL, with all it's "files" and so forth.  But if we follow this idea to it's natural conclusions, we would make all that look a lot different too.
+It's tuples all the way down.  Well, that's the idea anyway.  Of course there is still the Operating System down below PostgreSQL, with all it's "files" and so forth.  But if we follow this idea to its natural conclusions, we would make all that look a lot different too.
 
 Aquameta's long-term trajectory is to find the places where putting things in the database makes them easier to work with.  We think there is a lot more of opportunity here.  If you're up for an adventure into the unknown, I hope you'll give it a try.
 

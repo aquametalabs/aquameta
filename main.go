@@ -280,14 +280,6 @@ log.Print("                 [ version 0.3.0 ]")
             "org.aquameta.ui.layout",
             "org.aquameta.ui.tags"}
 
-/*
-            "com.aquameta.greatsphere",
-            "com.aquameta.helix",
-            "com.aquameta.cred.erichanson",
-            "com.aquameta.app.wikiviews"}
-*/
-
-
         for i := 0; i < len(coreBundles); i++ {
             q := "select bundle.bundle_import_csv('"+workingDirectory+"/bundles/"+ coreBundles[i]+"')"
             log.Printf("Import query: %s", q)
@@ -427,7 +419,7 @@ log.Print("                 [ version 0.3.0 ]")
 
         // halt
         if req.RequestURI == "/bootloader/halt" {
-            log.Fatal("Bootloader has requested that I halt, so I will halt.")
+            log.Print("Bootloader has requested that I halt, so I will halt.")
             if epg.IsStarted() {
                 log.Print("Stopping PostgreSQL")
                 epg.Stop()
@@ -610,7 +602,7 @@ log.Print("                 [ version 0.3.0 ]")
 
 //    go func() { // make the HTTPServer the main thread since GUI is disabled
         if config.HTTPServer.Protocol == "http" {
-            log.Fatal(http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil))
+            http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil)
         } else {
             if config.HTTPServer.Protocol == "https" {
                 // https://github.com/denji/golang-tls

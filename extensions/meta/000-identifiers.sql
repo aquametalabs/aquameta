@@ -2,7 +2,7 @@
  * Meta Identifiers
  * A set of types that identify PostgreSQL DDL entities.
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ****************************************************************************/
 
 /*****************************************************************************
@@ -469,8 +469,6 @@ as assignment;
 
 
 create or replace function meta.row_id_to_json(row_id meta.row_id, out row_json json) as $$
-declare
-    row_as_json json;
 begin
 
     execute 'with r as (select * from ' || quote_ident ((row_id).pk_column_id.relation_id.schema_id.name) || '.'
