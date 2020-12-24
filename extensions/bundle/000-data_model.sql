@@ -74,7 +74,7 @@ create trigger blob_hash_update
 
 create table bundle (
     id uuid not null default public.uuid_generate_v4() primary key,
-    name text,
+    name text not null default '',
     -- head_commit_id uuid, -- (circular, added later)
     -- checkout_commit_id uuid, -- (circular, added later)
     unique(name)
@@ -670,11 +670,11 @@ group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_
 -- here's a table where you can stash some saved connections.
 create table remote_database (
     id uuid not null default public.uuid_generate_v4() primary key,
-    foreign_server_name text,
-    schema_name text,
-    connection_string text,
-    username text,
-    password text
+    foreign_server_name text not null default '' unique,
+    schema_name text not null default '' unique,
+    connection_string text not null default '',
+    username text not null default '',
+    password text not null default ''
 );
 
 

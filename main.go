@@ -406,9 +406,12 @@ log.Print("                 [ version 0.3.0 ]")
 
         if err != nil {
             log.Printf("API Query failed: %s", err)
-            // log.Print("\n\n", dbQuery, "\n\n", req.Proto, req.RequestURI, "\nREQUEST BODY:\n"+requestBody, queryStringJSON)
+            log.Printf("REQUEST:\nversion: %s\nmessage: %s\nresponse: %s\nmimetype: %s\n\n", version,message,response,mimetype)
+            log.Printf("RESPONSE:\ndbQuery: %s\nreq.Proto: %s\nreq.RequestURI: %s\nrequestBody: %s\nqueryStringJSON: %s\n\n",dbQuery, req.Proto, req.RequestURI, requestBody, queryStringJSON)
             return
         }
+
+        // log.Printf("%s: %s", status, message)
 
         // set mimetype
         w.Header().Set("Content-Type", mimetype)

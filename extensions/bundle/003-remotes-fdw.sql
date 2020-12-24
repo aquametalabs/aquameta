@@ -101,9 +101,9 @@ declare
     _schema_name text;
     _foreign_server_name text;
 begin
-    select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
-    execute format('drop schema if exists %I cascade', _schema_name);
+    select foreign_server_name, schema_name from bundle.remote_database where id = remote_database_id into _foreign_server_name, _schema_name;
     execute format('drop server if exists %I cascade', _foreign_server_name);
+    execute format('drop schema f exists %I', _schema_name);
     return true;
 end;
 $$ language plpgsql;
@@ -255,15 +255,15 @@ declare
     source_schema_name text;
     source_bundle_name text;
     source_bundle_id uuid;
-    connection_string text;
+    source_connection_string text;
 begin
     select schema_name, connection_string from bundle.remote_database
         where id = remote_database_id
-	into source_schema_name, connection_string;
+	into source_schema_name, source_connection_string;
 
     -- source
     execute format ('select b.name, b.id from %1$I.bundle b where id=%2$L', source_schema_name, bundle_id) into source_bundle_name, source_bundle_id;
-    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, connection_string;
+    raise notice 'Cloning bundle % (%) from %...', source_bundle_name, source_bundle_id, source_connection_string;
 
     --------------- transfer --------------
     -- rowset
@@ -321,7 +321,7 @@ begin
             where b.id=%2$L
     ) where id=%2$L', source_schema_name, bundle_id);
 
-    execute format ('insert into bundle.bundle_origin_remote (bundle_id, remote_database_id) values( %L, %L )', bundle_id, remote_database_id);
+    execute format ('insert into bundle.bundle_remote_database (bundle_id, remote_database_id) values( %L, %L )', bundle_id, remote_database_id);
 
     return true;
 end;

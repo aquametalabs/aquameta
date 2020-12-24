@@ -23,6 +23,7 @@ extensions/endpoint/003-plgo.sql
 extensions/endpoint/endpoint.h
 extensions/endpoint/endpoint.so
 
-certificates/
+certificates/*.crt
+certificates/*.key
 aquameta
 bootloader.db/
