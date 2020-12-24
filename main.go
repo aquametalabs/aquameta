@@ -30,7 +30,7 @@ log.Print("     \\/    |__|          \\/      \\/     \\/          \\/")
 log.Print("                 [ version 0.3.0 ]")
 
 
-    log.SetPrefix("[ aquameta ] ")
+    log.SetPrefix("[💧 aquameta 💧] ")
     log.Print("Aquameta server... ENGAGE!")
     workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
     var epg embeddedPostgres.EmbeddedPostgres
@@ -404,36 +404,16 @@ log.Print("                 [ version 0.3.0 ]")
         // query endpoint.request()
         err = dbpool.QueryRow(context.Background(), dbQuery).Scan( &status, &message, &response, &mimetype)
 
+        // unhandled exception in endpoint.request()
         if err != nil {
-            log.Printf("API Query failed: %s", err)
+            log.Printf("💥💥💥💥 API Query failed, unhandled exception: %s", err)
             log.Printf("REQUEST:\nversion: %s\nmessage: %s\nresponse: %s\nmimetype: %s\n\n", version,message,response,mimetype)
             log.Printf("RESPONSE:\ndbQuery: %s\nreq.Proto: %s\nreq.RequestURI: %s\nrequestBody: %s\nqueryStringJSON: %s\n\n",dbQuery, req.Proto, req.RequestURI, requestBody, queryStringJSON)
             return
         }
 
-        // log.Printf("%s: %s", status, message)
-
-        // set mimetype
         w.Header().Set("Content-Type", mimetype)
-
-/*
-        // url parts
-        io.WriteString(w, "Hello from the REST API.  Here are some stats:\n")
-        io.WriteString(w, "RequestURI: "+req.RequestURI+"\n")
-        io.WriteString(w, "version: "+version+"\n")
-        io.WriteString(w, "apiPath: "+apiPath+"\n")
-        io.WriteString(w, "RawQuery: "+req.URL.RawQuery+"\n")
-        io.WriteString(w, "Proto: "+req.Proto+"\n\n\n")
-
-        io.WriteString(w, "qs: "+string(queryStringJSON)+"\n\n\n")
-
-        io.WriteString(w, "status: "+fmt.Sprintf("%v",status)+"\n")
-        io.WriteString(w, "message: "+message+"\n")
-        io.WriteString(w, "mimetype: "+mimetype+"\n")
-        io.WriteString(w, "response: "+response+"\n")
-*/
-
-        // response body
+        w.WriteHeader(status)
         io.WriteString(w, response)
     }
 

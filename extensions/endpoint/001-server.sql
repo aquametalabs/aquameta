@@ -1679,6 +1679,14 @@ create or replace function endpoint.request(
         op text;
         op_params text;
 
+        -- GET STACK DIAGNOSTICS vars
+        v_state text;
+        v_msg text;
+        v_detail text;
+        v_hint text;
+        v_context text;
+        exception_msg text;
+
     begin
         set local search_path = endpoint,meta,public;
 
@@ -1878,12 +1886,38 @@ create or replace function endpoint.request(
 
         end case;
 
-        exception when undefined_table then
-        return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
+    exception
+        when undefined_table then
+            return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
 
-    end;
+        -- https://www.depesz.com/2011/07/20/waiting-for-9-2-stacked-diagnostics-in-plpgsql/
+        WHEN others THEN
+            GET STACKED DIAGNOSTICS
+                v_state   = RETURNED_SQLSTATE,
+                v_msg     = MESSAGE_TEXT,
+                v_detail  = PG_EXCEPTION_DETAIL,
+                v_hint    = PG_EXCEPTION_HINT,
+                v_context = PG_EXCEPTION_CONTEXT;
+
+            exception_msg := format(E'PostgreSQL Exception:
+    state  : %s
+    message: %s
+    detail : %s
+    hint   : %s
+    context: %s
+    sqlerr: %s
+    sqlstate: %s', v_state, v_msg, v_detail, v_hint, v_context, SQLERRM, SQLSTATE);
+
+            raise warning '%', exception_msg;
+            return query select
+                500,
+                'Server Error'::text,
+                ('{ "status_code": 500, "title": "Server Error", "message": ' || to_json(exception_msg) || '}')::text,
+                'application/json'::text;
+        end;
 $$
 language plpgsql;
+
 
 
 /******************************************************************************
