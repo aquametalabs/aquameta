@@ -163,26 +163,48 @@ log.Print("                 [ version 0.3.0 ]")
     log.Print("Connected to database.")
     defer dbpool.Close()
 
-    //
-    // enable more verbose query logging in PostgreSQL -- FIXME?
-    //
-
-    dbpool.Query(context.Background(), "set log_min_messages=LOG")
-    dbpool.Query(context.Background(), "set log_statement='all'")
-    log.Print("PostgreSQL verbose query logging enabled.")
-
 
     //
-    // check that aquameta's required extensions are installed
+    // Finish installing after the database has been started:
     //
-
-    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint')")
+    // - set persistent pg_settings
+    // - install aquameta extensions
+    // - install aquameta bundles
+    // - setup hub in bundle.remote_database
+    // - create superuser
+    //
 
     var ct int
+    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint')")
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan( &ct)
     log.Print("Checking for Aquameta installation....")
 
     if ct != 3 {
+        //
+        // pg_settings
+        //
+
+        // CLI switch here:  if --debug, else ...
+        settingsQueries := [...]string{
+            fmt.Sprintf("alter database %s set log_min_messages='warning'", pq.QuoteIdentifier(config.Database.DatabaseName)), // notice, warning, error....
+            fmt.Sprintf("alter database %s set log_statement='all'", pq.QuoteIdentifier(config.Database.DatabaseName)),
+        }
+        for i := 0; i < len(settingsQueries); i++ {
+            rows, err := dbpool.Query(context.Background(), settingsQueries[i])
+            if err != nil {
+                epg.Stop()
+                log.Fatalf("Unable to update settings: %v", err)
+            }
+            rows.Close()
+        }
+        log.Print("PostgreSQL settings have been set.")
+
+
+
+        //
+        // install aquameta extensions
+        //
+
         log.Print("Aquameta is not installed on this database.  Installing...")
         exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
         exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
@@ -207,6 +229,7 @@ log.Print("                 [ version 0.3.0 ]")
         for i := 0; i < len(installQueries); i++ {
             rows, err := dbpool.Query(context.Background(), installQueries[i])
             if err != nil {
+                epg.Stop()
                 log.Fatalf("Unable to install extensions: %v", err)
             }
             rows.Close()
@@ -216,10 +239,46 @@ log.Print("                 [ version 0.3.0 ]")
 
 
         //
-        // download and install bundles
+        // setup hub remote
+        //
+        hubRemoteQuery := `insert into bundle.remote_database (foreign_server_name, schema_name, connection_string, username, password)
+            values (
+                'hub', 'hub',
+                'dbname ''aquameta'', host ''hub.aquameta.com'', port ''5432''',
+                'anonymous', 'anonymous'
+            )`
+        _, err := dbpool.Query(context.Background(), hubRemoteQuery)
+        if err != nil {
+            epg.Stop()
+            log.Fatalf("Unable to add bundle.remote_database: %v", err)
+        }
+
+
+
+        //
+        // create superuser
         //
 
+        log.Print("Setting up permissions...")
+
+        superuserQuery := fmt.Sprintf("insert into endpoint.user (email, name, active, role_id) values (%s, %s, true, meta.role_id(%s))",
+            pq.QuoteLiteral(config.AquametaUser.Email),
+            pq.QuoteLiteral(config.AquametaUser.Name),
+            pq.QuoteLiteral(config.Database.Role))
+        rows, err := dbpool.Query(context.Background(), superuserQuery)
+        if err != nil {
+            log.Fatalf("Unable to create superuser: %v", err)
+        }
+        rows.Close()
+
+
+
+        //
+        // download and install bundles
+        //
 /*
+        TODO: switch hub install vs local file install, based on CLI
+
         // hub install over network
         log.Print("Downloading Aquameta core bundles from hub.aquameta.com...")
         bundleQueries := [...]string{
@@ -236,28 +295,6 @@ log.Print("                 [ version 0.3.0 ]")
             rows.Close()
         }
 */
-
-        //
-        // setup hub remote 
-        //
-        hubRemoteQuery := `insert into bundle.remote_database (
-            foreign_server_name,
-            schema_name,
-            connection_string,
-            username,
-            password)
-        values (
-            'hub',
-            'hub',
-            'dbname ''aquameta'', host ''hub.aquameta.com'', port ''5432''',
-            'anonymous',
-            'anonymous'
-        )`
-
-        _, err := dbpool.Query(context.Background(), hubRemoteQuery)
-        if err != nil {
-            log.Fatalf("Unable to add bundle.remote_database: %v", err)
-        }
 
         // install from local filesystem
         log.Print("Installing core bundles from source")
@@ -278,13 +315,14 @@ log.Print("                 [ version 0.3.0 ]")
             "org.aquameta.ui.event",
             "org.aquameta.ui.fsm",
             "org.aquameta.ui.layout",
-            "org.aquameta.ui.tags"}
+            "org.aquameta.ui.tags",
+        }
 
         for i := 0; i < len(coreBundles); i++ {
             q := "select bundle.bundle_import_csv('"+workingDirectory+"/bundles/"+ coreBundles[i]+"')"
-            log.Printf("Import query: %s", q)
             rows, err := dbpool.Query(context.Background(), q)
             if err != nil {
+                epg.Stop()
                 log.Fatalf("Unable to install Aquameta bundles: %v", err)
             }
             rows.Close()
@@ -295,28 +333,12 @@ log.Print("                 [ version 0.3.0 ]")
         //
 
         log.Print("Checking out core bundles...")
-        rows, err := dbpool.Query(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id")
+        rows, err = dbpool.Query(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id")
         if err != nil {
             log.Fatalf("Unable to checkout core bundles: %v", err)
         }
         rows.Close()
 
-
-        //
-        // create superuser
-        //
-
-        log.Print("Setting up permissions...")
-
-        superuserQuery := fmt.Sprintf("insert into endpoint.user (email, name, active, role_id) values (%s, %s, true, meta.role_id(%s))",
-            pq.QuoteLiteral(config.AquametaUser.Email),
-            pq.QuoteLiteral(config.AquametaUser.Name),
-            pq.QuoteLiteral(config.Database.Role))
-        rows, err = dbpool.Query(context.Background(), superuserQuery)
-        if err != nil {
-            log.Fatalf("Unable to create superuser: %v", err)
-        }
-        rows.Close()
 
         log.Print("Installation complete!")
 
@@ -634,11 +656,11 @@ log.Print("                 [ version 0.3.0 ]")
     w.SetSize(800, 500, webview.HintNone)
     w.Navigate(config.HTTPServer.Protocol+"://"+config.HTTPServer.IP+":"+config.HTTPServer.Port+"/boot")
     w.Run()
-    
+
      */
 
     if config.Database.Mode == "embedded" {
-        epg.Stop()
+        if epg.IsStarted() { epg.Stop() }
     }
 
     log.Fatal("Good day.")
