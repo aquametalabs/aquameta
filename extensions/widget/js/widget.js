@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Widget.js
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 define(['/doT.min.js', '/jQuery.min.js', '/datum.js'], function(doT, $, AQ, undefined) {
 

@@ -2,7 +2,7 @@
  * Bundle HTTP Remotes
  * Deprecated in favor of posstgres_fdw but still interesting?
  *
- * Copyriright (c) 2019 - Aquameta - http://aquameta.org/
+ * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
 /*******************************************************************************
