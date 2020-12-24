@@ -1450,6 +1450,7 @@ create function endpoint.anonymous_rows_select_function(
 ) returns record as $$
 
     declare
+        _mimetype alias for mimetype;
         columns_json text;
         function_args text;
         suffix text;
