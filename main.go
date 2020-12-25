@@ -165,9 +165,28 @@ log.Print("                 [ version 0.3.0 ]")
 
 
     //
+    // pg_settings
+    //
+
+    // CLI switch here:  if --debug, else ...
+    settingsQueries := [...]string{
+        fmt.Sprintf("alter database %s set log_min_messages='notice'", pq.QuoteIdentifier(config.Database.DatabaseName)), // notice, warning, error....
+        fmt.Sprintf("alter database %s set log_statement='all'", pq.QuoteIdentifier(config.Database.DatabaseName)),
+    }
+    for i := 0; i < len(settingsQueries); i++ {
+        rows, err := dbpool.Query(context.Background(), settingsQueries[i])
+        if err != nil {
+            epg.Stop()
+            log.Fatalf("Unable to update settings: %v", err)
+        }
+        rows.Close()
+    }
+    log.Print("PostgreSQL settings have been set.")
+
+
+    //
     // Finish installing after the database has been started:
     //
-    // - set persistent pg_settings
     // - install aquameta extensions
     // - install aquameta bundles
     // - setup hub in bundle.remote_database
@@ -180,26 +199,6 @@ log.Print("                 [ version 0.3.0 ]")
     log.Print("Checking for Aquameta installation....")
 
     if ct != 3 {
-        //
-        // pg_settings
-        //
-
-        // CLI switch here:  if --debug, else ...
-        settingsQueries := [...]string{
-            fmt.Sprintf("alter database %s set log_min_messages='warning'", pq.QuoteIdentifier(config.Database.DatabaseName)), // notice, warning, error....
-            fmt.Sprintf("alter database %s set log_statement='all'", pq.QuoteIdentifier(config.Database.DatabaseName)),
-        }
-        for i := 0; i < len(settingsQueries); i++ {
-            rows, err := dbpool.Query(context.Background(), settingsQueries[i])
-            if err != nil {
-                epg.Stop()
-                log.Fatalf("Unable to update settings: %v", err)
-            }
-            rows.Close()
-        }
-        log.Print("PostgreSQL settings have been set.")
-
-
 
         //
         // install aquameta extensions
