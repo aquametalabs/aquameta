@@ -670,6 +670,14 @@ create or replace function endpoint.row_insert(
        _relation_name text;
        q text;
 
+
+    /*
+    TODO: This doesn't work with bytea columns because when you insert text
+    into a bytea column because it thinks it's the client_encoding instead of
+    hex.  -- this function is entirely wrong anywya, it is detecting json not
+    by looking at the column type but by looking at the VALUE.  WTF.
+    */
+
     begin
         _schema_name := (relation_id::meta.schema_id).name;
         _relation_name := (relation_id).name;
@@ -685,6 +693,9 @@ create or replace function endpoint.row_insert(
                         from json_object_keys(args)
 
                     ) || ') values (' || (
+
+
+
                            select string_agg('
                                    case when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''array'' then ((
                                             select ''{'' || string_agg(value::text, '', '') || ''}''
@@ -704,6 +715,9 @@ create or replace function endpoint.row_insert(
                                       c.relation_name = _relation_name and
                                       c.name = json_object_keys
                            left join meta.type t on c.type_id = t.id
+
+
+
                     ) || ') '
                 end ||
                 'returning *
@@ -1703,6 +1717,14 @@ create or replace function endpoint.request(
         op text;
         op_params text;
 
+        -- GET STACK DIAGNOSTICS vars
+        v_state text;
+        v_msg text;
+        v_detail text;
+        v_hint text;
+        v_context text;
+        exception_msg text;
+
     begin
         set local search_path = endpoint,meta,public;
 
@@ -1902,12 +1924,38 @@ create or replace function endpoint.request(
 
         end case;
 
-        exception when undefined_table then
-        return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
+    exception
+        when undefined_table then
+            return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
 
-    end;
+        -- https://www.depesz.com/2011/07/20/waiting-for-9-2-stacked-diagnostics-in-plpgsql/
+        WHEN others THEN
+            GET STACKED DIAGNOSTICS
+                v_state   = RETURNED_SQLSTATE,
+                v_msg     = MESSAGE_TEXT,
+                v_detail  = PG_EXCEPTION_DETAIL,
+                v_hint    = PG_EXCEPTION_HINT,
+                v_context = PG_EXCEPTION_CONTEXT;
+
+            exception_msg := format(E'PostgreSQL Exception:
+    state  : %s
+    message: %s
+    detail : %s
+    hint   : %s
+    context: %s
+    sqlerr: %s
+    sqlstate: %s', v_state, v_msg, v_detail, v_hint, v_context, SQLERRM, SQLSTATE);
+
+            raise warning '%', exception_msg;
+            return query select
+                500,
+                'Server Error'::text,
+                ('{ "status_code": 500, "title": "Server Error", "message": ' || to_json(exception_msg) || '}')::text,
+                'application/json'::text;
+        end;
 $$
 language plpgsql;
+
 
 
 /******************************************************************************
