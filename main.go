@@ -537,6 +537,7 @@ log.Print("                 [ version 0.3.0 ]")
                 log.Printf("QueryRow failed: %v", err)
             }
             w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
             io.WriteString(w, content)
 
         case "resource_binary":
@@ -551,6 +552,7 @@ log.Print("                 [ version 0.3.0 ]")
                 log.Printf("QueryRow failed: %v", err)
             }
             w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
             w.Write(contentBinary)
 
         case "template":
@@ -571,6 +573,7 @@ log.Print("                 [ version 0.3.0 ]")
                 log.Printf("QueryRow failed: %v", err)
             }
             w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
             io.WriteString(w, content)
         }
     }
