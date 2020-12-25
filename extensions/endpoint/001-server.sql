@@ -646,6 +646,14 @@ create or replace function endpoint.row_insert(
        _relation_name text;
        q text;
 
+
+    /*
+    TODO: This doesn't work with bytea columns because when you insert text
+    into a bytea column because it thinks it's the client_encoding instead of
+    hex.  -- this function is entirely wrong anywya, it is detecting json not
+    by looking at the column type but by looking at the VALUE.  WTF.
+    */
+
     begin
         _schema_name := (relation_id::meta.schema_id).name;
         _relation_name := (relation_id).name;
@@ -661,6 +669,9 @@ create or replace function endpoint.row_insert(
                         from json_object_keys(args)
 
                     ) || ') values (' || (
+
+
+
                            select string_agg('
                                    case when json_typeof($3->' || quote_literal(json_object_keys) || ') = ''array'' then ((
                                             select ''{'' || string_agg(value::text, '', '') || ''}''
@@ -680,6 +691,9 @@ create or replace function endpoint.row_insert(
                                       c.relation_name = _relation_name and
                                       c.name = json_object_keys
                            left join meta.type t on c.type_id = t.id
+
+
+
                     ) || ') '
                 end ||
                 'returning *

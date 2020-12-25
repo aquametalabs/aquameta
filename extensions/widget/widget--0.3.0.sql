@@ -140,6 +140,19 @@ create table widget_view (
 
 
 /*******************************************************************************
+* TABLE snippet
+*******************************************************************************/
+
+create table snippet (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name text not null default '',
+    type text not null default '',
+    snippet text not null default ''
+);
+
+
+
+/*******************************************************************************
 * fsm
 *******************************************************************************/
 
