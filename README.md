@@ -14,9 +14,10 @@ cd aquameta
 go build
 ./aquameta
 ```
-
+<!--
 { [Download](http://aquameta.com/download) | [Demo](http://aquameta.com/demo) | [Documentation](http://aquameta.org/docs) }
 -----------------------------------------------
+-->
 
 Status
 ------
