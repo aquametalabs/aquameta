@@ -1749,10 +1749,10 @@ create or replace function endpoint.request(
         op := substring(path from '([^/]+)(/{1})'); -- row, relation, function, etc.
         op_params := substring(path from char_length(op) + 2); -- everything after {op}/
 
-        raise notice '##### endpoint.request % % %', version, verb, path;
-        raise notice '##### op and params: % %', op, op_params;
-        raise notice '##### query string args: %', query_args::text;
-        raise notice '##### POST data: %', post_data::text;
+        -- raise notice '##### endpoint.request % % %', version, verb, path;
+        -- raise notice '##### op and params: % %', op, op_params;
+        -- raise notice '##### query string args: %', query_args::text;
+        -- raise notice '##### POST data: %', post_data::text;
 
         case op
         when 'row' then
