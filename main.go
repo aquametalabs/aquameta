@@ -170,8 +170,8 @@ log.Print("                 [ version 0.3.0 ]")
 
     // CLI switch here:  if --debug, else ...
     settingsQueries := [...]string{
-        fmt.Sprintf("alter database %s set log_min_messages='notice'", pq.QuoteIdentifier(config.Database.DatabaseName)), // notice, warning, error....
-        fmt.Sprintf("alter database %s set log_statement='all'", pq.QuoteIdentifier(config.Database.DatabaseName)),
+        fmt.Sprintf("set log_min_messages='notice'"), // notice, warning, error....
+        fmt.Sprintf("set log_statement='all'"),
     }
     for i := 0; i < len(settingsQueries); i++ {
         rows, err := dbpool.Query(context.Background(), settingsQueries[i])
