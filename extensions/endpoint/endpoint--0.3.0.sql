@@ -154,13 +154,13 @@ create table endpoint.resource (
 create table endpoint.template (
     id uuid not null default public.uuid_generate_v4() primary key,
     name text not null default '',
-    mimetype_id uuid not null references mimetype(id) on delete restrict on update cascade, -- why on update cascade??
+    mimetype_id uuid not null references mimetype(id),
     content text not null default ''
 );
 
 create table endpoint.template_route (
     id uuid not null default public.uuid_generate_v4() primary key,
-    template_id uuid not null references endpoint.template(id),
+    template_id uuid not null references endpoint.template(id) on delete cascade,
     url_pattern text not null default '', -- matching paths may contain arguments from the url to be passed into the template
     args text not null default '{}' -- this route's static arguments to be passed into the template
 );

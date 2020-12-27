@@ -306,7 +306,6 @@ log.Print("                 [ version 0.3.0 ]")
             "org.aquameta.core.semantics",
             "org.aquameta.core.widget",
             "org.aquameta.games.snake",
-            "org.aquameta.ui.bundle",
             "org.aquameta.ui.fsm",
             "org.aquameta.ui.layout",
             "org.aquameta.ui.tags",
