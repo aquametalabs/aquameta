@@ -1,4 +1,0 @@
-25811bbc-352f-488e-81cd-ddf12d5ed14c	2c28d445-e3dd-45ec-a81d-fdc84ddb045c	61c676ee-9833-473f-877f-fb2a3f9e221b	\N	a44dbb38-176e-45fe-9041-dc6820b47918	2019-01-19 19:47:59.513231	remove references to http:// for SSL support
-5a2400eb-c42f-4136-871e-a12e11a0944b	2c28d445-e3dd-45ec-a81d-fdc84ddb045c	ca81b705-214c-4e2a-9f26-866a266a7e8f	\N	\N	2017-07-12 16:38:36.661328	initial import
-a44dbb38-176e-45fe-9041-dc6820b47918	2c28d445-e3dd-45ec-a81d-fdc84ddb045c	e6c595c3-dfcb-4d49-bfee-2ee9acc2a092	\N	5a2400eb-c42f-4136-871e-a12e11a0944b	2017-08-15 16:19:43.663918	fix imports, decrease font size for schema
-e0108e2c-c4ee-4f48-adbc-1db5aaec20d7	2c28d445-e3dd-45ec-a81d-fdc84ddb045c	48775c34-70ec-4d56-9b37-38012d7259b5	\N	25811bbc-352f-488e-81cd-ddf12d5ed14c	2019-04-23 23:12:32.555984	stub out a docs manager & editor

@@ -1,8 +1,0 @@
-0adf8453-e011-4adc-891f-281d227142ab	13aa5018-d573-4e0c-97ca-7f9fffb6602e	ea022e08-ad43-4cba-a6ff-c026b8711f50	\N	eb68eace-96e2-4cb3-8ae7-de01ced6c77a	2018-02-12 19:33:09.924397	using function that returns rows
-2986ef0a-306a-43ae-afcc-af8681cb8bcd	13aa5018-d573-4e0c-97ca-7f9fffb6602e	b81aefee-2897-43a7-a252-d41039c72419	\N	32333553-4e54-476e-ad72-3870969face7	2019-01-19 19:43:44.364492	remove reference to http:// for SSL support
-2fe58b79-4fc2-40bd-9a66-1c71451c1e95	13aa5018-d573-4e0c-97ca-7f9fffb6602e	f4192a34-24e4-4c9f-875c-25629bff2c56	\N	0adf8453-e011-4adc-891f-281d227142ab	2018-07-23 05:49:51.981727	bundle manager kinda shows commit diffs!
-32333553-4e54-476e-ad72-3870969face7	13aa5018-d573-4e0c-97ca-7f9fffb6602e	47c74bab-a009-4a60-aabe-f855b6a53ae7	\N	eaeb0097-3a99-4d79-90eb-c71843057c38	2018-10-27 19:23:14.267744	fix bundle admin ui after remote clone refactor
-3c46cd36-8ae1-467f-885c-573ad4914fd5	13aa5018-d573-4e0c-97ca-7f9fffb6602e	80b5775e-be97-4cb6-a7cd-2d9e5a84f266	\N	\N	2018-01-22 13:53:26.485194	start of bundle remote manager
-71a575ad-8eba-4a1a-a9d2-fe2f357ed721	13aa5018-d573-4e0c-97ca-7f9fffb6602e	8cf0518b-9643-407f-b103-20fc052c74c6	\N	2fe58b79-4fc2-40bd-9a66-1c71451c1e95	2018-07-23 06:10:24.67977	bundle manager showing commit diffs
-eaeb0097-3a99-4d79-90eb-c71843057c38	13aa5018-d573-4e0c-97ca-7f9fffb6602e	3c996162-6615-43a8-a336-c9466a8e6793	\N	71a575ad-8eba-4a1a-a9d2-fe2f357ed721	2018-08-15 15:34:57.001686	better bundle manager ui
-eb68eace-96e2-4cb3-8ae7-de01ced6c77a	13aa5018-d573-4e0c-97ca-7f9fffb6602e	04f8c980-c0eb-4899-b7bc-7c79c392f0fe	\N	3c46cd36-8ae1-467f-885c-573ad4914fd5	2018-02-05 04:21:45.048264	switch bundle manager to use admin and layout bundles

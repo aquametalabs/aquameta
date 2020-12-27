@@ -296,22 +296,17 @@ log.Print("                 [ version 0.3.0 ]")
 */
 
         // install from local filesystem
+        // TODO: Do this by inspecting the bundles directory?
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
             "org.aquameta.core.bootloader",
-            "org.aquameta.core.docs",
             "org.aquameta.core.endpoint",
             "org.aquameta.core.ide",
             "org.aquameta.core.mimetypes",
             "org.aquameta.core.semantics",
             "org.aquameta.core.widget",
             "org.aquameta.games.snake",
-            "org.aquameta.templates.simple",
-            "org.aquameta.ui.admin",
-            "org.aquameta.ui.auth",
             "org.aquameta.ui.bundle",
-            "org.aquameta.ui.dev",
-            "org.aquameta.ui.event",
             "org.aquameta.ui.fsm",
             "org.aquameta.ui.layout",
             "org.aquameta.ui.tags",
