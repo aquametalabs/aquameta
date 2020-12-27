@@ -1,6 +1,7 @@
 \\x00a9e4255a5b63067b76cbfb9fd67f26bdb91be802d5ffcb177ec1b7a8d4c623	li
 \\x01e906f9f83dac8d2e00e6a96e8a4ad833bf3638416acd8f8f9430bfcfc651d2	var w = $("#"+id);\n\nif( typeof row != 'undefined' ) {\n    w.data('row', row);\n}
 \\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2	.{{= name }} {\n}
+\\x34c569ef714981a0dd00295a5869bf5099066b6d673b312a4220ccd493c7557c	<option\n\t    id="{{= id }}"\n        class="{{= name }}"\n        value="{{= value }}"\n        {{? typeof selected != 'undefined' && selected }}\n        \tselected="selected"\n        {{?}}\n>{{= label }}</option>
 \\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab	var w = $("#"+id);
 \\x5b5e12674367523b93ffc4ee7058996b466f5dc1251760466544a785c53f1d8b	<option id="{{= id }}" class="{{= name }}" value="{{= value }}" {{? typeof selected != 'undefined' && selected }}selected="selected"{{?}}>\n    {{= label }}\n</option>
 \\x78900e1c20f125bccfcc6f98137f14b5985899d33e1adef5d8a28878db116c16	var w = $("#"+id);\n\n// if they passed in a row, attach it as jQuery data to the element\nif(typeof row != 'undefined') {\n    w.data('row', row);\n}
@@ -8,6 +9,9 @@
 \\xa2ff2522382852a144365e46f2f8646319024abb7ae1aa9c97c24177c44e3deb	18251e25-cfca-4f4d-bde5-c9c5be89eaba
 \\xb4109920496eb265c91078c527592d80d8d7f49546c9c8231d5ef4f0fdb5cb13	<option id="{{= id }}" class="{{= name }}" value="{{= value }}">\n    {{= label }}\n</option>
 \\xb462be37eb1d011a9e7009fc3ded570a9d5f1c3767572003c9d124b76d4213b7	<li id="{{= id }}" class="{{= name }}">\n    {{= content }}\n</li>
+\\xbc1d23bf1783e17b04ba2b675e6253c1f3401f36428a599b15fe9d4c7671dab2	# org.aquameta.ui.tags\n\nWidgets that are interfaces to simple element tags.\n\nFor example, to populate a `<select>` tag with `<option>` elements that correspond to rows in the database, we need to call `widget.sync`, but each injected widget needs to be a naked `<option>` HTML tag with a different "value" and "label."\n\n\n```\n// get some rows\nendpoint.schema('meta').view('table').rows().then(function(tables) {\n\n\t// create an options tag for each row, injected into the <select class="tables"> element\n\twidget.sync(tables, w.find('select.tables'), function(table) {\n    \n    \treturn widget('tags:option', {\n    \t    label: table.get('name'),\n\t        value: table.get('id')\n    \t});\n    });\n});\n```\n\nSee demo widgets for more examples.
+\\xc6dfb1395c952f347d3c86ab029b6fce88ff2e52794807152599b1ff167ed626	d37a54a3-b5ee-4817-a815-688cf4a1e829
+\\xcb7ca6e92a4a696f3598120fbdc2ef1b7a04011d69fd176685f1c2878eac0134	41a177a5-6836-46d3-81de-fd970d26cb46
 \\xd103fa289ce6b5f6c57d50cf2c1d655be29601b9ae168236d55431a1c5589120	e83c6a04-bc73-43ed-ab3e-2642bf43e9e1
 \\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	
 \\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382	return {};
