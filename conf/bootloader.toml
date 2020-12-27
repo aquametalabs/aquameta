@@ -43,4 +43,4 @@
     # SSLCertificateFile = "certificates/server.crt"
     # SSLKeyFile = "certificates/server.key"
 
-    StartupURL = "/boot"            # URL to open at startup
+    StartupURL = "/dev"            # URL to open at startup
