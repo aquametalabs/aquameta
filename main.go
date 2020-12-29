@@ -489,7 +489,6 @@ log.Print("                 [ version 0.3.0 ]")
             matchCountQ,
             pq.QuoteLiteral(path),
             pq.QuoteLiteral(path),
-            pq.QuoteLiteral(path),
             pq.QuoteLiteral(path)))
         if err != nil {
             log.Fatalf("Resource matching query failed: %v", err)
