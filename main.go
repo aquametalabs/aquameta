@@ -465,6 +465,7 @@ log.Print("                 [ version 0.3.0 ]")
         */
 
         // count matching endpoint.resource
+        // TODO: Learn to work with UUIDs in Go
         const matchCountQ = `
             select r.id::text, 'resource' as resource_table
             from endpoint.resource r
@@ -476,7 +477,8 @@ log.Print("                 [ version 0.3.0 ]")
             select r.id::text, 'resource_binary'
             from endpoint.resource_binary r
             where path = %v
-            and active = true
+            and active = true`
+            /*
 
             union
 
@@ -484,10 +486,10 @@ log.Print("                 [ version 0.3.0 ]")
             from endpoint.template_route r
             where %v ~ r.url_pattern`
             // and active = true ?
+            */
 
         matches, err := dbpool.Query(context.Background(), fmt.Sprintf(
             matchCountQ,
-            pq.QuoteLiteral(path),
             pq.QuoteLiteral(path),
             pq.QuoteLiteral(path)))
         if err != nil {
@@ -541,14 +543,17 @@ log.Print("                 [ version 0.3.0 ]")
             w.WriteHeader(200)
             io.WriteString(w, content)
 
-        case "resource_binary":
-            const resourceBinaryQ = `
-                select r.content, m.mimetype
-                from endpoint.resource_binary r
+        // this is a mess
+        /*
+        case "resource_function":
+            const resourceFunctionQ = `
+                select f.path_pattern, m.mimetype
+                from endpoint.resource_function r
                     join endpoint.mimetype m on r.mimetype_id = m.id
+                    join %v.%v(%xxx)
                 where r.id = %v`
 
-            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&contentBinary, &mimetype)
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceFunctionQ, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
@@ -576,6 +581,22 @@ log.Print("                 [ version 0.3.0 ]")
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
             io.WriteString(w, content)
+        */
+        case "resource_binary":
+            const resourceBinaryQ = `
+                select r.content, m.mimetype
+                from endpoint.resource_binary r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
+                where r.id = %v`
+
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&contentBinary, &mimetype)
+            if err != nil {
+                log.Printf("QueryRow failed: %v", err)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
+            w.Write(contentBinary)
+
         }
     }
 
