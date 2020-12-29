@@ -115,7 +115,7 @@ log.Print("                 [ version 0.3.0 ]")
         }
 
         //
-        // start the database daemon
+        // start the epg database daemon
         //
 
         log.Printf("Starting PostgreSQL server from %s...", config.Database.EmbeddedPostgresRuntimePath)
@@ -170,7 +170,7 @@ log.Print("                 [ version 0.3.0 ]")
 
     // CLI switch here:  if --debug, else ...
     settingsQueries := [...]string{
-        fmt.Sprintf("set log_min_messages='notice'"), // notice, warning, error....
+        fmt.Sprintf("set log_min_messages='notice'"), // { notice, warning, error, ...}
         fmt.Sprintf("set log_statement='all'"),
     }
     for i := 0; i < len(settingsQueries); i++ {
@@ -184,30 +184,30 @@ log.Print("                 [ version 0.3.0 ]")
     log.Print("PostgreSQL settings have been set.")
 
 
-    //
-    // Finish installing after the database has been started:
+
     //
     // - install aquameta extensions
-    // - install aquameta bundles
-    // - setup hub in bundle.remote_database
-    // - create superuser
     //
 
     var ct int
-    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint')")
+    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint','ide','documentation','widget','semantics')")
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan( &ct)
     log.Print("Checking for Aquameta installation....")
 
-    if ct != 3 {
+    if ct != 7 {
 
         //
         // install aquameta extensions
         //
 
         log.Print("Aquameta is not installed on this database.  Installing...")
-        exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
-        exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
-        log.Print("Extensions copied to PostgreSQL's extensions directory.")
+
+
+        if config.Database.Mode == "embedded" {
+            exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
+            exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
+            log.Print("Extensions copied to PostgreSQL's extensions directory.")
+        }
 
         installQueries := [...]string{
             "create extension if not exists hstore schema public",
@@ -353,6 +353,10 @@ log.Print("                 [ version 0.3.0 ]")
         s := strings.SplitN(req.URL.Path,"/",4)
         version, apiPath := s[2], s[3]
 
+        if version != "0.3" {
+            log.Print("💩💩💩💩💩💩 Referene to non-0.3 endpoint.")
+        }
+
         // convert query string to JSON
         m, err := url.ParseQuery(req.URL.RawQuery)
         if err != nil { log.Fatal(err) }
@@ -481,7 +485,12 @@ log.Print("                 [ version 0.3.0 ]")
             where %v ~ r.url_pattern`
             // and active = true ?
 
-        matches, err := dbpool.Query(context.Background(), fmt.Sprintf(matchCountQ, pq.QuoteLiteral(path), pq.QuoteLiteral(path), pq.QuoteLiteral(path)))
+        matches, err := dbpool.Query(context.Background(), fmt.Sprintf(
+            matchCountQ,
+            pq.QuoteLiteral(path),
+            pq.QuoteLiteral(path),
+            pq.QuoteLiteral(path),
+            pq.QuoteLiteral(path)))
         if err != nil {
             log.Fatalf("Resource matching query failed: %v", err)
         }
