@@ -3,6 +3,7 @@ package main
 import (
     "context"
     "encoding/json"
+    "flag"
     "fmt"
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
     "github.com/jackc/pgx/v4/pgxpool"
@@ -21,13 +22,13 @@ import (
 )
 
 func main() {
-log.Print("                                           __")
-log.Print("_____    ________ _______    _____   _____/  |______")
-log.Print("\\__  \\  / ____/  |  \\__  \\  /     \\_/ __ \\   __\\__  \\")
-log.Print(" / __ \\< <_|  |  |  // __ \\|  Y Y  \\  ___/|  |  / __ \\_")
-log.Print("(____  /\\__   |____/(____  /__|_|  /\\___  >__| (____  /")
-log.Print("     \\/    |__|          \\/      \\/     \\/          \\/")
-log.Print("                 [ version 0.3.0 ]")
+log.Print(`                                           __          `)
+log.Print(`_____    ________ _______    _____   _____/  |______   `)
+log.Print(`\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  `)
+log.Print(` / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_`)
+log.Print(`(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /`)
+log.Print(`     \/    |__|          \/      \/     \/          \/ `)
+log.Print(`                 [ version 0.3.0 ]                     `)
 
 
     log.SetPrefix("[💧 aquameta 💧] ")
@@ -56,20 +57,19 @@ log.Print("                 [ version 0.3.0 ]")
     // load config
     //
 
-    configFile := workingDirectory+"/conf/boot.toml"
-    bootloaderConfigFile := workingDirectory+"/conf/bootloader.toml"
-    // TODO: allow override configFile w/ cmd-line args
-    // TODO: constants for filenames
+    var configFile = flag.String("c", workingDirectory + "/conf/boot.toml", "configuration file")
 
-    config, err := getConfig(configFile)
+    config, err := getConfig(*configFile)
     if err != nil {
-        log.Printf("Could not load boot configuration file: %s", err)
+        log.Fatalf("Could not load boot configuration file: %s", err)
+        /*
         log.Printf("Loading default Bootloader configuration instead from %s", bootloaderConfigFile)
 
         blconfig, err := getConfig(bootloaderConfigFile); if err != nil {
             log.Fatalf("Could not load bootloader config %s: %s", bootloaderConfigFile, err)
         }
         config = blconfig
+        */
     }
 
     //
@@ -172,6 +172,7 @@ log.Print("                 [ version 0.3.0 ]")
     settingsQueries := [...]string{
         fmt.Sprintf("set log_min_messages='notice'"), // { notice, warning, error, ...}
         fmt.Sprintf("set log_statement='all'"),
+        fmt.Sprintf("set statement_timeout=0"),
     }
     for i := 0; i < len(settingsQueries); i++ {
         rows, err := dbpool.Query(context.Background(), settingsQueries[i])
