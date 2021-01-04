@@ -121,6 +121,53 @@ create table endpoint.resource (
     content text not null default ''
 );
 
+-- Returns the result of a function call as a resource. Functions must return
+-- one row with either one or two columns.  When it returns two columns, one must
+-- be named "mimetype", which sets the resource's content-type, and takes
+-- precedence over the value of mimetype_id.
+
+/*
+aquameta=# select regexp_match('/blog/123/posts/512125', regexp_replace('^/blog/{$1}/posts/{$2}$', '{\$\d+}', '(\S+)', 'g'))
+;
+    regexp_match
+---------------------
+ {123,51215}
+(1 row)
+
+aquameta=# select regexp_matches('^/blog/{$1}/posts/{$2}$', '{\$(\d+)}', 'g');
+ regexp_matches
+----------------
+ {1}
+ {2}
+(2 rows)
+
+insert into resource_function (function_id, path_pattern, default_args, mimetype_id) values (
+    meta.function_id('endpoint','hello_world','{"text","text","text"}'),
+    '/hello/{$1}/{$3}',
+    '{"a","b","c"}',
+    get_mimetype_id('text/html')
+);
+create function hello_world(text,text,text) returns text as $$
+    select 'Hello ' || $1 || ' from ' || $3;
+language sql;
+
+create function endpoint.path_matches( path text, pattern text ) returns boolean as $$
+declare
+    regex text;
+begin
+    select * from regexp_replace(pattern, '\{\$\d+\}')
+
+end;
+$$ language plpgsql;
+create table endpoint.resource_function (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    function_id meta.function_id not null,
+    path_pattern text not null, -- /blogs/$1/posts/$2.html -- see site_settings.path_pattern_regex
+    default_args text[], -- for setting fixed arguments to the function, when only some of the args are specified by the path.  null ok.
+    mimetype_id uuid references mimetype(id)
+ );
+*/
+
 /******************************************************************************
  * templates
  * - dynamic HTML fragments, parsed and rendered upon request.
@@ -168,6 +215,8 @@ create table endpoint.site_settings (
 
     site_title text,
     site_url text,
+
+    resource_function_regex text,
 
     smtp_server_id uuid not null,
     auth_from_email text

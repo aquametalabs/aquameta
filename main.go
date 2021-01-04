@@ -480,6 +480,12 @@ log.Print("                 [ version 0.3.0 ]")
             and active = true`
             /*
 
+            -- union
+
+            -- select r.id::text, 'resource_function'
+            -- from endpoint.resource_function r
+            -- where regexp_match(%v, regexp_replace('^' || r.path_pattern || '$', '{\$\d+}', '(\S+)', 'g'))
+
             union
 
             select r.id::text, 'template'
@@ -560,7 +566,27 @@ log.Print("                 [ version 0.3.0 ]")
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
             w.Write(contentBinary)
+        */
 
+        case "resource_binary":
+            const resourceBinaryQ = `
+                select r.content, m.mimetype
+                from endpoint.resource_binary r
+                    join endpoint.mimetype m on r.mimetype_id = m.id
+                    join %v.%v(%xxx)
+                where r.id = %v`
+
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
+            if err != nil {
+                log.Printf("QueryRow failed: %v", err)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
+            w.Write(contentBinary)
+        }
+
+            /*
+            failed attempt at using pl/go solution
         case "template":
             const templateQ = `
                 select
@@ -581,7 +607,6 @@ log.Print("                 [ version 0.3.0 ]")
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
             io.WriteString(w, content)
-        */
         case "resource_binary":
             const resourceBinaryQ = `
                 select r.content, m.mimetype
@@ -598,6 +623,7 @@ log.Print("                 [ version 0.3.0 ]")
             w.Write(contentBinary)
 
         }
+            */
     }
 
 
