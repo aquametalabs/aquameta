@@ -909,7 +909,7 @@ language plpgsql;
  * FUNCTION row_select                                                                              *
  ****************************************************************************************************/
 
-create function endpoint.row_select(
+create or replace function endpoint.row_select(
     row_id meta.row_id,
     args json
 ) returns json as $$
@@ -1148,7 +1148,7 @@ create or replace function endpoint.suffix_clause(
                                 ) v)
                             b;
                         */
-                        select _where || ' and ' || string_agg( quote_ident(name) || ' ' || op || ' ' ||
+                        select _where || ' and ' || string_agg( name || ' ' || op || ' ' ||
 
 
                             case when op = 'in' then
@@ -1175,7 +1175,7 @@ create or replace function endpoint.suffix_clause(
                         into _where;
 
                     elsif json_typeof(r.value) = 'object' then -- { where: JSON object }
-                        select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' ||
+                        select _where || ' and ' || name || ' ' || op || ' ' ||
 
                             case when op = 'in' then
                                 -- Value is array
@@ -1251,7 +1251,7 @@ $$ language plpgsql;
  * FUNCTION rows_select                                                                             *
  ****************************************************************************************************/
 
-create function endpoint.rows_select(
+create or replace function endpoint.rows_select(
     relation_id meta.relation_id,
     args json
 ) returns json as $$

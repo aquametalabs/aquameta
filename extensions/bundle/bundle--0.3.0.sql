@@ -1437,7 +1437,7 @@ $$ language plpgsql;
  * use record_in, so we can't pass it a text string without explicitly casting
  * it in the call.  So it just takes text and casts it internally.
  */
-create function checkout_row(_row_id text, commit_id uuid) returns void as $$
+create or replace function checkout_row(_row_id text, commit_id uuid) returns void as $$
     declare
         commit_row record;
     begin
@@ -1525,21 +1525,21 @@ create or replace function bundle.checkout_delete(in _bundle_id uuid, in _commit
 declare
         temprow record;
 begin
-	for temprow in
-		select rr.* from bundle.bundle b
-			join bundle.commit c on c.bundle_id = b.id
-			join bundle.rowset r on r.id = c.rowset_id
-			join bundle.rowset_row rr on rr.rowset_id = r.id
-		where b.id = _bundle_id and c.id = _commit_id
-	loop
-		execute format ('delete from %I.%I where %I = %L',
-			((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
-			(((temprow.row_id).pk_column_id).relation_id).name,
-			((temprow.row_id).pk_column_id).name,
-			(temprow.row_id).pk_value);
-	end loop;
+    for temprow in
+        select rr.* from bundle.bundle b
+            join bundle.commit c on c.bundle_id = b.id
+            join bundle.rowset r on r.id = c.rowset_id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+        where b.id = _bundle_id and c.id = _commit_id
+    loop
+        execute format ('delete from %I.%I where %I = %L',
+            ((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
+            (((temprow.row_id).pk_column_id).relation_id).name,
+            ((temprow.row_id).pk_column_id).name,
+            (temprow.row_id).pk_value);
+    end loop;
 
-	update bundle.bundle set checkout_commit_id = null where id = _bundle_id;
+    update bundle.bundle set checkout_commit_id = null where id = _bundle_id;
 end;
 $$ language plpgsql;
 
@@ -1555,6 +1555,122 @@ returns setof text as $$
     from bundle.bundle b
         join bundle.head_db_stage_changed hds on hds.bundle_id = b.id
     order by b.name, hds.row_id::text;
+$$ language sql;
+
+
+
+------------------------------------------------------------------------------
+-- ROW HISTORY
+------------------------------------------------------------------------------
+
+
+create type row_history_return_type as (
+    field_hashes jsonb,
+    commit_id uuid,
+    commit_message text,
+    commit_parent_id uuid,
+    time timestamp,
+    bundle_id uuid,
+    bundle_name text
+);
+
+-- create or replace function bundle.row_history(_row_id meta.row_id) returns setof record as $$
+-- broken out into fields because composite types hate endpoint
+-- this is wrong.  not traversing the commit tree, just using time
+create or replace function bundle.row_history(schema_name text, relation_name text, pk_column_name text, pk_value text) returns setof row_history_return_type as $$
+    select field_hashes, commit_id, commit_message, commit_parent_id, time, bundle_id, bundle_name 
+    from (
+        with commits as (
+            select jsonb_object_agg(((rrf.field_id).column_id).name, rrf.value_hash::text) as field_hashes, c.id as commit_id, c.message as commit_message, c.parent_id as commit_parent_id, c.time, b.id as bundle_id, b.name as bundle_name
+            from bundle.rowset_row rr
+                join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                join bundle.rowset r on rr.rowset_id = r.id
+                join bundle.commit c on c.rowset_id = r.id
+                join bundle.bundle b on c.bundle_id = b.id
+            where row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+            group by rr.id, c.id, c.message, b.id, b.name, c.parent_id, c.time
+            order by c.time
+        )
+        select commits.*, lag(field_hashes, 1, null) over (order by commits.time) as previous_commit_hashes
+        from commits
+    ) commits_with_previous
+    where field_hashes != previous_commit_hashes;
+$$ language sql;
+
+
+create or replace function bundle.row_status(schema_name text, relation_name text, pk_column_name text, pk_value text) returns bundle.head_db_stage as $$
+
+select
+    *,
+    meta.row_exists(row_id) as row_exists,
+    case
+        when change_type = 'same' then null
+        when change_type = 'deleted' then (stage_row_id is null)
+        when change_type = 'added' then true
+        when change_type = 'modified' then null
+        when change_type = 'tracked' then false
+    end as staged,
+
+    (head_row_id is not null) in_head
+from (
+    select
+        coalesce (hcr.bundle_id, sr.bundle_id) as bundle_id,
+        hcr.commit_id,
+        coalesce (hcr.row_id, sr.row_id) as row_id,
+        hcr.row_id as head_row_id,
+        sr.row_id as stage_row_id,
+
+        -- change_type
+        case
+            when sr.row_id is null then 'deleted'
+            when hcr.row_id is null then  'added'
+            when
+                array_remove(array_agg(ofc.field_id), null) != '{}'
+                or array_remove(array_agg(sfc.field_id), null) != '{}' then  'modified'
+            when meta.row_exists(sr.row_id) = false then 'deleted'
+            else 'same'
+        end as change_type,
+
+        -- offstage changes
+        array_remove(array_agg(ofc.field_id), null) as offstage_field_changes,
+        array_agg(ofc.old_value) as offstage_field_changes_old_vals,
+        array_agg(ofc.new_value) as offstage_field_changes_new_vals,
+        -- staged changes
+        array_remove(array_agg(sfc.field_id), null) as stage_field_changes,
+        array_agg(ofc.old_value) as stage_field_changes_old_vals,
+        array_agg(sfc.new_value) as stage_field_changes_new_vals
+
+    from (
+		-- this is view head_commit_row, just ganked in with row_id filter
+		select b.id AS bundle_id,
+			c.id as commit_id,
+			rr.row_id
+		from bundle.bundle b
+			join bundle.commit c on b.head_commit_id = c.id
+			join bundle.rowset r on r.id = c.rowset_id
+			join bundle.rowset_row rr on rr.rowset_id = r.id
+		where row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+    ) hcr
+    full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
+    left join bundle.stage_field_changed sfc on (sfc.field_id).row_id=hcr.row_id
+    left join bundle.offstage_field_changed ofc on (ofc.field_id).row_id=hcr.row_id
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
+
+    union
+
+    select tra.bundle_id, null, tra.row_id, null, null, 'tracked', null, null, null, null, null, null
+    from bundle.tracked_row_added tra
+
+) c
+order by
+case c.change_type
+    when 'tracked' then 0
+    when 'deleted' then 1
+    when 'modified' then 2
+    when 'same' then 3
+    when 'added' then 4
+end, row_id;
+
 $$ language sql;
 /*******************************************************************************
  * Bundle Utilities

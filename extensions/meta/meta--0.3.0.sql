@@ -408,7 +408,7 @@ create function meta.row_id(schema_name text, relation_name text, pk_column_name
            row(row(row(schema_name), relation_name), pk_column_name),
                pk_value
            )::meta.row_id
-    -- TODO: check for not existing row
+    -- TODO: check for not existing row ?  no.
 $$ language sql;
 
 create function exec(statements text[]) returns setof record as $$
@@ -445,29 +445,12 @@ create function meta.row_id(value json) returns meta.row_id as $$
     )::meta.row_id
 $$ immutable language sql;
 
-/*
-create function meta.row_id(value json) returns meta.row_id as $$
-    select
-    row(
-        row(
-            row(
-                row(
-                    value->'pk_column_id'->'relation_id'->'schema_id'->>'name'
-                ),
-                value->'pk_column_id'->'relation_id'->>'name'
-            ),
-            value->'pk_column_id'->>'name'
-        )::meta.column_id,
-        value->'pk_value'
-    )::meta.row_id
-$$ immutable language sql;
-*/
-
 create cast (json as meta.row_id)
 with function meta.row_id(json)
 as assignment;
 
 
+-- returns an actual row, given a row_id
 create or replace function meta.row_id_to_json(row_id meta.row_id, out row_json json) as $$
 begin
 
@@ -482,11 +465,22 @@ end;
 $$ language plpgsql;
 
 
-/*
+create or replace function meta.row_id_as_json(row_id meta.row_id, out _row_id json) as $$
+-- {"pk_value":"de94da7f-3997-4df9-844d-44635e165fea","relation_id":{"schema_id":{"name":"bundle"},"name":"rowset_row"}} zzzz
+begin
+    execute format ('select ''{"pk_value":"%s","pk_column_id":{"name": "%s", "relation_id": {"name":"%s", "schema_id":{"name":"%s"}}}}''::json',
+    (row_id).pk_value,
+    ((row_id).pk_column_id).name,
+    (((row_id).pk_column_id).relation_id).name,
+    ((((row_id).pk_column_id).relation_id).schema_id).name
+    ) into _row_id;
+end;
+$$ language plpgsql;
+
 create cast (meta.row_id as json)
-    with function meta.row_id_to_json(row_id)
+    with function meta.row_id_as_json(meta.row_id)
 as assignment;
-*/
+
 
 
 /*

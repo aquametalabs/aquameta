@@ -72,7 +72,7 @@ create table semantics.relation (
 );
 
 /*
-moved to bundle....
+moved to semantics bundle....
 insert into semantics.relation_purpose (purpose) values
     ('overview'),
     ('list_view'),
@@ -107,7 +107,7 @@ create table semantics."column" (
 
 
 /*
-moved to bundle
+moved to semantics bundle
 
 insert into semantics.column_purpose (purpose) values
     ('new_field'),

@@ -31,7 +31,7 @@ log.Print(`     \/    |__|          \/      \/     \/          \/ `)
 log.Print(`                 [ version 0.3.0 ]                     `)
 
 
-    log.SetPrefix("[💧 aquameta 💧] ")
+    // log.SetPrefix("[💧 aquameta 💧] ")
     log.Print("Aquameta server... ENGAGE!")
     workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
     var epg embeddedPostgres.EmbeddedPostgres
@@ -57,11 +57,15 @@ log.Print(`                 [ version 0.3.0 ]                     `)
     // load config
     //
 
-    var configFile = flag.String("c", workingDirectory + "/conf/boot.toml", "configuration file")
+    var configFile = flag.String("c", "", "configuration file")
+    flag.Parse();
 
     config, err := getConfig(*configFile)
     if err != nil {
-        log.Fatalf("Could not load boot configuration file: %s", err)
+        log.Printf("Could not load boot configuration file: %s", err)
+        log.Print("Usage:");
+        flag.PrintDefaults()
+        log.Fatal("Quitting.");
         /*
         log.Printf("Loading default Bootloader configuration instead from %s", bootloaderConfigFile)
 
