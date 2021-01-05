@@ -578,10 +578,9 @@ log.Print(`                 [ version 0.3.0 ]                     `)
                 select r.content, m.mimetype
                 from endpoint.resource_binary r
                     join endpoint.mimetype m on r.mimetype_id = m.id
-                    join %v.%v(%xxx)
                 where r.id = %v`
 
-            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&contentBinary, &mimetype)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
