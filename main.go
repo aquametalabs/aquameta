@@ -231,10 +231,13 @@ log.Print(`                 [ version 0.3.0 ]                     `)
             "create extension documentation"}
 
         for i := 0; i < len(installQueries); i++ {
+            log.Print(installQueries[i]);
             rows, err := dbpool.Query(context.Background(), installQueries[i])
             if err != nil {
-                epg.Stop()
                 log.Fatalf("Unable to install extensions: %v", err)
+                if config.Database.Mode == "embedded" {
+                    epg.Stop()
+                }
             }
             rows.Close()
         }
@@ -245,6 +248,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
         //
         // setup hub remote
         //
+        log.Print("Adding bundle.remote_database for hub...")
         hubRemoteQuery := `insert into bundle.remote_database (foreign_server_name, schema_name, connection_string, username, password)
             values (
                 'hub', 'hub',
@@ -253,7 +257,9 @@ log.Print(`                 [ version 0.3.0 ]                     `)
             )`
         _, err := dbpool.Query(context.Background(), hubRemoteQuery)
         if err != nil {
-            epg.Stop()
+            if config.Database.Mode == "embedded" {
+                epg.Stop()
+            }
             log.Fatalf("Unable to add bundle.remote_database: %v", err)
         }
 
@@ -320,7 +326,9 @@ log.Print(`                 [ version 0.3.0 ]                     `)
             q := "select bundle.bundle_import_csv('"+workingDirectory+"/bundles/"+ coreBundles[i]+"')"
             rows, err := dbpool.Query(context.Background(), q)
             if err != nil {
-                epg.Stop()
+                if config.Database.Mode == "embedded" {
+                    epg.Stop()
+                }
                 log.Fatalf("Unable to install Aquameta bundles: %v", err)
             }
             rows.Close()
