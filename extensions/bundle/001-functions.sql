@@ -866,7 +866,7 @@ create or replace function bundle.row_history(schema_name text, relation_name te
         select commits.*, lag(field_hashes, 1, null) over (order by commits.time) as previous_commit_hashes
         from commits
     ) commits_with_previous
-    where field_hashes != previous_commit_hashes;
+    where field_hashes != previous_commit_hashes or previous_commit_hashes is null;
 $$ language sql;
 
 

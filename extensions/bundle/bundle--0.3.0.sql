@@ -1594,7 +1594,7 @@ create or replace function bundle.row_history(schema_name text, relation_name te
         select commits.*, lag(field_hashes, 1, null) over (order by commits.time) as previous_commit_hashes
         from commits
     ) commits_with_previous
-    where field_hashes != previous_commit_hashes;
+    where field_hashes != previous_commit_hashes or previous_commit_hashes is null;
 $$ language sql;
 
 
@@ -1839,11 +1839,11 @@ begin
         search_stmt := search_stmt || '
             join bundle.head_commit_row hcr on hcr.commit_id = c.id
             join bundle.head_commit_field rrf on rrf.row_id = hcr.row_id
-            join blob bb on rrf.value_hash = bb.hash ';
+            join bundle.blob bb on rrf.value_hash = bb.hash ';
         when 'stage' then
         search_stmt := search_stmt || '
             join bundle.stage_row sr on sr.bundle_id = b.id
-            join bundle.stage_row_field rrf on rrf.stage_row_id = sr.row_id ';
+            join bundle.stage_row_field rrf on rrf.stage_row_id::text = sr.row_id::text '; --TODO: holy cown this cast to text speeds things up 70x
         when 'history' then
         search_stmt := search_stmt || '
             join bundle.rowset r on c.rowset_id=r.id
@@ -1871,6 +1871,7 @@ begin
     search_stmt := search_stmt || '
         group by rrf.field_id, b.id, b.name, rrf.value_hash, value';
 
+     -- TODO: escape single quotes
     search_stmt := format( search_stmt, term );
     raise notice 'search_stmt: %', search_stmt;
     return query execute search_stmt;
