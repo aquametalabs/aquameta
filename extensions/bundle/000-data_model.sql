@@ -708,7 +708,22 @@ create table bundle_remote_database (
 
 
 ------------------------------------------------------------------------------
--- 9. EXTENSION DUMP CONFIGURATION
+-- 12. MIGRATIONS
+--
+-- SQL script to be run when a commit is checked out.  Additive, runs all
+-- prior migrations in the commit tree
+------------------------------------------------------------------------------
+
+create table migration (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    description text not null default '',
+    sql_up text not null default '',
+    sql_down text not null default ''
+);
+
+
+------------------------------------------------------------------------------
+-- 13. EXTENSION DUMP CONFIGURATION
 --
 -- Set tables so that when pg_dump runs, their contents (rows) are dumped
 -- (which doesn't happen by default)
