@@ -27,7 +27,7 @@
 -------------------------
 -- UTIL FIXME
 --------------------------
-create function exec(statements text[]) returns setof record as $$
+create or replace function exec(statements text[]) returns setof record as $$
    declare
        statement text;
    begin
@@ -518,9 +518,9 @@ from (
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
     from bundle.head_commit_row hcr
-    full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
-    left join stage_field_changed sfc on (sfc.field_id).row_id=hcr.row_id
-    left join offstage_field_changed ofc on (ofc.field_id).row_id=hcr.row_id
+    full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
+    left join stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
+    left join offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
 
     union
@@ -590,19 +590,24 @@ create or replace view trackable_relation as
 ;
 
 /*
-Generates a set of sql statements that select not_ignored_rows: that are not
-ignored by schema- or relation-ignores.
+
+Generates a set of sql statements that select the row_id of all non-ignored rows, aka
+rows that are not ignored by schema- or relation-ignores.
+
 TODO: ignore rows in ignored_row
 */
 
 create or replace view bundle.not_ignored_row_stmt as
 select *, 'select meta.row_id(' ||
-    quote_literal((r.schema_id).name) || ', ' ||
-    quote_literal((r.relation_id).name) || ', ' ||
-    quote_literal((r.primary_key_column_id).name) || ', ' ||
-    quote_ident((r.primary_key_column_id).name) || '::text ' ||
+        quote_literal((r.schema_id).name) || ', ' ||
+        quote_literal((r.relation_id).name) || ', ' ||
+        quote_literal((r.primary_key_column_id).name) || ', ' ||
+        quote_ident((r.primary_key_column_id).name) || '::text ' ||
     ') as row_id from ' ||
-    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) ||
+    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) /* ||
+
+    -- we can comment this out, now that meta is not tracked by default
+
     -- special case meta rows so that ignored_* cascades down to all objects in it's scope
     case
         -- schemas
@@ -628,6 +633,7 @@ select *, 'select meta.row_id(' ||
            ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema) and table_id not in (select relation_id from bundle.ignored_relation)'
         else ''
     end
+    '' */
     as stmt
 from bundle.trackable_relation r;
 
@@ -639,14 +645,14 @@ select r.row_id /*, r.row_id::meta.relation_id as relation_id */
     )) r(
         row_id meta.row_id
     )
-where r.row_id not in (
-    select a.row_id from bundle.stage_row_added a
+where r.row_id::text not in (
+    select a.row_id::text from bundle.stage_row_added a
     union
-    select t.row_id from bundle.tracked_row_added t
+    select t.row_id::text from bundle.tracked_row_added t
     union
-    select rr.row_id from bundle.stage_row_deleted d join rowset_row rr on d.rowset_row_id=rr.id
+    select rr.row_id::text from bundle.stage_row_deleted d join rowset_row rr on d.rowset_row_id=rr.id
     union
-    select rr.row_id from bundle.bundle bundle
+    select rr.row_id::text from bundle.bundle bundle
         join bundle.commit c on bundle.head_commit_id=c.id
         join bundle.rowset r on c.rowset_id = r.id
         join bundle.rowset_row rr on rr.rowset_id=r.id
@@ -679,7 +685,7 @@ create table remote_database (
 
 
 ------------------------------------------------------------------------------
--- 9. ORIGINS
+-- 10. ORIGINS
 --
 -- When a bundle is imported or fetched, the origin is the source from whence
 -- it came.   We use this on push and pull, import and export.
