@@ -36,6 +36,8 @@ SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #############################################################################
 
 # install extensions into PostgreSQL's extensions/ directory
+rm $SRC/../extensions/*/*--0.3.0.sql
+
 echo "Building core PostgreSQL extensions..."
 cd $SRC/../extensions/pg_catalog_get_defs && make
 cd $SRC/../extensions/meta && make

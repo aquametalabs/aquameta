@@ -293,7 +293,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
         log.Print("Downloading Aquameta core bundles from hub.aquameta.com...")
         bundleQueries := [...]string{
             "select bundle.remote_mount(id) from bundle.remote_database",
-            "select bundle.remote_pull_bundle(r.id, b.id) from bundle.remote_database r, hub.bundle b where b.name != 'org.aquameta.core.bundle'",
+            "select bundle.remote_pull_bundle(r.id, b.id) from bundle.remote_database r, hub.bundle b",
             "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id;" }
 
         for i := 0; i < len(bundleQueries); i++ {
@@ -311,6 +311,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
             "org.aquameta.core.bootloader",
+            "org.aquameta.core.bundle",
             "org.aquameta.core.endpoint",
             "org.aquameta.core.ide",
             "org.aquameta.core.mimetypes",
