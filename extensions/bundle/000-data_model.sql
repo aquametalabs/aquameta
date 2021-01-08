@@ -373,9 +373,9 @@ select
     end as value,
     hcf.value_hash
 from bundle.stage_row sr
-    left join bundle.head_commit_field hcf on sr.row_id=hcf.row_id
+    left join bundle.head_commit_field hcf on sr.row_id::text=hcf.row_id::text
     left join bundle.blob b on hcf.value_hash = b.hash
-    left join stage_field_changed sfc on sfc.field_id = hcf.field_id
+    left join stage_field_changed sfc on sfc.field_id::text = hcf.field_id::text
     where sr.new_row=false;
 
 
@@ -604,9 +604,7 @@ select *, 'select meta.row_id(' ||
         quote_literal((r.primary_key_column_id).name) || ', ' ||
         quote_ident((r.primary_key_column_id).name) || '::text ' ||
     ') as row_id from ' ||
-    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) /* ||
-
-    -- we can comment this out, now that meta is not tracked by default
+    quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) ||
 
     -- special case meta rows so that ignored_* cascades down to all objects in it's scope
     case
@@ -633,7 +631,6 @@ select *, 'select meta.row_id(' ||
            ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema) and table_id not in (select relation_id from bundle.ignored_relation)'
         else ''
     end
-    '' */
     as stmt
 from bundle.trackable_relation r;
 

@@ -46,7 +46,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     select f.value
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id; -- TODO: should we be checking here to see if the staged value is different than the w.c. value??
+    join bundle.stage_row_field f on (f.field_id).row_id::text = rr.row_id::text; -- TODO: should we be checking here to see if the staged value is different than the w.c. value??
 
     raise notice 'bundle: Committing stage_row_fields...';
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
@@ -54,7 +54,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     select rr.id, f.field_id, public.digest(value, 'sha256')
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id = rr.row_id;
+    join bundle.stage_row_field f on (f.field_id).row_id::text = rr.row_id::text;
 
     raise notice 'bundle: Creating the commit...';
     -- create the commit
@@ -199,14 +199,14 @@ as $$
         select b.id, meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
         from bundle.bundle b
         join bundle.tracked_row_added tra on tra.bundle_id=b.id
-        where b.name=bundle_name and tra.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
+        where b.name=bundle_name and tra.row_id::text=meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text;
 
     if not FOUND then
         raise exception 'No such bundle, or this row is not yet tracked by this bundle.';
     end if;
 
     delete from bundle.tracked_row_added tra
-        where tra.row_id=meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
+        where tra.row_id::text=meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text;
 
     if not FOUND then
         raise exception 'Row could not be deleted from bundle.tracked_row_added';
@@ -432,7 +432,8 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
     begin
         -- raise log '------------ checkout_row % ----------',
         --    (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
-        set search_path=bundle,meta,public;
+        -- set search_path=bundle,meta,public;
+        set local search_path=something_that_must_not_be;
 
         if meta.row_exists(row_id) then
             -- raise log '---------------------- row % already exists.... overwriting.',
@@ -555,7 +556,8 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         commit_role text;
         commit_time timestamp;
     begin
-        set local search_path=bundle,meta,public;
+        -- set local search_path=bundle,meta,public;
+        set local search_path=something_that_must_not_be;
         /* TODO
         - check to see if this bundle is already checked out
         - if yes, check to see if it has any uncommitted changes, either new tracked rows or already
@@ -713,6 +715,7 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
     declare
         commit_row record;
     begin
+        set local_search_path=something_that_must_not_be;
         for commit_row in
             select
                 rr.row_id,
@@ -859,7 +862,7 @@ create or replace function bundle.row_history(schema_name text, relation_name te
                 join bundle.rowset r on rr.rowset_id = r.id
                 join bundle.commit c on c.rowset_id = r.id
                 join bundle.bundle b on c.bundle_id = b.id
-            where row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+            where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
             group by rr.id, c.id, c.message, b.id, b.name, c.parent_id, c.time
             order by c.time
         )
@@ -921,11 +924,11 @@ from (
 			join bundle.commit c on b.head_commit_id = c.id
 			join bundle.rowset r on r.id = c.rowset_id
 			join bundle.rowset_row rr on rr.rowset_id = r.id
-		where row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)
+		where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
     ) hcr
-    full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
-    left join bundle.stage_field_changed sfc on (sfc.field_id).row_id=hcr.row_id
-    left join bundle.offstage_field_changed ofc on (ofc.field_id).row_id=hcr.row_id
+    full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
+    left join bundle.stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
+    left join bundle.offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
 
     union
