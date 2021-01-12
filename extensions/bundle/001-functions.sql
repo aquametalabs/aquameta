@@ -433,7 +433,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
         -- raise log '------------ checkout_row % ----------',
         --    (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
         -- set search_path=bundle,meta,public;
-        set local_search_path=something_that_must_not_be;
+        set local search_path=something_that_must_not_be;
 
         if meta.row_exists(row_id) then
             -- raise log '---------------------- row % already exists.... overwriting.',
@@ -556,8 +556,8 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         commit_role text;
         commit_time timestamp;
     begin
-        -- set local_search_path=bundle,meta,public;
-        set local_search_path=something_that_must_not_be;
+        -- set local search_path=bundle,meta,public;
+        set local search_path=something_that_must_not_be;
         /* TODO
         - check to see if this bundle is already checked out
         - if yes, check to see if it has any uncommitted changes, either new tracked rows or already
@@ -715,7 +715,7 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
     declare
         commit_row record;
     begin
-        set local_search_path=something_that_must_not_be;
+        set local search_path=something_that_must_not_be;
         for commit_row in
             select
                 rr.row_id,
