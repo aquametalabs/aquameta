@@ -563,7 +563,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         - if yes, check to see if it has any uncommitted changes, either new tracked rows or already
           tracked row changes
           - if it does, fail, unless checkout was passed a (new) HARD boolean of true
-          - if it doesn't delete the existing checkout
+          - if it doesn't, delete the existing checkout (so we don't have dangling rows)
         - proceed.
         */
 
@@ -705,7 +705,6 @@ create or replace function checkout (in commit_id uuid, in comment text default 
 $$ language plpgsql;
 
 
-
 /*
  * row_id here is text because composite types custom input functions, they all
  * use record_in, so we can't pass it a text string without explicitly casting
@@ -741,6 +740,131 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
         return;
     end;
 $$ language plpgsql;
+
+
+------------------------------------------------------------------------------
+-- MERGE
+------------------------------------------------------------------------------
+
+create or replace function commit_ancestry(_commit_id uuid) returns uuid[] as $$
+    with recursive parent as (
+        select c.id, c.parent_id from bundle.commit c where c.id=_commit_id
+        union
+        select c.id, c.parent_id from bundle.commit c join parent p on c.id = p.parent_id
+    ) select array_agg(id) from parent
+    -- ancestors only
+    where id != _commit_id;
+$$ language sql;
+
+create or replace function commits_common_ancestor(commit1_id uuid, commit2_id uuid) returns uuid as $$
+    declare
+        same_branch_1 boolean;
+        same_branch_2 boolean;
+        ancestor uuid;
+    begin
+        select true from unnest(commit_ancestry(commit1_id)) c(id) where id = commit2_id into same_branch_1;
+        select true from unnest(commit_ancestry(commit2_id)) c(id) where id = commit1_id into same_branch_2;
+
+        if same_branch_1 is not null or same_branch_2 is not null then
+            raise notice 'Commits do not share a common ancestor.';
+            return null;
+        end if;
+
+        select c1.id from unnest(commit_ancestry(commit2_id)) c1(id)
+            join unnest(commit_ancestry(commit2_id)) c2(id) on c1.id = c2.id limit 1
+        into ancestor;
+
+        return ancestor;
+    end;
+$$ language plpgsql;
+
+-- fields changed between two commits
+create type fields_changed_between_commits as (field_id meta.field_id, commit1_value_hash text, commit2_value_hash text);
+create function fields_changed_between_commits(commit1_id uuid, commit2_id uuid) returns setof fields_changed_between_commits as $$
+    select commit1_field_id, commit1_value_hash, commit2_value_hash
+    from (
+        select rrf.field_id as commit1_field_id, rrf.value_hash as commit1_value_hash
+            from bundle.commit c
+                join bundle.rowset r on c.rowset_id = r.id
+                join bundle.rowset_row rr on rr.rowset_id = r.id
+                join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                where c.id = commit1_id
+    ) c1 join (
+        select rrf.field_id as commit2_field_id, rrf.value_hash as commit2_value_hash
+            from bundle.commit c
+                join bundle.rowset r on c.rowset_id = r.id
+                join bundle.rowset_row rr on rr.rowset_id = r.id
+                join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                where c.id = commit2_id
+    ) c2 on commit1_field_id = commit2_field_id and commit1_value_hash != commit2_value_hash
+$$ language sql;
+
+/*
+create or replace function _update_fields_from_commit(merge_commit_id uuid, row_id, changed_fields meta.field_id[]) returns void as $$
+    declare
+        update_stmt text;
+    begin
+        for each field
+        update_stmt := format('update %I.%I set %I = (select b.value from commit c join rowset r on c.rowset_id = r.id join rowset_row rr on rr.rowset_id = r.id join rowset_row_field rrf on rrf.rowset_row_id = rr.id join blob b on rrf.value_hash = b.hash where c = %L)',
+
+    end;
+$$ language plpgsql;
+
+
+$$ language plpgsql;
+create or replace function merge(_bundle_id uuid, merge_commit_id uuid) returns void as $$
+    declare
+        checkout_matches_head boolean;
+        changes_count integer;
+        common_ancestor_id uuid;
+        head_commit_id uuid;
+    begin
+        -- assert that the bundle is not in detached head mode
+        select b.head_commit_id = b.checkout_commit_id from bundle.bundle b where b.id = _bundle_id into checkout_matches_head;
+        if not checkout_matches_head then
+            raise exception 'Merge not permitted when bundle.head_commit_id does not equal bundle.checkout_commit_id';
+        end if;
+
+        -- assert that the working copy does not contain uncommitted changes (TODO: allow this?)
+        select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
+        if changes_count > 0 then
+            raise exception 'Merge not permitted when there are uncommitted changes';
+        end if;
+
+        -- get head_commit_id
+        select b.head_commit_id from bundle.bundle b where b.id=_bundle_id into head_commit_id;
+
+        -- assert that the two commits share a common ancestor
+        select * from commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
+        if common_ancestor_id is null then
+            raise exception 'Head commit and merge commit do not share a common ancestor.';
+        end if;
+
+        raise notice 'Merging commit % into head (%), with common ancestor commit %', merge_commit_id, head_commit_id, common_ancestor_id;
+
+        -- get fields that were changed on the merge commit branch, but not also changed on the head commit branch
+        with (
+            select (safe_changed_fields.field_id).row_id as row_id, array_agg(safe_changed_fields.field_id) changed_fields from (
+                select field_id from bundle.changed_fields_between_commits(merge_commit_id, common_ancestor_id)
+                except
+                select field_id from bundle.changed_fields_between_commits(head_commit_id, common_ancestor_id)
+            ) as safe_changed_fields
+            group by row_id
+        ) as safe_changed_rows
+        select _update_fields_from_commit(merge_commit_id, safe_changed_rows.row_id, safe_changed_rows.changed_fields);
+
+    end;
+$$ language plpgsql;
+
+create or replace function merge_cancel(_bundle_id uuid) returns void as $$
+    begin
+        -- assert that bundle is in merge mode
+        -- assert that head_commit_id
+    end;
+$$ language plpgsql;
+*/
+
+
 
 ------------------------------------------------------------------------------
 -- BUNDLE COPY
@@ -853,7 +977,7 @@ create type row_history_return_type as (
 -- broken out into fields because composite types hate endpoint
 -- this is wrong.  not traversing the commit tree, just using time
 create or replace function bundle.row_history(schema_name text, relation_name text, pk_column_name text, pk_value text) returns setof row_history_return_type as $$
-    select field_hashes, commit_id, commit_message, commit_parent_id, time, bundle_id, bundle_name 
+    select field_hashes, commit_id, commit_message, commit_parent_id, time, bundle_id, bundle_name
     from (
         with commits as (
             select jsonb_object_agg(((rrf.field_id).column_id).name, rrf.value_hash::text) as field_hashes, c.id as commit_id, c.message as commit_message, c.parent_id as commit_parent_id, c.time, b.id as bundle_id, b.name as bundle_name
@@ -873,8 +997,8 @@ create or replace function bundle.row_history(schema_name text, relation_name te
 $$ language sql;
 
 
+-- this is mostly ganked from head_db_stage for performance reasons, seemed view was acting as an optimization barrier.  audit.
 create or replace function bundle.row_status(schema_name text, relation_name text, pk_column_name text, pk_value text) returns bundle.head_db_stage as $$
-
 select
     *,
     meta.row_exists(row_id) as row_exists,
