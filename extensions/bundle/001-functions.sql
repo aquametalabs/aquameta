@@ -424,8 +424,6 @@ $$ language sql;
 ------------------------------------------------------------------------------
 
 create type checkout_field as (name text, value text, type_name text);
-
--- create or replace function checkout_row (in row_id meta.row_id, in fields text[], in vals text[], in force_overwrite boolean) returns void as $$
 create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
     declare
         query_str text;
@@ -706,10 +704,12 @@ $$ language plpgsql;
 
 
 /*
- * row_id here is text because composite types custom input functions, they all
- * use record_in, so we can't pass it a text string without explicitly casting
- * it in the call.  So it just takes text and casts it internally.
+ * This is used by the IDE for "revert".  row_id here is text because composite
+ * types custom input functions, they all use record_in, so we can't pass it a
+ * text string without explicitly casting it in the call, and endpoint always
+ * passes text without casting.  So it just takes text and casts it internally.
  */
+
 create or replace function checkout_row(_row_id text, commit_id uuid) returns void as $$
     declare
         commit_row record;
@@ -744,8 +744,12 @@ $$ language plpgsql;
 
 ------------------------------------------------------------------------------
 -- MERGE
+--
+--
 ------------------------------------------------------------------------------
 
+
+-- traverses the parent_ids of this commit, recursively returns them all
 create or replace function commit_ancestry(_commit_id uuid) returns uuid[] as $$
     with recursive parent as (
         select c.id, c.parent_id from bundle.commit c where c.id=_commit_id
@@ -756,31 +760,36 @@ create or replace function commit_ancestry(_commit_id uuid) returns uuid[] as $$
     where id != _commit_id;
 $$ language sql;
 
+
+
+-- takes two commits on (presumably) different branches of the same bundle, returns their common ancestor or null
 create or replace function commits_common_ancestor(commit1_id uuid, commit2_id uuid) returns uuid as $$
     declare
         same_branch_1 boolean;
         same_branch_2 boolean;
         ancestor uuid;
     begin
-        select true from unnest(commit_ancestry(commit1_id)) c(id) where id = commit2_id into same_branch_1;
-        select true from unnest(commit_ancestry(commit2_id)) c(id) where id = commit1_id into same_branch_2;
+        select true from unnest(bundle.commit_ancestry(commit1_id)) c(id) where id = commit2_id into same_branch_1;
+        select true from unnest(bundle.commit_ancestry(commit2_id)) c(id) where id = commit1_id into same_branch_2;
 
         if same_branch_1 is not null or same_branch_2 is not null then
             raise notice 'Commits do not share a common ancestor.';
             return null;
         end if;
 
-        select c1.id from unnest(commit_ancestry(commit2_id)) c1(id)
-            join unnest(commit_ancestry(commit2_id)) c2(id) on c1.id = c2.id limit 1
+        select c1.id from unnest(bundle.commit_ancestry(commit2_id)) c1(id)
+            join unnest(bundle.commit_ancestry(commit2_id)) c2(id) on c1.id = c2.id limit 1
         into ancestor;
 
         return ancestor;
     end;
 $$ language plpgsql;
 
--- fields changed between two commits
+
+
+-- fields changed between two commits, a kind of field-level diff
 create type fields_changed_between_commits as (field_id meta.field_id, commit1_value_hash text, commit2_value_hash text);
-create function fields_changed_between_commits(commit1_id uuid, commit2_id uuid) returns setof fields_changed_between_commits as $$
+create or replace function fields_changed_between_commits(commit1_id uuid, commit2_id uuid) returns setof fields_changed_between_commits as $$
     select commit1_field_id, commit1_value_hash, commit2_value_hash
     from (
         select rrf.field_id as commit1_field_id, rrf.value_hash as commit1_value_hash
@@ -799,28 +808,47 @@ create function fields_changed_between_commits(commit1_id uuid, commit2_id uuid)
     ) c2 on commit1_field_id = commit2_field_id and commit1_value_hash != commit2_value_hash
 $$ language sql;
 
-/*
-create or replace function _update_fields_from_commit(merge_commit_id uuid, row_id, changed_fields meta.field_id[]) returns void as $$
+
+
+-- rows in new_commit that are not in ancestor_commit
+create or replace function rows_created_between_commits( new_commit_id uuid, ancestor_commit_id uuid ) returns setof meta.row_id as $$
+    select rr.row_id
+        from bundle.commit c
+            join bundle.rowset r on c.rowset_id = r.id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+            where c.id = new_commit_id
+    except
+    select rr.row_id
+        from bundle.commit c
+            join bundle.rowset r on c.rowset_id = r.id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+            where c.id = ancestor_commit_id
+$$ language sql;
+
+
+
+-- merge
+-- the big kahuna.
+
+create or replace function merge(merge_commit_id uuid) returns void as $$
     declare
-        update_stmt text;
-    begin
-        for each field
-        update_stmt := format('update %I.%I set %I = (select b.value from commit c join rowset r on c.rowset_id = r.id join rowset_row rr on rr.rowset_id = r.id join rowset_row_field rrf on rrf.rowset_row_id = rr.id join blob b on rrf.value_hash = b.hash where c = %L)',
-
-    end;
-$$ language plpgsql;
-
-
-$$ language plpgsql;
-create or replace function merge(_bundle_id uuid, merge_commit_id uuid) returns void as $$
-    declare
+        _bundle_id uuid;
+        bundle_name text;
         checkout_matches_head boolean;
         changes_count integer;
         common_ancestor_id uuid;
         head_commit_id uuid;
+        f record;
+        update_stmt text;
     begin
+        -- propagate some variables
+        select b.head_commit_id = b.checkout_commit_id, b.name, b.id
+        from bundle.commit c
+            join bundle.bundle b on c.bundle_id = b.id
+        where c.id = merge_commit_id
+        into checkout_matches_head, bundle_name, _bundle_id;
+
         -- assert that the bundle is not in detached head mode
-        select b.head_commit_id = b.checkout_commit_id from bundle.bundle b where b.id = _bundle_id into checkout_matches_head;
         if not checkout_matches_head then
             raise exception 'Merge not permitted when bundle.head_commit_id does not equal bundle.checkout_commit_id';
         end if;
@@ -835,23 +863,73 @@ create or replace function merge(_bundle_id uuid, merge_commit_id uuid) returns 
         select b.head_commit_id from bundle.bundle b where b.id=_bundle_id into head_commit_id;
 
         -- assert that the two commits share a common ancestor
-        select * from commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
+        select * from bundle.commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
         if common_ancestor_id is null then
             raise exception 'Head commit and merge commit do not share a common ancestor.';
         end if;
 
         raise notice 'Merging commit % into head (%), with common ancestor commit %', merge_commit_id, head_commit_id, common_ancestor_id;
 
-        -- get fields that were changed on the merge commit branch, but not also changed on the head commit branch
-        with (
-            select (safe_changed_fields.field_id).row_id as row_id, array_agg(safe_changed_fields.field_id) changed_fields from (
-                select field_id from bundle.changed_fields_between_commits(merge_commit_id, common_ancestor_id)
-                except
-                select field_id from bundle.changed_fields_between_commits(head_commit_id, common_ancestor_id)
-            ) as safe_changed_fields
-            group by row_id
-        ) as safe_changed_rows
-        select _update_fields_from_commit(merge_commit_id, safe_changed_rows.row_id, safe_changed_rows.changed_fields);
+        /*
+         *
+         * safely mergable fields
+         *
+         */
+
+        -- get fields that were changed on the merge commit branch, but not also changed on the head commit branch (aka non-conflicting)
+        for f in
+            select field_id from bundle.fields_changed_between_commits(merge_commit_id, common_ancestor_id)
+            except
+            select field_id from bundle.fields_changed_between_commits(head_commit_id, common_ancestor_id)
+        loop
+            -- update the working copy with each non-conflicting field change
+            update_stmt := format('
+                update %I.%I set %I = (
+                    select b.value
+                    from bundle.commit c
+                        join bundle.rowset r on c.rowset_id = r.id
+                        join bundle.rowset_row rr on rr.rowset_id = r.id
+                        join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                        join bundle.blob b on rrf.value_hash = b.hash
+                    where c.id = %L
+                        and rrf.field_id::text = %L
+                ) where %I = %L',
+                (((((f.field_id).row_id).pk_column_id).relation_id).schema_id).name,
+                 ((((f.field_id).row_id).pk_column_id).relation_id).name,
+                   ((f.field_id).column_id).name,
+                merge_commit_id,
+                   f.field_id::text,
+                  (((f.field_id).row_id).pk_column_id).name,
+                   ((f.field_id).row_id).pk_value
+            );
+            raise notice 'STMT: %', update_stmt;
+            execute update_stmt;
+            perform bundle.stage_field_change(_bundle_id, f.field_id);
+        end loop;
+
+
+        /*
+         *
+         * new rows
+         *
+         */
+
+        for f in
+            select bundle.rows_created_between_commits(merge_commit_id, common_ancestor_id) as row_id
+        loop
+            raise notice 'checking out new row %', f.row_id::text;
+            perform bundle.checkout_row(f.row_id::text, merge_commit_id);
+            perform bundle.tracked_row_add(bundle_name, f.row_id);
+            perform bundle.stage_row_add(bundle_name, f.row_id);
+        end loop;
+
+
+        /*
+        TODO:
+        - set bundle into merge state (if necessary)
+        - row deletes
+        - conflicting field changes
+        */
 
     end;
 $$ language plpgsql;
@@ -862,7 +940,6 @@ create or replace function merge_cancel(_bundle_id uuid) returns void as $$
         -- assert that head_commit_id
     end;
 $$ language plpgsql;
-*/
 
 
 
