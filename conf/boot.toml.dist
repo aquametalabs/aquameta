@@ -1,6 +1,6 @@
-# Boot Configuration
+# Standalone Boot Configuration
 #
-# A sample config file for booting to a non-managed, standalone database.
+# A example configuration for booting to a non-managed, standalone database running on localhost
 
 [Database]
     Mode = "standalone"               # { embedded | standalone } - if embedded, aquameta will create a new PostgreSQL
@@ -27,12 +27,11 @@
 
 [HTTPServer]
     Protocol = "http"               # { http | https }
-    IP = "127.0.0.1"                # IP to bind to
+    IP = "127.0.0.1"                # IP to bind to, change this to 0.0.0.0 to allow remote traffic
     Port = "4444"                   # Port to open
 
     # only used w/ https
-    # SSLCertificateFile = "certs/server.crt"
-    # SSLKeyFile = "certs/server.key"
+    # SSLCertificateFile = "certificates/server.crt"
+    # SSLKeyFile = "certificates/server.key"
 
     StartupURL = "/"                # URL to open at startup
-
