@@ -835,6 +835,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         _bundle_id uuid;
         bundle_name text;
         checkout_matches_head boolean;
+        conflicted_merge boolean := false;
         changes_count integer;
         common_ancestor_id uuid;
         head_commit_id uuid;
@@ -902,7 +903,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
                   (((f.field_id).row_id).pk_column_id).name,
                    ((f.field_id).row_id).pk_value
             );
-            raise notice 'STMT: %', update_stmt;
+            -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;
             perform bundle.stage_field_change(_bundle_id, f.field_id);
         end loop;
@@ -925,10 +926,57 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
 
 
         /*
+         *
+         * conflicting fields
+         *
+         * Change the working copy but do not stage them.  Merge conflicts are
+         * unstaged.  There's probably something more elaborate we cna do here.
+         *
+         */
+
+        for f in
+            select field_id from bundle.fields_changed_between_commits(merge_commit_id, common_ancestor_id)
+            intersect
+            select field_id from bundle.fields_changed_between_commits(head_commit_id, common_ancestor_id)
+        loop
+            -- if this section has rows in it, this merge has conflicts
+            conflicted_merge := true;
+
+            -- update the working copy with each non-conflicting field change
+            update_stmt := format('
+                update %I.%I set %I = (
+                    select b.value
+                    from bundle.commit c
+                        join bundle.rowset r on c.rowset_id = r.id
+                        join bundle.rowset_row rr on rr.rowset_id = r.id
+                        join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                        join bundle.blob b on rrf.value_hash = b.hash
+                    where c.id = %L
+                        and rrf.field_id::text = %L
+                ) where %I = %L',
+                (((((f.field_id).row_id).pk_column_id).relation_id).schema_id).name,
+                 ((((f.field_id).row_id).pk_column_id).relation_id).name,
+                   ((f.field_id).column_id).name,
+                merge_commit_id,
+                   f.field_id::text,
+                  (((f.field_id).row_id).pk_column_id).name,
+                   ((f.field_id).row_id).pk_value
+            );
+            -- raise notice 'STMT: %', update_stmt;
+            execute update_stmt;
+        end loop;
+
+        /*
+        if conflicted_merge then
+            update bundle set merge_commit_id = merge_commit_id where id=_bundle_id;
+        else
+            select bundle.commit();
+        end if;
+        */
+
+        /*
         TODO:
-        - set bundle into merge state (if necessary)
         - row deletes
-        - conflicting field changes
         */
 
     end;
@@ -1117,15 +1165,15 @@ from (
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
     from (
-		-- this is view head_commit_row, just ganked in with row_id filter
-		select b.id AS bundle_id,
-			c.id as commit_id,
-			rr.row_id
-		from bundle.bundle b
-			join bundle.commit c on b.head_commit_id = c.id
-			join bundle.rowset r on r.id = c.rowset_id
-			join bundle.rowset_row rr on rr.rowset_id = r.id
-		where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
+        -- this is view head_commit_row, just ganked in with row_id filter
+        select b.id AS bundle_id,
+            c.id as commit_id,
+            rr.row_id
+        from bundle.bundle b
+            join bundle.commit c on b.head_commit_id = c.id
+            join bundle.rowset r on r.id = c.rowset_id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+        where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
     ) hcr
     full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
     left join bundle.stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
