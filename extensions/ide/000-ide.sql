@@ -64,3 +64,15 @@ join bundle.bundle b on h.bundle_id = b.id
 where b.checkout_commit_id is not null
 group by b.name, b.id, ((row_id).pk_column_id).relation_id, change_type
 order by b.name;
+
+
+
+create or replace view ide.commit_with_mergable as
+select
+    c.*,
+	bundle.commit_ancestry(c.id),
+	bundle.commits_common_ancestor(c.id, b.head_commit_id),
+	bundle.commit_is_mergable(c.id)
+from bundle.commit c
+    join bundle.bundle b on c.bundle_id = b.id;
+

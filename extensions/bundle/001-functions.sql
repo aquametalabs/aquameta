@@ -762,18 +762,19 @@ $$ language sql;
 
 
 
+
 -- takes two commits on (presumably) different branches of the same bundle, returns their common ancestor or null
 create or replace function commits_common_ancestor(commit1_id uuid, commit2_id uuid) returns uuid as $$
     declare
-        same_branch_1 boolean;
-        same_branch_2 boolean;
+        same_branch_1 integer;
+        same_branch_2 integer;
         ancestor uuid;
     begin
-        select true from unnest(bundle.commit_ancestry(commit1_id)) c(id) where id = commit2_id into same_branch_1;
-        select true from unnest(bundle.commit_ancestry(commit2_id)) c(id) where id = commit1_id into same_branch_2;
+        select count(*) from unnest(bundle.commit_ancestry(commit1_id)) c(id) where id = commit2_id into same_branch_1;
+        select count(*) from unnest(bundle.commit_ancestry(commit2_id)) c(id) where id = commit1_id into same_branch_2;
 
-        if same_branch_1 is not null or same_branch_2 is not null then
-            raise notice 'Commits do not share a common ancestor.';
+        if same_branch_1 > 0 or same_branch_2 > 0 or same_branch_1 is null or same_branch_2 is null then
+            -- raise notice 'Commits are on the same branch.';
             return null;
         end if;
 
@@ -826,6 +827,47 @@ create or replace function rows_created_between_commits( new_commit_id uuid, anc
 $$ language sql;
 
 
+create or replace function commit_is_mergable(merge_commit_id uuid) returns boolean as $$
+    declare
+        _bundle_id uuid;
+        bundle_name text;
+        checkout_matches_head boolean;
+        common_ancestor_id uuid;
+        head_commit_id uuid;
+    begin
+        -- propagate some variables
+        select b.head_commit_id = b.checkout_commit_id, b.head_commit_id, b.name, b.id
+        from bundle.commit c
+            join bundle.bundle b on c.bundle_id = b.id
+        where c.id = merge_commit_id
+        into checkout_matches_head, head_commit_id, bundle_name, _bundle_id;
+
+        -- assert that the bundle is not in detached head mode
+        if not checkout_matches_head then
+            -- raise notice 'Merge not permitted when bundle.head_commit_id does not equal bundle.checkout_commit_id';
+            return false;
+        end if;
+
+        /*
+        -- assert that the working copy does not contain uncommitted changes (TODO: allow this?)
+        select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
+        if changes_count > 0 then
+            raise exception 'Merge not permitted when there are uncommitted changes';
+        end if;
+        */
+
+        -- assert that the two commits share a common ancestor
+        select bundle.commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
+        if common_ancestor_id is null then
+            -- raise notice 'Head commit and merge commit do not share a common ancestor.';
+            return false;
+        end if;
+
+        return true;
+    end;
+$$ language plpgsql;
+
+
 
 -- merge
 -- the big kahuna.
@@ -843,11 +885,11 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         update_stmt text;
     begin
         -- propagate some variables
-        select b.head_commit_id = b.checkout_commit_id, b.name, b.id
+        select b.head_commit_id = b.checkout_commit_id, b.head_commit_id, b.name, b.id
         from bundle.commit c
             join bundle.bundle b on c.bundle_id = b.id
         where c.id = merge_commit_id
-        into checkout_matches_head, bundle_name, _bundle_id;
+        into checkout_matches_head, head_commit_id, bundle_name, _bundle_id;
 
         -- assert that the bundle is not in detached head mode
         if not checkout_matches_head then
@@ -859,9 +901,6 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         if changes_count > 0 then
             raise exception 'Merge not permitted when there are uncommitted changes';
         end if;
-
-        -- get head_commit_id
-        select b.head_commit_id from bundle.bundle b where b.id=_bundle_id into head_commit_id;
 
         -- assert that the two commits share a common ancestor
         select * from bundle.commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
