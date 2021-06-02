@@ -6,8 +6,8 @@
 
 begin;
 
--- create language plpythonu;
-create schema http_client;
+-- create language plpython3u;
+-- create schema http_client;
 set search_path=http_client;
 
 
@@ -117,7 +117,7 @@ plpy.info ('************ http_get('+url+')')
 r = requests.get(url)
 return [r.status_code, r.headers, r.encoding, r.text]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 /*******************************************************************************
 * http_get_binary
@@ -132,7 +132,7 @@ plpy.info ('************ http_get('+url+')')
 r = requests.get(url)
 return [r.status_code, r.headers, r.encoding, r.content]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 /*******************************************************************************
 * http_post text
@@ -146,7 +146,7 @@ plpy.info ('************ http_post('+url+')')
 r = requests.post(url,data)
 return [r.status_code, r.headers, r.encoding, r.text]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 /*******************************************************************************
 * http_post json
@@ -161,7 +161,7 @@ plpy.info ('************ http_post('+url+')')
 r = requests.post(url,json.loads(data))
 return [r.status_code, r.headers, r.encoding, r.text]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 /*******************************************************************************
 * http_delete
@@ -176,7 +176,7 @@ plpy.info ('************ http_delete('+url+')')
 r = requests.delete(url)
 return [r.status_code, r.headers, r.encoding, r.text]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 /*******************************************************************************
 * http_patch text
@@ -190,7 +190,7 @@ plpy.info ('************ http_patch('+url+')')
 r = requests.patch(url,data)
 return [r.status_code, r.headers, r.encoding, r.text]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 
 /*******************************************************************************
@@ -206,6 +206,6 @@ plpy.info ('************ http_patch('+url+')')
 r = requests.patch(url,json.loads(data))
 return [r.status_code, r.headers, r.encoding, r.text]
 
-$$ language plpythonu;
+$$ language plpython3u;
 
 commit;

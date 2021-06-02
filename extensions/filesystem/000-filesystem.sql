@@ -12,6 +12,7 @@ set search_path=filesystem,public;
 
 -- drop foreign data wrapper if exists filesystem_fdw cascade;
 
+/*
 create foreign data wrapper filesystem_fdw
   handler public.multicorn_handler
   validator public.multicorn_validator;
@@ -47,6 +48,7 @@ create foreign table filesystem.directory (
 	last_mod text
 ) server filesystem_fdw_srv options (table_name 'directory');
 
+*/
 -- http://dba.stackexchange.com/questions/1742/how-to-insert-file-data-into-a-postgresql-bytea-column
 create or replace function filesystem.bytea_import(p_path text, p_result out bytea)
 language plpgsql as $$
