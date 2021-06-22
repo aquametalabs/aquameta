@@ -112,6 +112,14 @@ create table commit (
 alter table bundle add head_commit_id uuid references commit(id) on delete set null;
 alter table bundle add checkout_commit_id uuid references commit(id) on delete set null;
 
+create table merge_conflict (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    bundle_id uuid references bundle(id) on delete cascade,
+    field_id meta.field_id not null,
+    conflict_value text,
+    rowset_row_field_id uuid not null references bundle.rowset_row_field(id) on delete cascade
+);
+
 
 
 ------------------------------------------------------------------------------

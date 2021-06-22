@@ -1020,7 +1020,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
                     join bundle.blob b on rrf.value_hash = b.hash
                 where c.id = %L
                     and rrf.field_id::text = %L',
-                merge_commit_id, f.field_id::text,
+                merge_commit_id, f.field_id::text
             );
             -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;
@@ -1117,7 +1117,7 @@ begin
             join bundle.rowset r on r.id = c.rowset_id
             join bundle.rowset_row rr on rr.rowset_id = r.id
         where b.id = _bundle_id and c.id = _commit_id
-    loop
+        loop
         execute format ('delete from %I.%I where %I = %L',
             ((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
             (((temprow.row_id).pk_column_id).relation_id).name,
