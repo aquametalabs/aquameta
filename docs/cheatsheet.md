@@ -231,7 +231,7 @@ Here's a simple call to request all rows in the table `beehive.customers`.  It r
 var customers = endpoint.schema('beehive').table('customer').rows();
 ```
 
-This code immediately assigns `customers` to a Rowset Promise, and then asyncronously fires a request to the server to retrieve the actual customers data.
+This code immediately assigns `customers` to a Rowset Promise, and then asynchronously fires a request to the server to retrieve the actual customers data.
 
 ### Requesting a Single `AQ.Row` via `AQ.Relation.row(pk_name, pk_value)`
 
@@ -383,12 +383,12 @@ First let's give the event a name and expected arguments.  We will name the even
 ### Event Listener Widget
 Let's first create the widget that listens for `alert_message` events and shows them to the user.
 
-Bind only recieves events that are fired on its descendent elements.  As such, we typically want to bind to some parent widget, a widget that is a parent to all widgets that will be calling this listener.  Often times the root widget of the app works great, since all widgets in the app are its descendents.
+Bind only receives events that are fired on its descendent elements.  As such, we typically want to bind to some parent widget, a widget that is a parent to all widgets that will be calling this listener.  Often times the root widget of the app works great, since all widgets in the app are its descendents.
 
 ```javascript
 var w = $('#'+id);
 
-// find the ancestor widget .main, and bind the alert_hanler to it
+// find the ancestor widget .main, and bind the alert_handler to it
 w.closest('.main').bind('alert_message', function(e,o) {
     // o is whatever is passed into the second argument of .trigger()
     var message = o.message;
@@ -398,7 +398,7 @@ w.closest('.main').bind('alert_message', function(e,o) {
 });
 ```
 
-Now, anywhere in our app, we can trigger an event with this name and arguments, and the listener will recieve and handle it.  Whenever .main receives a `alert_message` event, the handler will fire and show the message passed in.  
+Now, anywhere in our app, we can trigger an event with this name and arguments, and the listener will receive and handle it.  Whenever .main receives a `alert_message` event, the handler will fire and show the message passed in.  
 
 ### Widget that Triggers an Event for the Listener
 
