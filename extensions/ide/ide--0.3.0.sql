@@ -30,14 +30,23 @@ create table ide.sql_code (
 
 create or replace view ide.resource as
 select r.*, b.id as bundle_id, b.name from (
-    select meta.row_id('endpoint','resource','id',r.id::text), path, mimetype from endpoint.resource r join endpoint.mimetype m on r.mimetype_id = m.id
+    select meta.row_id('endpoint','resource','id',r.id::text), path, mimetype
+    from endpoint.resource r
+        join endpoint.mimetype m on r.mimetype_id = m.id
+
     union
-    select meta.row_id('endpoint','resource_binary','id',rb.id::text), path, mimetype from endpoint.resource_binary rb join endpoint.mimetype m on rb.mimetype_id = m.id
-) r
-join bundle.rowset_row rr on rr.row_id = r.row_id
-join bundle.rowset rs on rr.rowset_id = rs.id
-join bundle.commit c on c.rowset_id = rs.id
-join bundle.bundle b on b.head_commit_id = c.id
+
+    select meta.row_id('endpoint','resource_binary','id',rb.id::text), path, mimetype
+    from endpoint.resource_binary rb
+        join endpoint.mimetype m on rb.mimetype_id = m.id
+) r left join (
+    select rr.row_id, b.*
+    from bundle.rowset_row rr
+        join bundle.rowset rs on rr.rowset_id = rs.id
+        join bundle.commit c on c.rowset_id = rs.id
+        join bundle.bundle b on b.head_commit_id = c.id
+) b on b.row_id = r.row_id
+
 order by path;
 
 
@@ -64,3 +73,15 @@ join bundle.bundle b on h.bundle_id = b.id
 where b.checkout_commit_id is not null
 group by b.name, b.id, ((row_id).pk_column_id).relation_id, change_type
 order by b.name;
+
+
+
+create or replace view ide.commit_with_mergable as
+select
+    c.*,
+	bundle.commit_ancestry(c.id),
+	bundle.commits_common_ancestor(c.id, b.head_commit_id),
+	bundle.commit_is_mergable(c.id)
+from bundle.commit c
+    join bundle.bundle b on c.bundle_id = b.id;
+
