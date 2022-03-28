@@ -769,6 +769,9 @@ select pg_catalog.pg_extension_config_dump('bundle_remote_database','');
 ------------------------------------------------------------------------------
 -- COMMIT FUNCTIONS
 ------------------------------------------------------------------------------
+set search_path=bundle;
+begin;
+
 create or replace function commit (bundle_name text, message text) returns void as $$
     declare
         _bundle_id uuid;
@@ -1626,6 +1629,18 @@ Merge
 - delete and stage new row deletes
 */
 
+create or replace function bundle_has_uncommited_changes( _bundle_id uuid ) returns boolean as $$
+    declare
+        changes_count integer;
+    begin
+        select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
+        if changes_count > 0 then
+            return true;
+        else return false;
+        end if;
+    end;
+$$ language plpgsql;
+
 
 create or replace function merge(merge_commit_id uuid) returns void as $$
     declare
@@ -1633,7 +1648,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         bundle_name text;
         checkout_matches_head boolean;
         conflicted_merge boolean := false;
-        changes_count integer;
+        has_changes boolean;
         common_ancestor_id uuid;
         head_commit_id uuid;
         f record;
@@ -1652,8 +1667,8 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         end if;
 
         -- assert that the working copy does not contain uncommitted changes (TODO: allow this?)
-        select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
-        if changes_count > 0 then
+        select bundle.bundle_has_uncommitted_changes(_bundle_id) into has_changes;
+        if changes_count == true then
             raise exception 'Merge not permitted when this bundle has uncommitted changes';
         end if;
 
@@ -2012,6 +2027,10 @@ case c.change_type
 end, row_id;
 
 $$ language sql;
+
+
+
+commit;
 /*******************************************************************************
  * Bundle Utilities
  *

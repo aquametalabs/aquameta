@@ -2,9 +2,9 @@
 
 ## Requirements
 
-Bundle requires the following extensions, which must be manually installed before bundle can be installed:
+Bundle requires the following extensions:
 
-- [meta](https://github.com/aquametalabs/aquameta/tree/master/src/pg-extension/meta)
+- [meta](../meta)
 - uuid-ossp (included with PostgreSQL)
 - pgcrypto (included with PostgreSQL)
 
