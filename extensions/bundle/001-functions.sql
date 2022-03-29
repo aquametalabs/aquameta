@@ -651,7 +651,7 @@ $$ language sql;
 --
 ------------------------------------------------------------------------------
 
--- create type checkout_field as (name text, value text, type_name text);
+create type checkout_field as (name text, value text, type_name text);
 create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
     declare
         query_str text;
@@ -1048,7 +1048,7 @@ $$ language plpgsql;
 
 
 -- fields changed between two commits, a kind of field-level diff
--- create type fields_changed_between_commits as (field_id meta.field_id, commit1_value_hash text, commit2_value_hash text);
+create type fields_changed_between_commits as (field_id meta.field_id, commit1_value_hash text, commit2_value_hash text);
 create or replace function fields_changed_between_commits(commit1_id uuid, commit2_id uuid) returns setof fields_changed_between_commits as $$
     select commit1_field_id, commit1_value_hash, commit2_value_hash
     from (
