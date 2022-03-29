@@ -761,10 +761,226 @@ select pg_catalog.pg_extension_config_dump('bundle_remote_database','');
 
 /*
  * User Functions
- *     1. commit
- *     2. stage
- *     3. checkout
+ *     1. utility functions
+ *     2. commit
+ *     3. stage
+ *     4. checkout
  */
+
+
+
+------------------------------------------------------------------------------
+-- BUNDLE COPY
+------------------------------------------------------------------------------
+/*
+create function bundle.bundle_copy(_bundle_id uuid, new_name text) returns uuid as $$
+    insert into bundle.bundle select * from bundle.bundle where id=_bundle_id;
+    insert into bundle.rowset select * from bundle.rowset r join commit c on c.rowset_id=r.id where c.bundle_id = _bundle_id;
+    insert into bundle.commit select * from bundle.commit where bundle_id = _bundle_id;
+
+$$ language sql;
+*/
+
+
+------------------------------------------------------------------------------
+-- STATUS FUNCTIONS
+------------------------------------------------------------------------------
+
+create or replace function bundle.status()
+returns setof text as $$
+    select b.name || ' - '
+        || hds.change_type || ' - '
+        || hds.row_id::text
+    from bundle.bundle b
+        join bundle.head_db_stage_changed hds on hds.bundle_id = b.id
+    order by b.name, hds.row_id::text;
+$$ language sql;
+
+
+
+------------------------------------------------------------------------------
+-- ROW HISTORY
+------------------------------------------------------------------------------
+
+
+create type row_history_return_type as (
+    field_hashes jsonb,
+    commit_id uuid,
+    commit_message text,
+    commit_parent_id uuid,
+    time timestamp,
+    bundle_id uuid,
+    bundle_name text
+);
+
+-- create or replace function bundle.row_history(_row_id meta.row_id) returns setof record as $$
+-- broken out into fields because composite types hate endpoint
+-- this is wrong.  not traversing the commit tree, just using time
+create or replace function bundle.row_history(schema_name text, relation_name text, pk_column_name text, pk_value text) returns setof row_history_return_type as $$
+    select field_hashes, commit_id, commit_message, commit_parent_id, time, bundle_id, bundle_name
+    from (
+        with commits as (
+            select jsonb_object_agg(((rrf.field_id).column_id).name, rrf.value_hash::text) as field_hashes, c.id as commit_id, c.message as commit_message, c.parent_id as commit_parent_id, c.time, b.id as bundle_id, b.name as bundle_name
+            from bundle.rowset_row rr
+                join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                join bundle.rowset r on rr.rowset_id = r.id
+                join bundle.commit c on c.rowset_id = r.id
+                join bundle.bundle b on c.bundle_id = b.id
+            where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
+            group by rr.id, c.id, c.message, b.id, b.name, c.parent_id, c.time
+            order by c.time
+        )
+        select commits.*, lag(field_hashes, 1, null) over (order by commits.time) as previous_commit_hashes
+        from commits
+    ) commits_with_previous
+    where field_hashes != previous_commit_hashes or previous_commit_hashes is null;
+$$ language sql;
+
+
+-- this is mostly ganked from head_db_stage for performance reasons, seemed view was acting as an optimization barrier.  audit.
+create or replace function bundle.row_status(schema_name text, relation_name text, pk_column_name text, pk_value text) returns bundle.head_db_stage as $$
+select
+    *,
+    meta.row_exists(row_id) as row_exists,
+    case
+        when change_type = 'same' then null
+        when change_type = 'deleted' then (stage_row_id is null)
+        when change_type = 'added' then true
+        when change_type = 'modified' then null
+        when change_type = 'tracked' then false
+    end as staged,
+
+    (head_row_id is not null) in_head
+from (
+    select
+        coalesce (hcr.bundle_id, sr.bundle_id) as bundle_id,
+        hcr.commit_id,
+        coalesce (hcr.row_id, sr.row_id) as row_id,
+        hcr.row_id as head_row_id,
+        sr.row_id as stage_row_id,
+
+        -- change_type
+        case
+            when sr.row_id is null then 'deleted'
+            when hcr.row_id is null then  'added'
+            when
+                array_remove(array_agg(ofc.field_id), null) != '{}'
+                or array_remove(array_agg(sfc.field_id), null) != '{}' then  'modified'
+            when meta.row_exists(sr.row_id) = false then 'deleted'
+            else 'same'
+        end as change_type,
+
+        -- offstage changes
+        array_remove(array_agg(ofc.field_id), null) as offstage_field_changes,
+        array_agg(ofc.old_value) as offstage_field_changes_old_vals,
+        array_agg(ofc.new_value) as offstage_field_changes_new_vals,
+        -- staged changes
+        array_remove(array_agg(sfc.field_id), null) as stage_field_changes,
+        array_agg(ofc.old_value) as stage_field_changes_old_vals,
+        array_agg(sfc.new_value) as stage_field_changes_new_vals
+
+    from (
+        -- this is view head_commit_row, just ganked in with row_id filter
+        select b.id AS bundle_id,
+            c.id as commit_id,
+            rr.row_id
+        from bundle.bundle b
+            join bundle.commit c on b.head_commit_id = c.id
+            join bundle.rowset r on r.id = c.rowset_id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+        where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
+    ) hcr
+    full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
+    left join bundle.stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
+    left join bundle.offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
+
+    union
+
+    select tra.bundle_id, null, tra.row_id, null, null, 'tracked', null, null, null, null, null, null
+    from bundle.tracked_row_added tra
+
+) c
+order by
+case c.change_type
+    when 'tracked' then 0
+    when 'deleted' then 1
+    when 'modified' then 2
+    when 'same' then 3
+    when 'added' then 4
+end, row_id;
+
+$$ language sql;
+
+------------------------------------------------------------------------------
+-- BUNDLE CREATE / DELETE
+------------------------------------------------------------------------------
+
+create or replace function bundle.bundle_create (name text) returns uuid as $$
+declare
+    bundle_id uuid;
+begin
+    insert into bundle.bundle (name) values (name) returning id into bundle_id;
+    -- TODO: should we make an initial commit and rowset for a newly created bundle?  if not, when checkout_commit_id is null, does that mean it is not checked out, or it is new, or both?  both is wrong.
+    -- insert into bundle.commit
+    return bundle_id;
+end;
+$$ language plpgsql;
+
+create or replace function bundle.bundle_delete (in _bundle_id uuid) returns void as $$
+    -- TODO: delete blobs
+    delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
+    delete from bundle.bundle where id = _bundle_id;
+$$ language sql;
+
+
+
+------------------------------------------------------------------------------
+-- COMMIT DELETE
+------------------------------------------------------------------------------
+
+create or replace function bundle.commit_delete(in _commit_id uuid) returns void as $$
+    -- TODO: delete blobs
+    -- TODO: delete commits in order?
+    delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
+    delete from bundle.commit c where c.id = _commit_id;
+$$ language sql;
+
+
+
+------------------------------------------------------------------------------
+-- CHECKOUT DELETE
+------------------------------------------------------------------------------
+
+/*
+ * deletes the rows in the database that are tracked by the specified commit
+ * (usually bundle.head_commit_id).
+ * TODO: this could be optimized to one delete per relation
+ */
+create or replace function bundle.checkout_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
+declare
+        temprow record;
+begin
+    for temprow in
+        select rr.* from bundle.bundle b
+            join bundle.commit c on c.bundle_id = b.id
+            join bundle.rowset r on r.id = c.rowset_id
+            join bundle.rowset_row rr on rr.rowset_id = r.id
+        where b.id = _bundle_id and c.id = _commit_id
+        loop
+        execute format ('delete from %I.%I where %I = %L',
+            ((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
+            (((temprow.row_id).pk_column_id).relation_id).name,
+            ((temprow.row_id).pk_column_id).name,
+            (temprow.row_id).pk_value);
+    end loop;
+
+    update bundle.bundle set checkout_commit_id = null where id = _bundle_id;
+end;
+$$ language plpgsql;
+
+
+
 
 ------------------------------------------------------------------------------
 -- COMMIT FUNCTIONS
@@ -831,6 +1047,22 @@ create or replace function commit (bundle_name text, message text) returns void 
 
     end
 
+$$ language plpgsql;
+
+
+
+-- checks to see if this bundle has anything present in head_db_stage_changed, which will catch
+-- added rows, deleted rows, changed rows, and staged rows
+create or replace function bundle.bundle_has_uncommitted_changes( _bundle_id uuid ) returns boolean as $$
+    declare
+        changes_count integer;
+    begin
+        select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
+        if changes_count > 0 then
+            return true;
+        else return false;
+        end if;
+    end;
 $$ language plpgsql;
 
 
@@ -1187,7 +1419,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
             -- (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
 
             -- TODO: check to see if this row which is being merged is going to overwrite a row that is
-            -- different from the head commit
+            -- different from the head commit, maybe??  checkout() does a safety check for this
 
             -- overwrite existing values with new values.
             /*
@@ -1286,32 +1518,65 @@ $$ language plpgsql;
 
 
 
--- checkout can only be run by superusers because it disables triggers, as described here: http://blog.endpoint.com/2012/10/postgres-system-triggers-error.html
+/*
+ *
+ * checkout
+ *
+ * checkout can only be run by superusers because it disables triggers, as
+ * described here:
+ * http://blog.endpoint.com/2012/10/postgres-system-triggers-error.html
+ */
+
 create or replace function checkout (in commit_id uuid, in comment text default null) returns void as $$
     declare
         commit_row record;
         bundle_name text;
         commit_message text;
         _commit_id uuid;
+        _bundle_id uuid;
+        _head_commit_id uuid;
+        _checkout_commit_id uuid;
         commit_role text;
         commit_time timestamp;
+        has_changes boolean;
     begin
         -- set local search_path=bundle,meta,public;
         set local search_path=something_that_must_not_be;
+
         /* TODO
-        - check to see if this bundle is already checked out
-        - if yes, check to see if it has any uncommitted changes, either new tracked rows or already
-          tracked row changes
-          - if it does, fail, unless checkout was passed a (new) HARD boolean of true
-          - if it doesn't, delete the existing checkout (so we don't have dangling rows)
-        - proceed.
+        - is this bundle checked out?
+            - yes?
+                - does it have uncommitted changes?
+                    yes?  fail
+                - delete the current checkout
         */
 
-        select b.name, c.id, c.message, c.time, (c.role_id).name
-        into bundle_name, _commit_id, commit_message, commit_time, commit_role
+        -- propagate variables
+        select b.name, b.id, b.head_commit_id, b.checkout_commit_id, c.id, c.message, c.time, (c.role_id).name
+        into
+            bundle_name,
+            _bundle_id,
+            _head_commit_id,
+            _checkout_commit_id,
+            _commit_id,
+            commit_message,
+            commit_time,
+            commit_role
         from bundle.bundle b
             join bundle.commit c on c.bundle_id = b.id
         where c.id = commit_id;
+
+        -- assert that the working copy doesn't have unsaved changes, aka it's in sync with the contents of the head commit
+        select bundle.bundle_has_uncommitted_changes(_bundle_id) into has_changes;
+        if has_changes = true then
+            raise exception 'Checkout not permitted when this bundle has uncommitted changes (aka rows in bundle.head_db_stage_changed)';
+        end if;
+
+
+        -- if this bundle has already been checked out, delete the checkout
+        if _checkout_commit_id is not null then
+            perform bundle.checkout_delete(_bundle_id, _checkout_commit_id);
+        end if;
 
         if _commit_id is null then
             raise exception 'bundle.checkout() commit with id % does not exist', commit_id;
@@ -1577,7 +1842,7 @@ $$ language sql;
 
 -- checks to see if it structurally makes sense that this commit be merged.
 -- does not check for changes in the working copy.
-create or replace function commit_is_mergable(merge_commit_id uuid) returns boolean as $$
+create or replace function commit_is_mergable(_merge_commit_id uuid) returns boolean as $$
     declare
         _bundle_id uuid;
         bundle_name text;
@@ -1589,7 +1854,7 @@ create or replace function commit_is_mergable(merge_commit_id uuid) returns bool
         select b.head_commit_id = b.checkout_commit_id, b.head_commit_id, b.name, b.id
         from bundle.commit c
             join bundle.bundle b on c.bundle_id = b.id
-        where c.id = merge_commit_id
+        where c.id = _merge_commit_id
         into checkout_matches_head, head_commit_id, bundle_name, _bundle_id;
 
         -- assert that the bundle is not in detached head mode
@@ -1599,7 +1864,7 @@ create or replace function commit_is_mergable(merge_commit_id uuid) returns bool
         end if;
 
         -- assert that the two commits share a common ancestor
-        select bundle.commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
+        select bundle.commits_common_ancestor(head_commit_id, _merge_commit_id) into common_ancestor_id;
         if common_ancestor_id is null then
             -- raise notice 'Head commit and merge commit do not share a common ancestor.';
             return false;
@@ -1629,20 +1894,7 @@ Merge
 - delete and stage new row deletes
 */
 
-create or replace function bundle_has_uncommited_changes( _bundle_id uuid ) returns boolean as $$
-    declare
-        changes_count integer;
-    begin
-        select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
-        if changes_count > 0 then
-            return true;
-        else return false;
-        end if;
-    end;
-$$ language plpgsql;
-
-
-create or replace function merge(merge_commit_id uuid) returns void as $$
+create or replace function merge(_merge_commit_id uuid) returns void as $$
     declare
         _bundle_id uuid;
         bundle_name text;
@@ -1658,7 +1910,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         select b.head_commit_id = b.checkout_commit_id, b.head_commit_id, b.name, b.id
         from bundle.commit c
             join bundle.bundle b on c.bundle_id = b.id
-        where c.id = merge_commit_id
+        where c.id = _merge_commit_id
         into checkout_matches_head, head_commit_id, bundle_name, _bundle_id;
 
         -- assert that the bundle is not in detached head mode
@@ -1666,14 +1918,14 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
             raise exception 'Merge not permitted when bundle.head_commit_id does not equal bundle.checkout_commit_id';
         end if;
 
-        -- assert that the working copy does not contain uncommitted changes (TODO: allow this?)
+        -- assert that the working copy does not contain uncommitted changes
         select bundle.bundle_has_uncommitted_changes(_bundle_id) into has_changes;
-        if changes_count == true then
+        if has_changes = true then
             raise exception 'Merge not permitted when this bundle has uncommitted changes';
         end if;
 
         -- assert that the two commits share a common ancestor
-        select * from bundle.commits_common_ancestor(head_commit_id, merge_commit_id) into common_ancestor_id;
+        select * from bundle.commits_common_ancestor(head_commit_id, _merge_commit_id) into common_ancestor_id;
         if common_ancestor_id is null then
             raise exception 'Head commit and merge commit do not share a common ancestor.';
         end if;
@@ -1681,7 +1933,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         -- assert that this commit is not already merged
         -- TODO
 
-        raise notice 'Merging commit % into head (%), with common ancestor commit %', merge_commit_id, head_commit_id, common_ancestor_id;
+        raise notice 'Merging commit % into head (%), with common ancestor commit %', _merge_commit_id, head_commit_id, common_ancestor_id;
 
         /*
          *
@@ -1691,7 +1943,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
 
         -- get fields that were changed on the merge commit branch, but not also changed on the head commit branch (aka non-conflicting)
         for f in
-            select field_id from bundle.fields_changed_between_commits(merge_commit_id, common_ancestor_id)
+            select field_id from bundle.fields_changed_between_commits(_merge_commit_id, common_ancestor_id)
             except
             select field_id from bundle.fields_changed_between_commits(head_commit_id, common_ancestor_id)
         loop
@@ -1710,7 +1962,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
                 (((((f.field_id).row_id).pk_column_id).relation_id).schema_id).name,
                  ((((f.field_id).row_id).pk_column_id).relation_id).name,
                    ((f.field_id).column_id).name,
-                merge_commit_id,
+                _merge_commit_id,
                    f.field_id::text,
                   (((f.field_id).row_id).pk_column_id).name,
                    ((f.field_id).row_id).pk_value
@@ -1728,10 +1980,10 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
          */
 
         for f in
-            select bundle.rows_created_between_commits(merge_commit_id, common_ancestor_id) as row_id
+            select bundle.rows_created_between_commits(_merge_commit_id, common_ancestor_id) as row_id
         loop
             raise notice 'checking out new row %', f.row_id::text;
-            perform bundle.checkout_row(f.row_id::text, merge_commit_id);
+            perform bundle.checkout_row(f.row_id::text, _merge_commit_id);
             perform bundle.tracked_row_add(bundle_name, f.row_id);
             perform bundle.stage_row_add(bundle_name, f.row_id);
         end loop;
@@ -1741,13 +1993,13 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
          *
          * conflicting fields
          *
-         * Change the working copy but do not stage them.  Merge conflicts are
-         * unstaged.  There's probably something more elaborate we cna do here.
+         * for any fields changed in both the working copy and the merge commit,
+         * add the fields to the merge_conflict table
          *
          */
 
         for f in
-            select field_id from bundle.fields_changed_between_commits(merge_commit_id, common_ancestor_id)
+            select field_id from bundle.fields_changed_between_commits(_merge_commit_id, common_ancestor_id)
             intersect
             select field_id from bundle.fields_changed_between_commits(head_commit_id, common_ancestor_id)
         loop
@@ -1769,7 +2021,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
                 (((((f.field_id).row_id).pk_column_id).relation_id).schema_id).name,
                  ((((f.field_id).row_id).pk_column_id).relation_id).name,
                    ((f.field_id).column_id).name,
-                merge_commit_id,
+                _merge_commit_id,
                    f.field_id::text,
                   (((f.field_id).row_id).pk_column_id).name,
                    ((f.field_id).row_id).pk_value
@@ -1779,7 +2031,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
 
             -- insert record of the conflicting field into bundle.merge_conflict
             update_stmt := format('
-                insert into bundle.merge_conflict 
+                insert into bundle.merge_conflict
                     ( bundle_id, rowset_row_field_id, field_id, conflict_value )
                 select _bundle_id, rrf.id, rrf.field_id, b.value
                 from bundle.commit c
@@ -1789,7 +2041,7 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
                     join bundle.blob b on rrf.value_hash = b.hash
                 where c.id = %L
                     and rrf.field_id::text = %L',
-                merge_commit_id, f.field_id::text
+                _merge_commit_id, f.field_id::text
             );
             -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;
@@ -1797,12 +2049,22 @@ create or replace function merge(merge_commit_id uuid) returns void as $$
         end loop;
 
         /*
-        TODO:
-        - row deletes
-        */
+         *
+         * - row deletes TODO
+         *
+         */
 
-        -- set merge state
-        update bundle.bundle set merge_commit_id = merge_commit_id where id=_bundle_id;
+        /*
+         *
+         * - create merge commit TODO
+         *
+         * if there are no conflicts, go ahead and create the commit and update
+         * bundle accordingly.  if there are conflicts, not sure what we do here yet
+         *
+         */
+
+        -- create merge commit
+        -- TODO:
 
     end;
 $$ language plpgsql;
@@ -1821,212 +2083,6 @@ create or replace function merge_cancel(_bundle_id uuid) returns void as $$
 $$ language plpgsql;
 
 
-
-------------------------------------------------------------------------------
--- BUNDLE COPY
-------------------------------------------------------------------------------
-/*
-create function bundle.bundle_copy(_bundle_id uuid, new_name text) returns uuid as $$
-    insert into bundle.bundle select * from bundle.bundle where id=_bundle_id;
-    insert into bundle.rowset select * from bundle.rowset r join commit c on c.rowset_id=r.id where c.bundle_id = _bundle_id;
-    insert into bundle.commit select * from bundle.commit where bundle_id = _bundle_id;
-
-$$ language sql;
-*/
-
-------------------------------------------------------------------------------
--- BUNDLE CREATE / DELETE
-------------------------------------------------------------------------------
-
-create or replace function bundle.bundle_create (name text) returns uuid as $$
-declare
-    bundle_id uuid;
-begin
-    insert into bundle.bundle (name) values (name) returning id into bundle_id;
-    -- TODO: should we make an initial commit and rowset for a newly created bundle?  if not, when checkout_commit_id is null, does that mean it is not checked out, or it is new, or both?  both is wrong.
-    -- insert into bundle.commit
-    return bundle_id;
-end;
-$$ language plpgsql;
-
-create or replace function bundle.bundle_delete (in _bundle_id uuid) returns void as $$
-    -- TODO: delete blobs
-    delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
-    delete from bundle.bundle where id = _bundle_id;
-$$ language sql;
-
-------------------------------------------------------------------------------
--- COMMIT DELETE
-------------------------------------------------------------------------------
-
-create or replace function bundle.commit_delete(in _commit_id uuid) returns void as $$
-    -- TODO: delete blobs
-    -- TODO: delete commits in order?
-    delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
-    delete from bundle.commit c where c.id = _commit_id;
-$$ language sql;
-
-
-------------------------------------------------------------------------------
--- CHECKOUT DELETE
-------------------------------------------------------------------------------
-
-/*
- * deletes the rows in the database that are tracked by the specified commit
- * (usually bundle.head_commit_id).
- * TODO: this could be optimized to one delete per relation
- */
-create or replace function bundle.checkout_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
-declare
-        temprow record;
-begin
-    for temprow in
-        select rr.* from bundle.bundle b
-            join bundle.commit c on c.bundle_id = b.id
-            join bundle.rowset r on r.id = c.rowset_id
-            join bundle.rowset_row rr on rr.rowset_id = r.id
-        where b.id = _bundle_id and c.id = _commit_id
-        loop
-        execute format ('delete from %I.%I where %I = %L',
-            ((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
-            (((temprow.row_id).pk_column_id).relation_id).name,
-            ((temprow.row_id).pk_column_id).name,
-            (temprow.row_id).pk_value);
-    end loop;
-
-    update bundle.bundle set checkout_commit_id = null where id = _bundle_id;
-end;
-$$ language plpgsql;
-
-------------------------------------------------------------------------------
--- STATUS FUNCTIONS
-------------------------------------------------------------------------------
-
-create or replace function bundle.status()
-returns setof text as $$
-    select b.name || ' - '
-        || hds.change_type || ' - '
-        || hds.row_id::text
-    from bundle.bundle b
-        join bundle.head_db_stage_changed hds on hds.bundle_id = b.id
-    order by b.name, hds.row_id::text;
-$$ language sql;
-
-
-
-------------------------------------------------------------------------------
--- ROW HISTORY
-------------------------------------------------------------------------------
-
-
-create type row_history_return_type as (
-    field_hashes jsonb,
-    commit_id uuid,
-    commit_message text,
-    commit_parent_id uuid,
-    time timestamp,
-    bundle_id uuid,
-    bundle_name text
-);
-
--- create or replace function bundle.row_history(_row_id meta.row_id) returns setof record as $$
--- broken out into fields because composite types hate endpoint
--- this is wrong.  not traversing the commit tree, just using time
-create or replace function bundle.row_history(schema_name text, relation_name text, pk_column_name text, pk_value text) returns setof row_history_return_type as $$
-    select field_hashes, commit_id, commit_message, commit_parent_id, time, bundle_id, bundle_name
-    from (
-        with commits as (
-            select jsonb_object_agg(((rrf.field_id).column_id).name, rrf.value_hash::text) as field_hashes, c.id as commit_id, c.message as commit_message, c.parent_id as commit_parent_id, c.time, b.id as bundle_id, b.name as bundle_name
-            from bundle.rowset_row rr
-                join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-                join bundle.rowset r on rr.rowset_id = r.id
-                join bundle.commit c on c.rowset_id = r.id
-                join bundle.bundle b on c.bundle_id = b.id
-            where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
-            group by rr.id, c.id, c.message, b.id, b.name, c.parent_id, c.time
-            order by c.time
-        )
-        select commits.*, lag(field_hashes, 1, null) over (order by commits.time) as previous_commit_hashes
-        from commits
-    ) commits_with_previous
-    where field_hashes != previous_commit_hashes or previous_commit_hashes is null;
-$$ language sql;
-
-
--- this is mostly ganked from head_db_stage for performance reasons, seemed view was acting as an optimization barrier.  audit.
-create or replace function bundle.row_status(schema_name text, relation_name text, pk_column_name text, pk_value text) returns bundle.head_db_stage as $$
-select
-    *,
-    meta.row_exists(row_id) as row_exists,
-    case
-        when change_type = 'same' then null
-        when change_type = 'deleted' then (stage_row_id is null)
-        when change_type = 'added' then true
-        when change_type = 'modified' then null
-        when change_type = 'tracked' then false
-    end as staged,
-
-    (head_row_id is not null) in_head
-from (
-    select
-        coalesce (hcr.bundle_id, sr.bundle_id) as bundle_id,
-        hcr.commit_id,
-        coalesce (hcr.row_id, sr.row_id) as row_id,
-        hcr.row_id as head_row_id,
-        sr.row_id as stage_row_id,
-
-        -- change_type
-        case
-            when sr.row_id is null then 'deleted'
-            when hcr.row_id is null then  'added'
-            when
-                array_remove(array_agg(ofc.field_id), null) != '{}'
-                or array_remove(array_agg(sfc.field_id), null) != '{}' then  'modified'
-            when meta.row_exists(sr.row_id) = false then 'deleted'
-            else 'same'
-        end as change_type,
-
-        -- offstage changes
-        array_remove(array_agg(ofc.field_id), null) as offstage_field_changes,
-        array_agg(ofc.old_value) as offstage_field_changes_old_vals,
-        array_agg(ofc.new_value) as offstage_field_changes_new_vals,
-        -- staged changes
-        array_remove(array_agg(sfc.field_id), null) as stage_field_changes,
-        array_agg(ofc.old_value) as stage_field_changes_old_vals,
-        array_agg(sfc.new_value) as stage_field_changes_new_vals
-
-    from (
-        -- this is view head_commit_row, just ganked in with row_id filter
-        select b.id AS bundle_id,
-            c.id as commit_id,
-            rr.row_id
-        from bundle.bundle b
-            join bundle.commit c on b.head_commit_id = c.id
-            join bundle.rowset r on r.id = c.rowset_id
-            join bundle.rowset_row rr on rr.rowset_id = r.id
-        where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
-    ) hcr
-    full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
-    left join bundle.stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
-    left join bundle.offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
-    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
-
-    union
-
-    select tra.bundle_id, null, tra.row_id, null, null, 'tracked', null, null, null, null, null, null
-    from bundle.tracked_row_added tra
-
-) c
-order by
-case c.change_type
-    when 'tracked' then 0
-    when 'deleted' then 1
-    when 'modified' then 2
-    when 'same' then 3
-    when 'added' then 4
-end, row_id;
-
-$$ language sql;
 
 
 
