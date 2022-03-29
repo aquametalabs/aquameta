@@ -28,11 +28,11 @@ begin
     -- copy bundle contents to csv files
     -- checkout_commit_id is set to NULL explicitly, because it is only relevant to this current database
     execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle.bundle b
-        where b.name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
+        where b.name=''%s'' order by b.id) to ''%s/bundle.csv''', bundle_name, directory);
 
     execute format('copy (select distinct c.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
-        where b.name=%L) to ''%s/commit.csv''', bundle_name, directory);
+        where b.name=%L order by c.id) to ''%s/commit.csv''', bundle_name, directory);
 
     execute format('copy (select distinct r.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
