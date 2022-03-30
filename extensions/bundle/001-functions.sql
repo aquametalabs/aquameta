@@ -231,9 +231,6 @@ $$ language plpgsql;
 ------------------------------------------------------------------------------
 -- COMMIT FUNCTIONS
 ------------------------------------------------------------------------------
-set search_path=bundle;
-begin;
-
 create or replace function commit (bundle_name text, message text) returns void as $$
     declare
         _bundle_id uuid;
@@ -1327,9 +1324,3 @@ create or replace function merge_cancel(_bundle_id uuid) returns void as $$
         -- assert that head_commit_id
     end;
 $$ language plpgsql;
-
-
-
-
-
-commit;

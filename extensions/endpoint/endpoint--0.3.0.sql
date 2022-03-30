@@ -1974,11 +1974,12 @@ create or replace function endpoint.request(
         end case;
 
     exception
+/*
         when undefined_table then
             return query select 404, 'Not Found'::text, ('{"status_code": 404, "title": "Not Found", "message":"'|| replace(SQLERRM, '"', '\"') || '; '|| replace(SQLSTATE, '"', '\"') ||'"}')::text, 'application/json'::text;
+*/
 
-        -- https://www.depesz.com/2011/07/20/waiting-for-9-2-stacked-diagnostics-in-plpgsql/
-        WHEN others THEN
+        when others then
             GET STACKED DIAGNOSTICS
                 v_state   = RETURNED_SQLSTATE,
                 v_msg     = MESSAGE_TEXT,
@@ -1986,26 +1987,24 @@ create or replace function endpoint.request(
                 v_hint    = PG_EXCEPTION_HINT,
                 v_context = PG_EXCEPTION_CONTEXT;
 
-            exception_msg := format(E'PostgreSQL Exception:
-    state  : %s
-    message: %s
-    detail : %s
-    hint   : %s
-    context: %s
-    sqlerr: %s
-    sqlstate: %s', v_state, v_msg, v_detail, v_hint, v_context, SQLERRM, SQLSTATE);
+            exception_msg := json_build_object(
+                'state', v_state,
+                'message', v_msg,
+                'detail', v_detail,
+                'context', v_context,
+                'sqlerr', SQLERRM,
+                'sqlstate', SQLSTATE
+            )::text;
 
             raise warning '%', exception_msg;
-            return query select
-                500,
-                'Server Error'::text,
-                ('{ "status_code": 500, "title": "Server Error", "message": ' || to_json(exception_msg) || '}')::text,
-                'application/json'::text;
-        end;
+                return query select
+                    500,
+                    'Server Error'::text,
+                    ('{ "status_code": 500, "title": "Server Error", "message": ' || exception_msg || '}')::text,
+                    'application/json'::text;
+    end;
 $$
 language plpgsql;
-
-
 
 /******************************************************************************
  * endpoint.user

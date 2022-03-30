@@ -526,9 +526,11 @@ from (
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
     from bundle.head_commit_row hcr
-    full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
-    left join stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
-    left join offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
+	join bundle b on hcr.bundle_id=b.id
+        full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
+        left join stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
+        left join offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
+    where b.checkout_commit_id is not null
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
 
     union
@@ -985,9 +987,6 @@ $$ language plpgsql;
 ------------------------------------------------------------------------------
 -- COMMIT FUNCTIONS
 ------------------------------------------------------------------------------
-set search_path=bundle;
-begin;
-
 create or replace function commit (bundle_name text, message text) returns void as $$
     declare
         _bundle_id uuid;
@@ -2081,12 +2080,6 @@ create or replace function merge_cancel(_bundle_id uuid) returns void as $$
         -- assert that head_commit_id
     end;
 $$ language plpgsql;
-
-
-
-
-
-commit;
 /*******************************************************************************
  * Bundle Utilities
  *
@@ -2117,11 +2110,11 @@ begin
     -- copy bundle contents to csv files
     -- checkout_commit_id is set to NULL explicitly, because it is only relevant to this current database
     execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle.bundle b
-        where b.name=''%s'') to ''%s/bundle.csv''', bundle_name, directory);
+        where b.name=''%s'' order by b.id) to ''%s/bundle.csv''', bundle_name, directory);
 
     execute format('copy (select distinct c.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
-        where b.name=%L) to ''%s/commit.csv''', bundle_name, directory);
+        where b.name=%L order by c.id) to ''%s/commit.csv''', bundle_name, directory);
 
     execute format('copy (select distinct r.* from bundle.bundle b
         join bundle.commit c on c.bundle_id=b.id
