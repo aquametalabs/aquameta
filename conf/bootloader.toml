@@ -19,8 +19,8 @@
     EmbeddedPostgresRuntimePath = "./bootloader.db"
 
     # connection settings
-    Host = "127.0.0.1"                        # host
-    Port = 9876                     # instance will open (sometimes 5432)
+    Host = "127.0.0.1"              # host
+    Port = 9876                     # the port the postgresql server will open (we're not using the default 5432)
     DatabaseName = "bootloader"     # name of the database to be created where Aquameta will be installed
 
     # authentication settings
@@ -29,7 +29,7 @@
 
 
 [AquametaUser]                      # Record to create in `endpoint.user` table
-    Name = "Joe Bootloader"
+    Name = "Bootloader"
     Email = ""
 
 
@@ -37,10 +37,10 @@
 [HTTPServer]
     Protocol = "http"               # { http | https }
     IP = "127.0.0.1"                # IP to bind to
-    Port = "4444"                   # Port to open
+    Port = "8000"                   # Port to open
 
     # only used w/ https
     # SSLCertificateFile = "certificates/server.crt"
     # SSLKeyFile = "certificates/server.key"
 
-    StartupURL = "/dev"            # URL to open at startup
+    StartupURL = "/boot"            # URL to open at startup

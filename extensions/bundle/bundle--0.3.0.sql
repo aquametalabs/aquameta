@@ -404,9 +404,9 @@ ok.
 create or replace view _stage_relation_keys as
 with srk as (
 select
-	stage_row.row_id::meta.relation_id as relation_id,
-	((stage_row.row_id).pk_column_id).name as pk_column_name,
-	string_agg(quote_literal((stage_row.row_id).pk_value),',') as keys
+    stage_row.row_id::meta.relation_id as relation_id,
+    ((stage_row.row_id).pk_column_id).name as pk_column_name,
+    string_agg(quote_literal((stage_row.row_id).pk_value),',') as keys
 from stage_row
 group by (stage_row.row_id::meta.relation_id, ((stage_row.row_id).pk_column_id).name))
 
@@ -416,15 +416,15 @@ group by (stage_row.row_id::meta.relation_id, ((stage_row.row_id).pk_column_id).
 create or replace function bundle.stage_row_keys_to_fields ()
 returns setof json as $$
 declare
-	keys text;
-	rows_json json[];
+    keys text;
+    rows_json json[];
     fields meta.field_id[];
 begin
     return query execute 'select row_to_json(r) from (select * from '
             || quote_ident((relation_id::meta.schema_id).name) || '.'
             || quote_ident(relation_id.name)
             || ' where ' || quote_ident(pk_column_name) || '::text in'
-			|| '(' || keys || ')'
+            || '(' || keys || ')'
             || ') r';
 
 end;
@@ -526,7 +526,7 @@ from (
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
     from bundle.head_commit_row hcr
-	join bundle b on hcr.bundle_id=b.id
+        join bundle b on hcr.bundle_id=b.id
         full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
         left join stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
         left join offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
