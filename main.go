@@ -6,6 +6,7 @@ import (
     "flag"
     "fmt"
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
+    socketio "github.com/googollee/go-socket.io"
     "github.com/jackc/pgx/v4/pgxpool"
     "github.com/lib/pq"
     "io"
