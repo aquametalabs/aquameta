@@ -711,4 +711,46 @@ log.Print(`                 [ version 0.3.0 ]                     `)
     }
 
     log.Fatal("Good day.")
+
+	// ws handler
+
+	wsServer := socketio.NewServer(nil)
+	wsServer.OnConnect("/", func(s socketio.Conn) error {
+		// s.SetContext("")
+		log.Println("wsServer connected", s.ID())
+		return nil
+	})
+
+	wsServer.OnEvent("/", "attach", func(s socketio.Conn, sessionId string) {
+		log.Println("wsServer attaching", sessionId)
+
+		s.Join(sessionId)
+		s.Emit("event", fmt.Sprintf("{\"type\": \"attached\", \"sessionId\": \"%s\"}", sessionId))
+
+    // TODO: Need to acquire a connection that will LISTEN on this sessionId
+		// err = dbpool.Acquire(context.Background()).Conn()
+    // wsServer.BroadcastToRoom(sessionId, "event", fmt.Sprintf("{\"type\": \"event\", \"data\": \"%s\"}", data))
+
+    // TODO: need to call session_attach which will cause Aquameta to NOTIFY all the queued events
+		// event.session_attach
+		// dbQuery := fmt.Sprintf("select even.session_attach(%s);")
+		// rows, err := dbpool.Query(context.Background(), dbQuery)
+	})
+
+	wsServer.OnError("/", func(s socketio.Conn, e error) {
+		log.Println("wsServer error:", e)
+	})
+
+	wsServer.OnDisconnect("/", func(s socketio.Conn, reason string) {
+		// event.session_detach?
+		log.Println("wsServer closed", reason)
+	})
+
+	go func() {
+		if err := wsServer.Serve(); err != nil {
+			log.Fatalf("wsServer socketio listen error: %s\n", err)
+		}
+	}()
+
+	http.Handle("/socket.io/", wsServer)
 }
