@@ -19,6 +19,7 @@ import (
     "os/signal"
     "path/filepath"
     "strings"
+    "syscall"
     "time"
 )
 
@@ -41,7 +42,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
     // trap ctrl-c
     //
     c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
+    signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
     go func(){
         for sig := range c {
             if epg.IsStarted() {
