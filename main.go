@@ -663,10 +663,6 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       // /_socket/detach/${sessionId}
       s := strings.SplitN(req.URL.Path,"/",4)
       sessionId := s[3]
-      if sessionId == "null" {
-        log.Println("wsServer detach received `null` as sessionId");
-        return
-      }
       log.Println("wsServer detaching", sessionId)
       cancel, exists := cancels[sessionId]
       if exists {
@@ -676,6 +672,8 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       if err != nil {
         fmt.Println("wsServer error deleting old session:", err)
       }
+      w.Header().Set("Content-Type", "text/plain")
+      w.WriteHeader(200)
       io.WriteString(w, "")
     }
 
