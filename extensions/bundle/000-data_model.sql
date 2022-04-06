@@ -530,7 +530,7 @@ from (
         full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
         left join stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
         left join offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
-    where b.checkout_commit_id is not null
+        -- where b.checkout_commit_id is not null -- TODO I added this for a reason but now I can't remember why and it is breaking stuff
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
 
     union

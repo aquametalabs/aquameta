@@ -1189,6 +1189,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
             select field_id from bundle.fields_changed_between_commits(_merge_commit_id, common_ancestor_id)
             except
             select field_id from bundle.fields_changed_between_commits(head_commit_id, common_ancestor_id)
+            -- TODO: also include rows here where both were changed but change is the same
         loop
             -- update the working copy with each non-conflicting field change
             update_stmt := format('
@@ -1245,6 +1246,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
             select field_id from bundle.fields_changed_between_commits(_merge_commit_id, common_ancestor_id)
             intersect
             select field_id from bundle.fields_changed_between_commits(head_commit_id, common_ancestor_id)
+            -- TODO: filter out fields that were both changed but have equal values, maybe add them to non-conflicting??
         loop
             -- if this section has rows in it, this merge has conflicts
             conflicted_merge := true;
@@ -1272,6 +1274,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
             -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;
 
+/*
             -- insert record of the conflicting field into bundle.merge_conflict
             update_stmt := format('
                 insert into bundle.merge_conflict
@@ -1288,6 +1291,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
             );
             -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;
+*/
 
         end loop;
 
