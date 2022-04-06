@@ -657,20 +657,75 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       return nil
     })
 
+
     wsServer.OnEvent("/", "attach", func(s socketio.Conn, sessionId string) {
+      if sessionId == "null" {
+        log.Println("wsServer attach received `null` as sessionId");
+        return
+      }
       log.Println("wsServer attaching", sessionId)
 
-      s.Join(sessionId)
       s.Emit("event", fmt.Sprintf("{\"type\": \"attached\", \"sessionId\": \"%s\"}", sessionId))
 
-      // TODO: Need to acquire a connection that will LISTEN on this sessionId
-      // err = dbpool.Acquire(context.Background()).Conn()
-      // wsServer.BroadcastToRoom(sessionId, "event", fmt.Sprintf("{\"type\": \"event\", \"data\": \"%s\"}", data))
+      sendEvent := func(event string) {
+        s.Emit("event", fmt.Sprintf("{\"type\": \"event\", \"data\": %s}", string(event)))
+      }
 
-      // TODO: need to call session_attach which will cause Aquameta to NOTIFY all the queued events
-      // event.session_attach
-      // dbQuery := fmt.Sprintf("select even.session_attach(%s);")
-      // rows, err := dbpool.Query(context.Background(), dbQuery)
+      ctx, cancel := context.WithCancel(context.Background())
+      // go routine loop
+      go func() {
+        //  Need to acquire a connection that will LISTEN on this sessionId
+        conn, err := dbpool.Acquire(ctx)
+        defer conn.Release()
+        if err != nil {
+          log.Println("wsServer could not acquire persistent connection: ", err)
+          return;
+        }
+
+        // listen
+        _, err = conn.Exec(ctx, fmt.Sprintf("listen \"%s\"", sessionId))
+        if err != nil {
+          log.Println("wsServer error calling listen: ", err)
+          return;
+        }
+
+        // WaitForNotification on a loop - blocking
+        for {
+          // log.Printf("waiting")
+          notification, err := conn.Conn().WaitForNotification(ctx)
+          if err != nil {
+            log.Println("wsServer notification error: ", err)
+            break
+          } else {
+            log.Printf("wsServer notification: %#v\n", notification)
+            json, err := json.Marshal(notification.Payload)
+            if err != nil {
+              fmt.Println("wsServer error parsing notification:", err)
+              return
+            }
+            log.Printf("{\"type\": \"event\", \"data\": %s}", string(json))
+            sendEvent(string(json))
+          }
+        }
+        log.Println("wsServer cancelled notification listener");
+      }()
+
+      // select from event.event and publish those
+      rows, err := dbpool.Query(context.Background(), "select event from event.event where session_id=$1;", sessionId)
+      if err != nil {
+        fmt.Println("wsServer error reading queued events:", err)
+        return
+      }
+      for rows.Next() {
+        var event string
+        err := rows.Scan(&event)
+        if err != nil {
+          fmt.Println("wsServer error scanning queued event:", err)
+          continue
+        }
+        log.Printf("wsServer event.event: %#v\n", event)
+        sendEvent(event)
+      }
     })
 
     wsServer.OnError("/", func(s socketio.Conn, e error) {
@@ -682,6 +737,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       log.Println("wsServer closed", reason)
     })
 
+    // serve websocket
     go func() {
       if err := wsServer.Serve(); err != nil {
         log.Fatalf("wsServer socketio listen error: %s\n", err)
