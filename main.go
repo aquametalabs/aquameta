@@ -679,6 +679,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
 
     wsServer.OnEvent("/", "attach", func(s socketio.Conn, sessionId string) {
       if sessionId == "null" {
+      // TODO: this needs to be fixed
         log.Println("wsServer attach received `null` as sessionId");
         return
       }
@@ -713,20 +714,13 @@ log.Print(`                 [ version 0.3.0 ]                     `)
 
         // WaitForNotification on a loop - blocking
         for {
-          // log.Printf("waiting")
           notification, err := conn.Conn().WaitForNotification(ctx)
           if err != nil {
             log.Println("wsServer notification error: ", err)
             break
           } else {
-            log.Printf("wsServer notification: %#v\n", notification)
-            json, err := json.Marshal(notification.Payload)
-            if err != nil {
-              fmt.Println("wsServer error parsing notification:", err)
-              return
-            }
-            log.Printf("{\"type\": \"event\", \"data\": %s}", string(json))
-            sendEvent(string(json))
+            log.Println("wsServer notification")
+            sendEvent(string(notification.Payload))
           }
         }
         log.Println("wsServer cancelled notification listener");
