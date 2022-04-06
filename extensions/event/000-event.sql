@@ -97,14 +97,16 @@ create table event.subscription_table (
     id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     relation_id meta.relation_id,
-    created_at timestamp not null default now()
+    created_at timestamp not null default now(),
+    unique (session_id, relation_id)
 );
 
 create table event.subscription_column (
     id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     column_id meta.column_id,
-    created_at timestamp not null default now()
+    created_at timestamp not null default now(),
+    unique (session_id, column_id)
 );
 
 
@@ -112,14 +114,16 @@ create table event.subscription_row (
     id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     row_id meta.row_id,
-    created_at timestamp not null default now()
+    created_at timestamp not null default now(),
+    unique (session_id, row_id)
 );
 
 create table event.subscription_field (
     id uuid not null default public.uuid_generate_v4() primary key,
     session_id uuid not null references event.session(id) on delete cascade,
     field_id meta.field_id,
-    created_at timestamp not null default now()
+    created_at timestamp not null default now(),
+    unique (session_id, field_id)
 );
 
 
@@ -489,7 +493,8 @@ create or replace function event.subscribe_table(
                 relation_id.name);
 
         insert into event.subscription_table(session_id, relation_id)
-            values(session_id, relation_id);
+            values(session_id, relation_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
@@ -522,7 +527,8 @@ create or replace function event.subscribe_column(
                 relation_id.name);
 
         insert into event.subscription_column(session_id, column_id)
-            values(session_id, column_id);
+            values(session_id, column_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
@@ -555,7 +561,8 @@ create or replace function event.subscribe_row(
                 relation_id.name);
 
         insert into event.subscription_row(session_id, row_id)
-            values(session_id, row_id);
+            values(session_id, row_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
@@ -588,7 +595,8 @@ create or replace function event.subscribe_field(
                 relation_id.name);
 
         insert into event.subscription_field(session_id, field_id)
-            values(session_id, field_id);
+            values(session_id, field_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
