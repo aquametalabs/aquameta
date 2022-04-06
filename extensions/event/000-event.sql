@@ -484,8 +484,7 @@ create or replace function event.subscribe_table(
         trigger_name text := relation_id.name || '_evented_table';
 
     begin
-        execute format ('drop trigger if exists %I on %I.%I', trigger_name, (relation_id.schema_id).name, relation_id.name);
-        execute format ('create trigger %I '
+        execute format ('create or replace trigger %I '
             'after insert or update or delete on %I.%I '
             'for each row execute procedure event.event_listener_table()',
                 trigger_name,
@@ -518,8 +517,7 @@ create or replace function event.subscribe_column(
         relation_id := column_id.relation_id;
         trigger_name := relation_id.name || '_evented_table';
 
-        execute format ('drop trigger if exists %I on %I.%I', trigger_name, (relation_id.schema_id).name, relation_id.name);
-        execute format ('create trigger %I '
+        execute format ('create or replace trigger %I '
             'after insert or update or delete on %I.%I '
             'for each row execute procedure event.event_listener_table()',
                 trigger_name,
@@ -552,8 +550,7 @@ create or replace function event.subscribe_row(
         relation_id := (row_id.pk_column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
 
-        execute format ('drop trigger if exists %I on %I.%I', trigger_name, (relation_id.schema_id).name, relation_id.name);
-        execute format ('create trigger %I '
+        execute format ('create or replace trigger %I '
             'after update or delete on %I.%I '
             'for each row execute procedure event.event_listener_row()',
                 trigger_name,
@@ -586,8 +583,7 @@ create or replace function event.subscribe_field(
         relation_id := (field_id.column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
 
-        execute format ('drop trigger if exists %I on %I.%I', trigger_name, (relation_id.schema_id).name, relation_id.name);
-        execute format ('create trigger %I '
+        execute format ('create or replace trigger %I '
             'after update or delete on %I.%I '
             'for each row execute procedure event.event_listener_row()',
                 trigger_name,
