@@ -657,6 +657,27 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       return nil
     })
 
+    var cancels = make(map[string]func())
+
+    wsDetachHandler := func(w http.ResponseWriter, req *http.Request) {
+      // /_socket/detach/${sessionId}
+      s := strings.SplitN(req.URL.Path,"/",4)
+      sessionId := s[3]
+      if sessionId == "null" {
+        log.Println("wsServer detach received `null` as sessionId");
+        return
+      }
+      log.Println("wsServer detaching", sessionId)
+      cancel, exists := cancels[sessionId]
+      if exists {
+        cancel()
+      }
+      _, err := dbpool.Exec(context.Background(), "delete from event.session where id=$1;", sessionId)
+      if err != nil {
+        fmt.Println("wsServer error deleting old session:", err)
+      }
+      io.WriteString(w, "")
+    }
 
     wsServer.OnEvent("/", "attach", func(s socketio.Conn, sessionId string) {
       if sessionId == "null" {
@@ -672,6 +693,9 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       }
 
       ctx, cancel := context.WithCancel(context.Background())
+      // keep track of cancel function so we can call it from detach handler
+      cancels[sessionId] = cancel
+
       // go routine loop
       go func() {
         //  Need to acquire a connection that will LISTEN on this sessionId
@@ -750,6 +774,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
 
     // TODO: configure these in the database??
 
+    http.HandleFunc("/_socket/detach/", wsDetachHandler)
     http.Handle("/socket.io/", wsServer)
     http.HandleFunc("/bootloader/", bootloaderHandler)
     http.HandleFunc("/endpoint/", apiHandler)
