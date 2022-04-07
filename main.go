@@ -8,6 +8,7 @@ import (
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
     socketio "github.com/googollee/go-socket.io"
     "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/jackc/pgx/v4"
     "github.com/lib/pq"
     "io"
     "io/ioutil"
@@ -650,101 +651,153 @@ log.Print(`                 [ version 0.3.0 ]                     `)
 
     // ws handler
 
+    var sockets = make(map[string]socketio.Conn)
+    listen := make(chan string)
+    unlisten := make(chan string)
+
     wsServer := socketio.NewServer(nil)
     wsServer.OnConnect("/", func(s socketio.Conn) error {
-      // s.SetContext("")
       log.Println("wsServer connected", s.ID())
       return nil
     })
-
-    var cancels = make(map[string]func())
 
     wsDetachHandler := func(w http.ResponseWriter, req *http.Request) {
       // /_socket/detach/${sessionId}
       s := strings.SplitN(req.URL.Path,"/",4)
       sessionId := s[3]
       log.Println("wsServer detaching", sessionId)
-      cancel, exists := cancels[sessionId]
-      if exists {
-        cancel()
-      }
-      _, err := dbpool.Exec(context.Background(), "delete from event.session where id=$1;", sessionId)
-      if err != nil {
-        fmt.Println("wsServer error deleting old session:", err)
-      }
+
       w.Header().Set("Content-Type", "text/plain")
       w.WriteHeader(200)
       io.WriteString(w, "")
-    }
 
-    wsServer.OnEvent("/", "attach", func(s socketio.Conn, sessionId string) {
+      delete(sockets, sessionId)
+      log.Println("detached num sessions", len(sockets))
+      unlisten <- sessionId
+    }
+  
+    wsServer.OnEvent("/", "attach", func(s socketio.Conn, sessionId string) string {
       if sessionId == "null" {
-      // TODO: this needs to be fixed
         log.Println("wsServer attach received `null` as sessionId");
-        return
+        return "err"
       }
       log.Println("wsServer attaching", sessionId)
 
       s.Emit("event", fmt.Sprintf("{\"type\": \"attached\", \"sessionId\": \"%s\"}", sessionId))
+      sockets[sessionId] = s
+      log.Println("attached num sessions", len(sockets))
+      listen <- sessionId
+      return "ok"
+    })
 
-      sendEvent := func(event string) {
-        s.Emit("event", fmt.Sprintf("{\"type\": \"event\", \"data\": %s}", string(event)))
+    sendEvent := func(s socketio.Conn, event string) {
+      s.Emit("event", fmt.Sprintf("{\"type\": \"event\", \"data\": %s}", string(event)))
+    }
+
+    go func(pool *pgxpool.Pool) {
+      //  Need to acquire a connection that will LISTEN on this sessionId
+      cn, err := pool.Acquire(context.Background())
+      if err != nil {
+        log.Println("wsServer could not acquire persistent connection: ", err)
+        return;
       }
+      defer cn.Release()
 
-      ctx, cancel := context.WithCancel(context.Background())
-      // keep track of cancel function so we can call it from detach handler
-      cancels[sessionId] = cancel
+      done := make(chan bool)
+      var cancel func();
 
-      // go routine loop
-      go func() {
-        //  Need to acquire a connection that will LISTEN on this sessionId
-        conn, err := dbpool.Acquire(ctx)
-        defer conn.Release()
-        if err != nil {
-          log.Println("wsServer could not acquire persistent connection: ", err)
-          return;
-        }
-
-        // listen
-        _, err = conn.Exec(ctx, fmt.Sprintf("listen \"%s\"", sessionId))
-        if err != nil {
-          log.Println("wsServer error calling listen: ", err)
-          return;
-        }
-
-        // WaitForNotification on a loop - blocking
+      start := func(cn *pgx.Conn) {
+        done = make(chan bool)
+        log.Println("started")
+      	cancelctx, cncl := context.WithCancel(context.Background())
+        cancel = cncl
+        log.Println("going to wait")
         for {
-          notification, err := conn.Conn().WaitForNotification(ctx)
-          if err != nil {
-            log.Println("wsServer notification error: ", err)
-            break
+          notification, er := cn.WaitForNotification(cancelctx)
+          // WaitForNotification on a loop - blocking
+          if er != nil {
+            log.Println("wsServer notification error: ", er)
+            break;
           } else {
-            log.Println("wsServer notification")
-            sendEvent(string(notification.Payload))
+            log.Printf("wsServer notification %#v\n", notification.Channel)
+            sessionId := notification.Channel
+            sendEvent(sockets[sessionId], string(notification.Payload))
           }
         }
         log.Println("wsServer cancelled notification listener");
-      }()
+        close(done)
+      }
 
-      // select from event.event and publish those
-      rows, err := dbpool.Query(context.Background(), "select event from event.event where session_id=$1;", sessionId)
-      if err != nil {
-        fmt.Println("wsServer error reading queued events:", err)
-        return
-      }
-      for rows.Next() {
-        var event string
-        err := rows.Scan(&event)
-        if err != nil {
-          fmt.Println("wsServer error scanning queued event:", err)
-          continue
+      for {
+        select {
+          case sessionId := <- listen:
+            log.Println("got listne")
+
+            if cancel != nil {
+              cancel()
+              cancel = nil
+              <- done
+              log.Println("cancelled")
+            }
+
+            // listen
+            _, err = cn.Exec(context.Background(), fmt.Sprintf("listen \"%s\"", sessionId))
+            if err != nil {
+              log.Println("wsServer error calling listen: ", err)
+              return;
+            }
+
+            go start(cn.Conn())
+
+            // select from event.event and publish those
+            rows, err := pool.Query(context.Background(), "select event from event.event where session_id=$1;", sessionId)
+            if err != nil {
+              fmt.Println("wsServer error reading queued events:", err)
+            }
+            for rows.Next() {
+              var event string
+              err := rows.Scan(&event)
+              if err != nil {
+                fmt.Println("wsServer error scanning queued event:", err)
+                continue
+              }
+              log.Printf("wsServer event.event: %#v\n", event)
+
+              sendEvent(sockets[sessionId], event)
+            }
+            rows.Close()
+            break;
+
+          case sessionId := <- unlisten :
+            log.Println("got unlistne")
+
+            if cancel != nil {
+              cancel()
+              cancel = nil
+              <- done
+              log.Println("cancelled")
+            }
+
+            // unlisten
+            _, err = cn.Exec(context.Background(), fmt.Sprintf("unlisten \"%s\"", sessionId))
+            if err != nil {
+              log.Println("wsServer error calling unlisten: ", err)
+            }
+
+            go start(cn.Conn())
+
+            r, err := pool.Query(context.Background(), "delete from event.session where id=$1;", sessionId)
+            if err != nil {
+              fmt.Println("wsServer error deleting old session:", err)
+            }
+            r.Close()
+            break;
         }
-        log.Printf("wsServer event.event: %#v\n", event)
-        sendEvent(event)
       }
-    })
+    }(dbpool)
 
     wsServer.OnError("/", func(s socketio.Conn, e error) {
+      // event.session_detach?
       log.Println("wsServer error:", e)
     })
 
