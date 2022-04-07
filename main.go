@@ -672,7 +672,6 @@ log.Print(`                 [ version 0.3.0 ]                     `)
       io.WriteString(w, "")
 
       delete(sockets, sessionId)
-      log.Println("detached num sessions", len(sockets))
       unlisten <- sessionId
     }
   
@@ -682,10 +681,8 @@ log.Print(`                 [ version 0.3.0 ]                     `)
         return "err"
       }
       log.Println("wsServer attaching", sessionId)
-
       s.Emit("event", fmt.Sprintf("{\"type\": \"attached\", \"sessionId\": \"%s\"}", sessionId))
       sockets[sessionId] = s
-      log.Println("attached num sessions", len(sockets))
       listen <- sessionId
       return "ok"
     })
@@ -708,10 +705,8 @@ log.Print(`                 [ version 0.3.0 ]                     `)
 
       start := func(cn *pgx.Conn) {
         done = make(chan bool)
-        log.Println("started")
-      	cancelctx, cncl := context.WithCancel(context.Background())
+        cancelctx, cncl := context.WithCancel(context.Background())
         cancel = cncl
-        log.Println("going to wait")
         for {
           notification, er := cn.WaitForNotification(cancelctx)
           // WaitForNotification on a loop - blocking
@@ -724,20 +719,17 @@ log.Print(`                 [ version 0.3.0 ]                     `)
             sendEvent(sockets[sessionId], string(notification.Payload))
           }
         }
-        log.Println("wsServer cancelled notification listener");
         close(done)
       }
 
       for {
         select {
           case sessionId := <- listen:
-            log.Println("got listne")
-
             if cancel != nil {
               cancel()
               cancel = nil
+              // wait until done cancelling
               <- done
-              log.Println("cancelled")
             }
 
             // listen
@@ -747,6 +739,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
               return;
             }
 
+            // start wait process
             go start(cn.Conn())
 
             // select from event.event and publish those
@@ -766,16 +759,13 @@ log.Print(`                 [ version 0.3.0 ]                     `)
               sendEvent(sockets[sessionId], event)
             }
             rows.Close()
-            break;
 
           case sessionId := <- unlisten :
-            log.Println("got unlistne")
-
             if cancel != nil {
               cancel()
               cancel = nil
+              // wait until done cancelling
               <- done
-              log.Println("cancelled")
             }
 
             // unlisten
@@ -784,6 +774,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
               log.Println("wsServer error calling unlisten: ", err)
             }
 
+            // start wait process
             go start(cn.Conn())
 
             r, err := pool.Query(context.Background(), "delete from event.session where id=$1;", sessionId)
@@ -791,7 +782,6 @@ log.Print(`                 [ version 0.3.0 ]                     `)
               fmt.Println("wsServer error deleting old session:", err)
             }
             r.Close()
-            break;
         }
       }
     }(dbpool)
