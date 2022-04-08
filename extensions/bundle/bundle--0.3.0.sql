@@ -550,11 +550,12 @@ end, row_id;
 
 
 create view head_db_stage_changed as
-select * from bundle.head_db_stage
-where change_type != 'same'
-    or stage_field_changes::text != '{}'
-    or offstage_field_changes::text != '{}'
-    or row_exists = false;
+select hds.* from bundle.head_db_stage hds
+    join bundle.bundle b on hds.bundle_id=b.id
+where b.checkout_commit_id is not null and (hds.change_type != 'same'
+    or hds.stage_field_changes::text != '{}'
+    or hds.offstage_field_changes::text != '{}'
+    or hds.row_exists = false);
 
 
 
