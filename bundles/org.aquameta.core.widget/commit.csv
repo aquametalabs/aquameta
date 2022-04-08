@@ -1,3 +1,5 @@
 0902bb96-d77a-4d29-8c4c-f22e744d913a	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	d1d43a85-f8d7-43a6-8f67-0e2980e32fdf	\N	36b2c906-1269-42f1-a3a5-85924bc3ec55	2020-12-27 04:43:02.335408	include widget.js library in this bundle (removed from endpoint)
+27d69505-1dc1-432f-8fcc-2c1c97962e41	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	9384e1ac-ff25-4aca-9f14-347bf37c0cf1	\N	4798c7eb-66c8-46b4-8c11-973111bbac35	2022-04-07 20:39:37.587174	Use rowset event handlers for updating widgets
 36b2c906-1269-42f1-a3a5-85924bc3ec55	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	1e10a9c8-f21a-44e0-bd40-961cc632ead4	\N	\N	2019-01-25 08:47:32.81343	datum-plv8 first commit
+4798c7eb-66c8-46b4-8c11-973111bbac35	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	248952c1-d7c9-45dc-8ea7-ad4aa2c92c3b	\N	0902bb96-d77a-4d29-8c4c-f22e744d913a	2022-04-06 20:11:29.570572	Turn events off for widget requests - https://github.com/aquametalabs/aquameta/pull/241
 7e03b3a7-e27c-4636-9eb4-a1696ba73852	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	5df34e13-bfef-49d0-a503-c61cde530887	\N	36b2c906-1269-42f1-a3a5-85924bc3ec55	2019-05-15 06:19:29.993625	delete the plv8 version of datum, move it to the new endpoint.js_module table
