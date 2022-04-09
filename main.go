@@ -777,7 +777,7 @@ log.Print(`                 [ version 0.3.0 ]                     `)
             // start wait process
             go start(cn.Conn())
 
-            r, err := pool.Query(context.Background(), "delete from event.session where id=$1;", sessionId)
+            r, err := pool.Query(context.Background(), "delete from event.session where id=$1 cascade;", sessionId)
             if err != nil {
               fmt.Println("wsServer error deleting old session:", err)
             }
