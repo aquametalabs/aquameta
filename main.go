@@ -1,263 +1,239 @@
 package main
 
 import (
-    "context"
-    "encoding/json"
-    "flag"
-    "fmt"
-    embeddedPostgres "github.com/aquametalabs/embedded-postgres"
-    socketio "github.com/googollee/go-socket.io"
-    "github.com/jackc/pgx/v4/pgxpool"
-    "github.com/jackc/pgx/v4"
-    "github.com/lib/pq"
-    "io"
-    "io/ioutil"
-    "log"
-    "net/http"
-    "net/url"
-    "os"
-    "os/exec"
-    "os/signal"
-    "path/filepath"
-    "strings"
-    "syscall"
-    "time"
+	"context"
+	"flag"
+	"fmt"
+	embeddedPostgres "github.com/aquametalabs/embedded-postgres"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/lib/pq"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
 )
 
 func main() {
-log.Print(`                                           __          `)
-log.Print(`_____    ________ _______    _____   _____/  |______   `)
-log.Print(`\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  `)
-log.Print(` / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_`)
-log.Print(`(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /`)
-log.Print(`     \/    |__|          \/      \/     \/          \/ `)
-log.Print(`                 [ version 0.3.0 ]                     `)
+	log.Print(`                                           __          `)
+	log.Print(`_____    ________ _______    _____   _____/  |______   `)
+	log.Print(`\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  `)
+	log.Print(` / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_`)
+	log.Print(`(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /`)
+	log.Print(`     \/    |__|          \/      \/     \/          \/ `)
+	log.Print(`                 [ version 0.3.0 ]                     `)
 
+	// log.SetPrefix("[💧 aquameta 💧] ")
+	log.Print("Aquameta server... ENGAGE!")
+	workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	var epg embeddedPostgres.EmbeddedPostgres
 
-    // log.SetPrefix("[💧 aquameta 💧] ")
-    log.Print("Aquameta server... ENGAGE!")
-    workingDirectory, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    var epg embeddedPostgres.EmbeddedPostgres
+	//
+	// trap ctrl-c
+	//
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		for sig := range c {
+			if epg.IsStarted() {
+				log.Print("Stopping PostgreSQL")
+				epg.Stop()
 
-    //
-    // trap ctrl-c
-    //
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-    go func(){
-        for sig := range c {
-            if epg.IsStarted() {
-                log.Print("Stopping PostgreSQL")
-                epg.Stop()
+			}
+			log.Fatalf("SIG %s - Good day.", sig)
+		}
+	}()
 
-            }
-            log.Fatalf("SIG %s - Good day.", sig)
-        }
-    }()
+	//
+	// load config
+	//
+	var configFile = flag.String("c", "", "configuration file")
+	flag.Parse()
 
+	config, err := getConfig(*configFile)
+	if err != nil {
+		log.Printf("Could not load boot configuration file: %s", err)
+		log.Print("Usage:")
+		flag.PrintDefaults()
+		log.Fatal("Quitting.")
+		/*
+		   log.Printf("Loading default Bootloader configuration instead from %s", bootloaderConfigFile)
 
-    //
-    // load config
-    //
+		   blconfig, err := getConfig(bootloaderConfigFile); if err != nil {
+		       log.Fatalf("Could not load bootloader config %s: %s", bootloaderConfigFile, err)
+		   }
+		   config = blconfig
+		*/
+	}
 
-    var configFile = flag.String("c", "", "configuration file")
-    flag.Parse();
+	//
+	// setup embedded database
+	//
+	if config.Database.Mode == "embedded" {
+		//
+		// initialize epg w/ config settings
+		//
 
-    config, err := getConfig(*configFile)
-    if err != nil {
-        log.Printf("Could not load boot configuration file: %s", err)
-        log.Print("Usage:");
-        flag.PrintDefaults()
-        log.Fatal("Quitting.");
-        /*
-        log.Printf("Loading default Bootloader configuration instead from %s", bootloaderConfigFile)
+		// TODO: NewDatabase() should be called NewPGServer() or some such... refactor epg
+		epg = *embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
+			Username(config.Database.Role).
+			Password(config.Database.Password).
+			// Host
+			Port(config.Database.Port).
+			Database(config.Database.DatabaseName).
+			Version(embeddedPostgres.V12).
+			RuntimePath(config.Database.EmbeddedPostgresRuntimePath).
+			StartTimeout(45 * time.Second))
 
-        blconfig, err := getConfig(bootloaderConfigFile); if err != nil {
-            log.Fatalf("Could not load bootloader config %s: %s", bootloaderConfigFile, err)
-        }
-        config = blconfig
-        */
-    }
+		// has an embedded postgres already been installed?
+		log.Printf("Checking for existing embedded server at %s", config.Database.EmbeddedPostgresRuntimePath)
+		epgFilesExist := true
+		if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
+			// TODO: we probably want some more robust inspection of the directory.
+			// Check that it has the binary, and a data directory, and generally looks sane.
+			// If it doesn't, QUIT!  (Do NOT install the db here, it might be some other directory
+			// that would get overwritten.
+			log.Printf("Embedded PostgreSQL server found at %s.", config.Database.EmbeddedPostgresRuntimePath)
+			epgFilesExist = false
+		}
 
-    //
-    // setup embedded database
-    //
+		// if directory doesn't exist, generate an embedded database there
+		if !epgFilesExist {
+			log.Printf("Embedded PostgreSQL server not found at %s.  Installing...", config.Database.EmbeddedPostgresRuntimePath)
 
-    if config.Database.Mode == "embedded" {
-        //
-        // initialize epg w/ config settings
-        //
+			if err := epg.Install(); err != nil {
+				log.Fatalf("Unable to install PostgreSQL: %v", err)
+			}
+			log.Printf("PostgreSQL server installed at %s", config.Database.EmbeddedPostgresRuntimePath)
+		}
 
-        // TODO: NewDatabase() should be called NewPGServer() or some such... refactor epg
-        epg = *embeddedPostgres.NewDatabase(embeddedPostgres.DefaultConfig().
-            Username(config.Database.Role).
-            Password(config.Database.Password).
-            // Host
-            Port(config.Database.Port).
-            Database(config.Database.DatabaseName).
-            Version(embeddedPostgres.V12).
-            RuntimePath(config.Database.EmbeddedPostgresRuntimePath).
-            StartTimeout(45 * time.Second))
+		//
+		// start the epg database daemon
+		//
+		log.Printf("Starting PostgreSQL server from %s...", config.Database.EmbeddedPostgresRuntimePath)
+		if err := epg.Start(); err != nil {
+			log.Fatalf("Unable to start PostgreSQL: %v", err)
+		}
+		log.Print("PostgreSQL server started.")
 
-        // has an embedded postgres already been installed?
-        log.Printf("Checking for existing embedded server at %s", config.Database.EmbeddedPostgresRuntimePath)
-        epgFilesExist := true
-        if _, err := os.Stat(config.Database.EmbeddedPostgresRuntimePath); os.IsNotExist(err) {
-            // TODO: we probably want some more robust inspection of the directory.
-            // Check that it has the binary, and a data directory, and generally looks sane.
-            // If it doesn't, QUIT!  (Do NOT install the db here, it might be some other directory
-            // that would get overwritten.
-            log.Printf("Embedded PostgreSQL server found at %s.", config.Database.EmbeddedPostgresRuntimePath)
-            epgFilesExist = false
-        }
+		defer func() {
+			log.Print("Stopping PostgreSQL Server...")
+			if err := epg.Stop(); err != nil {
+				log.Fatalf("Database halt failed: %v", err)
+			} else {
+				log.Print("Database stopped")
+			}
+		}()
 
-        // if directory doesn't exist, generate an embedded database there
-        if !epgFilesExist {
-            log.Printf("Embedded PostgreSQL server not found at %s.  Installing...", config.Database.EmbeddedPostgresRuntimePath)
+		//
+		// CREATE DATABASE
+		//
+		if !epgFilesExist {
+			if err := epg.CreateDatabase(); err != nil {
+				// TODO: create epg.DatabaseExists() method
+				// log.Fatalf("Unable to create database: %v", err)
+			} else {
+				log.Print("PostgreSQL server installed to %s", config.Database.EmbeddedPostgresRuntimePath)
+			}
+		}
+	}
 
-            if err := epg.Install(); err != nil {
-                log.Fatalf("Unable to install PostgreSQL: %v", err)
-            }
-            log.Printf("PostgreSQL server installed at %s", config.Database.EmbeddedPostgresRuntimePath)
-        }
+	//
+	// connect to database
+	//
+	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", config.Database.Role, config.Database.Password, config.Database.Host, config.Database.Port, config.Database.DatabaseName)
+	log.Printf("Database: %s", connectionString)
 
-        //
-        // start the epg database daemon
-        //
+	dbpool, err := pgxpool.Connect(context.Background(), connectionString)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+	log.Print("Connected to database.")
+	defer dbpool.Close()
 
-        log.Printf("Starting PostgreSQL server from %s...", config.Database.EmbeddedPostgresRuntimePath)
-        if err := epg.Start(); err != nil {
-            log.Fatalf("Unable to start PostgreSQL: %v", err)
-        }
-        log.Print("PostgreSQL server started.")
+	//
+	// pg_settings
+	//
+	// CLI switch here:  if --debug, else ...
+	settingsQueries := [...]string{
+		fmt.Sprintf("set log_min_messages='notice'"), // { notice, warning, error, ...}
+		fmt.Sprintf("set log_statement='all'"),
+		fmt.Sprintf("set statement_timeout=0"),
+	}
+	for i := 0; i < len(settingsQueries); i++ {
+		rows, err := dbpool.Query(context.Background(), settingsQueries[i])
+		if err != nil {
+			epg.Stop()
+			log.Fatalf("Unable to update settings: %v", err)
+		}
+		rows.Close()
+	}
+	log.Print("PostgreSQL settings have been set.")
 
-        defer func() {
-            log.Print("Stopping PostgreSQL Server...")
-            if err := epg.Stop(); err != nil {
-                log.Fatalf("Database halt failed: %v", err)
-            } else {
-                log.Print("Database stopped")
-            }
-        }()
+	//
+	// - install aquameta extensions
+	//
+	var ct int
+	dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint','ide','documentation','widget','semantics')")
+	err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&ct)
+	log.Print("Checking for Aquameta installation....")
 
-        //
-        // CREATE DATABASE
-        //
+	if ct != 7 {
 
-        if !epgFilesExist {
-            if err := epg.CreateDatabase(); err != nil {
-                // TODO: create epg.DatabaseExists() method
-                // log.Fatalf("Unable to create database: %v", err)
-            } else {
-                log.Print("PostgreSQL server installed to %s", config.Database.EmbeddedPostgresRuntimePath)
-            }
-        }
-    }
+		//
+		// install aquameta extensions
+		//
+		log.Print("Aquameta is not installed on this database.  Installing...")
 
+		if config.Database.Mode == "embedded" {
+			exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql "+config.Database.EmbeddedPostgresRuntimePath+"/share/postgresql/extension/").Run()
+			exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control "+config.Database.EmbeddedPostgresRuntimePath+"/share/postgresql/extension/").Run()
+			log.Print("Extensions copied to PostgreSQL's extensions directory.")
+		}
 
+		installQueries := [...]string{
+			"create extension if not exists hstore schema public",
+			"create extension if not exists dblink schema public",
+			"create extension if not exists \"uuid-ossp\"",
+			"create extension if not exists pgcrypto schema public",
+			"create extension if not exists postgres_fdw",
+			"create extension pg_catalog_get_defs schema pg_catalog",
+			"create extension meta",
+			"create extension bundle",
+			"create extension event",
+			"create extension endpoint",
+			"create extension widget",
+			"create extension semantics",
+			"create extension ide",
+			"create extension documentation"}
 
-    //
-    // connect to database
-    //
+		for i := 0; i < len(installQueries); i++ {
+			log.Print(installQueries[i])
+			rows, err := dbpool.Query(context.Background(), installQueries[i])
+			if err != nil {
+				log.Fatalf("Unable to install extensions: %v", err)
+				if config.Database.Mode == "embedded" {
+					epg.Stop()
+				}
+			}
+			rows.Close()
+		}
+		log.Print("Extensions were successfully installed.")
 
-    connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", config.Database.Role, config.Database.Password, config.Database.Host, config.Database.Port, config.Database.DatabaseName)
-    log.Printf("Database: %s", connectionString)
-
-    dbpool, err := pgxpool.Connect(context.Background(), connectionString)
-    if err != nil {
-        log.Fatalf("Unable to connect to database: %v", err)
-    }
-    log.Print("Connected to database.")
-    defer dbpool.Close()
-
-
-    //
-    // pg_settings
-    //
-
-    // CLI switch here:  if --debug, else ...
-    settingsQueries := [...]string{
-        fmt.Sprintf("set log_min_messages='notice'"), // { notice, warning, error, ...}
-        fmt.Sprintf("set log_statement='all'"),
-        fmt.Sprintf("set statement_timeout=0"),
-    }
-    for i := 0; i < len(settingsQueries); i++ {
-        rows, err := dbpool.Query(context.Background(), settingsQueries[i])
-        if err != nil {
-            epg.Stop()
-            log.Fatalf("Unable to update settings: %v", err)
-        }
-        rows.Close()
-    }
-    log.Print("PostgreSQL settings have been set.")
-
-
-
-    //
-    // - install aquameta extensions
-    //
-
-    var ct int
-    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint','ide','documentation','widget','semantics')")
-    err = dbpool.QueryRow(context.Background(), dbQuery).Scan( &ct)
-    log.Print("Checking for Aquameta installation....")
-
-    if ct != 7 {
-
-        //
-        // install aquameta extensions
-        //
-
-        log.Print("Aquameta is not installed on this database.  Installing...")
-
-
-        if config.Database.Mode == "embedded" {
-            exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*--*.*.*.sql " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
-            exec.Command("/bin/sh", "-c", "cp "+workingDirectory+"/extensions/*/*.control " + config.Database.EmbeddedPostgresRuntimePath + "/share/postgresql/extension/").Run()
-            log.Print("Extensions copied to PostgreSQL's extensions directory.")
-        }
-
-        installQueries := [...]string{
-            "create extension if not exists hstore schema public",
-            "create extension if not exists dblink schema public",
-            "create extension if not exists \"uuid-ossp\"",
-            "create extension if not exists pgcrypto schema public",
-            "create extension if not exists postgres_fdw",
-            "create extension pg_catalog_get_defs schema pg_catalog",
-            "create extension meta",
-            "create extension bundle",
-            "create extension event",
-            "create extension endpoint",
-            "create extension widget",
-            "create extension semantics",
-            "create extension ide",
-            "create extension documentation"}
-
-        for i := 0; i < len(installQueries); i++ {
-            log.Print(installQueries[i]);
-            rows, err := dbpool.Query(context.Background(), installQueries[i])
-            if err != nil {
-                log.Fatalf("Unable to install extensions: %v", err)
-                if config.Database.Mode == "embedded" {
-                    epg.Stop()
-                }
-            }
-            rows.Close()
-        }
-        log.Print("Extensions were successfully installed.")
-
-
-
-        //
-        // setup hub remote
-        //
-        log.Print("Adding bundle.remote_database for hub...")
-        hubRemoteQuery := `insert into bundle.remote_database (foreign_server_name, schema_name, connection_string, username, password)
+		//
+		// setup hub remote
+		//
+		log.Print("Adding bundle.remote_database for hub...")
+		hubRemoteQuery := `insert into bundle.remote_database (foreign_server_name, schema_name, connection_string, username, password)
             values (
                 'hub', 'hub',
                 'dbname ''aquameta'', host ''hub.aquameta.com'', port ''5432''',
                 'anonymous', 'anonymous'
             )`
+    
         _, err := dbpool.Query(context.Background(), hubRemoteQuery)
         if err != nil {
             if config.Database.Mode == "embedded" {
