@@ -481,19 +481,35 @@ create or replace function event.subscribe_table(
 ) returns void as $$
 
     declare
+        trigger_exists boolean;
         trigger_name text := relation_id.name || '_evented_table';
 
     begin
-        execute format ('create or replace trigger %I '
-            'after insert or update or delete on %I.%I '
-            'for each row execute procedure event.event_listener_table()',
-                trigger_name,
-                (relation_id.schema_id).name,
-                relation_id.name);
 
-        insert into event.subscription_table(session_id, relation_id)
-            values(session_id, relation_id)
-            on conflict do nothing;
+        execute format ('select exists(
+            select 1
+            from pg_trigger
+            where not tgisinternal
+              and tgname = ''%I''
+              and tgrelid = ''%I.%I''::regclass
+          )',
+          trigger_name,
+          (relation_id.schema_id).name,
+          relation_id.name)
+        into trigger_exists;
+
+        if not trigger_exists then
+          execute format ('create trigger %I '
+              'after insert or update or delete on %I.%I '
+              'for each row execute procedure event.event_listener_table()',
+                  trigger_name,
+                  (relation_id.schema_id).name,
+                  relation_id.name);
+
+          insert into event.subscription_table(session_id, relation_id)
+              values(session_id, relation_id)
+              on conflict do nothing;
+        end if;
 
     end;
 $$ language plpgsql security definer;
@@ -510,6 +526,7 @@ create or replace function event.subscribe_column(
 ) returns void as $$
 
     declare
+        trigger_exists boolean;
         relation_id meta.relation_id;
         trigger_name text;
 
@@ -517,16 +534,30 @@ create or replace function event.subscribe_column(
         relation_id := column_id.relation_id;
         trigger_name := relation_id.name || '_evented_table';
 
-        execute format ('create or replace trigger %I '
-            'after insert or update or delete on %I.%I '
-            'for each row execute procedure event.event_listener_table()',
-                trigger_name,
-                (relation_id.schema_id).name,
-                relation_id.name);
+        execute format ('select exists(
+            select 1
+            from pg_trigger
+            where not tgisinternal
+              and tgname = ''%I''
+              and tgrelid = ''%I.%I''::regclass
+          )',
+          trigger_name,
+          (relation_id.schema_id).name,
+          relation_id.name)
+        into trigger_exists;
 
-        insert into event.subscription_column(session_id, column_id)
-            values(session_id, column_id)
-            on conflict do nothing;
+        if not trigger_exists then
+          execute format ('create trigger %I '
+              'after insert or update or delete on %I.%I '
+              'for each row execute procedure event.event_listener_table()',
+                  trigger_name,
+                  (relation_id.schema_id).name,
+                  relation_id.name);
+
+          insert into event.subscription_column(session_id, column_id)
+              values(session_id, column_id)
+              on conflict do nothing;
+        end if;
 
     end;
 $$ language plpgsql security definer;
@@ -543,6 +574,7 @@ create or replace function event.subscribe_row(
 ) returns void as $$
 
     declare
+        trigger_exists boolean;
         relation_id meta.relation_id;
         trigger_name text;
 
@@ -550,16 +582,30 @@ create or replace function event.subscribe_row(
         relation_id := (row_id.pk_column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
 
-        execute format ('create or replace trigger %I '
-            'after update or delete on %I.%I '
-            'for each row execute procedure event.event_listener_row()',
-                trigger_name,
-                (relation_id.schema_id).name,
-                relation_id.name);
+        execute format ('select exists(
+            select 1
+            from pg_trigger
+            where not tgisinternal
+              and tgname = ''%I''
+              and tgrelid = ''%I.%I''::regclass
+          )',
+          trigger_name,
+          (relation_id.schema_id).name,
+          relation_id.name)
+        into trigger_exists;
 
-        insert into event.subscription_row(session_id, row_id)
-            values(session_id, row_id)
-            on conflict do nothing;
+        if not trigger_exists then
+          execute format ('create trigger %I '
+              'after update or delete on %I.%I '
+              'for each row execute procedure event.event_listener_row()',
+                  trigger_name,
+                  (relation_id.schema_id).name,
+                  relation_id.name);
+
+          insert into event.subscription_row(session_id, row_id)
+              values(session_id, row_id)
+              on conflict do nothing;
+        end if;
 
     end;
 $$ language plpgsql security definer;
@@ -576,6 +622,7 @@ create or replace function event.subscribe_field(
 ) returns void as $$
 
     declare
+        trigger_exists boolean;
         relation_id meta.relation_id;
         trigger_name text;
 
@@ -583,16 +630,30 @@ create or replace function event.subscribe_field(
         relation_id := (field_id.column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
 
-        execute format ('create or replace trigger %I '
-            'after update or delete on %I.%I '
-            'for each row execute procedure event.event_listener_row()',
-                trigger_name,
-                (relation_id.schema_id).name,
-                relation_id.name);
+        execute format ('select exists(
+            select 1
+            from pg_trigger
+            where not tgisinternal
+              and tgname = ''%I''
+              and tgrelid = ''%I.%I''::regclass
+          )',
+          trigger_name,
+          (relation_id.schema_id).name,
+          relation_id.name)
+        into trigger_exists;
 
-        insert into event.subscription_field(session_id, field_id)
-            values(session_id, field_id)
-            on conflict do nothing;
+        if not trigger_exists then
+          execute format ('create trigger %I '
+              'after update or delete on %I.%I '
+              'for each row execute procedure event.event_listener_row()',
+                  trigger_name,
+                  (relation_id.schema_id).name,
+                  relation_id.name);
+
+          insert into event.subscription_field(session_id, field_id)
+              values(session_id, field_id)
+              on conflict do nothing;
+        end if;
 
     end;
 $$ language plpgsql security definer;
