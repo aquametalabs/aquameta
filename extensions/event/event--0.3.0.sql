@@ -505,11 +505,11 @@ create or replace function event.subscribe_table(
                   trigger_name,
                   (relation_id.schema_id).name,
                   relation_id.name);
-
-          insert into event.subscription_table(session_id, relation_id)
-              values(session_id, relation_id)
-              on conflict do nothing;
         end if;
+
+        insert into event.subscription_table(session_id, relation_id)
+            values(session_id, relation_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
@@ -553,11 +553,11 @@ create or replace function event.subscribe_column(
                   trigger_name,
                   (relation_id.schema_id).name,
                   relation_id.name);
-
-          insert into event.subscription_column(session_id, column_id)
-              values(session_id, column_id)
-              on conflict do nothing;
         end if;
+
+        insert into event.subscription_column(session_id, column_id)
+            values(session_id, column_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
@@ -601,11 +601,11 @@ create or replace function event.subscribe_row(
                   trigger_name,
                   (relation_id.schema_id).name,
                   relation_id.name);
-
-          insert into event.subscription_row(session_id, row_id)
-              values(session_id, row_id)
-              on conflict do nothing;
         end if;
+
+        insert into event.subscription_row(session_id, row_id)
+            values(session_id, row_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
@@ -649,11 +649,11 @@ create or replace function event.subscribe_field(
                   trigger_name,
                   (relation_id.schema_id).name,
                   relation_id.name);
-
-          insert into event.subscription_field(session_id, field_id)
-              values(session_id, field_id)
-              on conflict do nothing;
         end if;
+
+        insert into event.subscription_field(session_id, field_id)
+            values(session_id, field_id)
+            on conflict do nothing;
 
     end;
 $$ language plpgsql security definer;
