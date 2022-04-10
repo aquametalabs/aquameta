@@ -127,11 +127,10 @@ func websocket(dbpool *pgxpool.Pool) *socketio.Server {
 				// start wait process
 				go start(cn.Conn())
 
-				r, err := pool.Query(context.Background(), "delete from event.session where id=$1;", sessionId)
+				_, err := pool.Exec(context.Background(), "delete from event.session where id=$1;", sessionId)
 				if err != nil {
 					fmt.Println("wsServer error deleting old session:", err)
 				}
-				r.Close()
 			}
 		}
 	}(dbpool)
