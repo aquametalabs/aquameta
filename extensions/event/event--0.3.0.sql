@@ -485,6 +485,9 @@ create or replace function event.subscribe_table(
         trigger_name text := relation_id.name || '_evented_table';
 
     begin
+        if 'event.event' = format('%I.%I', (relation_id.schema_id).name, relation_id.name) then
+          return;
+        end if;
 
         execute format ('select exists(
             select 1
@@ -534,6 +537,10 @@ create or replace function event.subscribe_column(
         relation_id := column_id.relation_id;
         trigger_name := relation_id.name || '_evented_table';
 
+        if 'event.event' = format('%I.%I', (relation_id.schema_id).name, relation_id.name) then
+          return;
+        end if;
+
         execute format ('select exists(
             select 1
             from pg_trigger
@@ -582,6 +589,10 @@ create or replace function event.subscribe_row(
         relation_id := (row_id.pk_column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
 
+        if 'event.event' = format('%I.%I', (relation_id.schema_id).name, relation_id.name) then
+          return;
+        end if;
+
         execute format ('select exists(
             select 1
             from pg_trigger
@@ -629,6 +640,10 @@ create or replace function event.subscribe_field(
     begin
         relation_id := (field_id.column_id).relation_id;
         trigger_name := relation_id.name || '_evented_row';
+
+        if 'event.event' = format('%I.%I', (relation_id.schema_id).name, relation_id.name) then
+          return;
+        end if;
 
         execute format ('select exists(
             select 1
