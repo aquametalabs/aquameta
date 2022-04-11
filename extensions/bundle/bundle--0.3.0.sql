@@ -552,10 +552,10 @@ end, row_id;
 create view head_db_stage_changed as
 select hds.* from bundle.head_db_stage hds
     join bundle.bundle b on hds.bundle_id=b.id
-where b.checkout_commit_id is not null and (hds.change_type != 'same'
+where hds.change_type != 'same'
     or hds.stage_field_changes::text != '{}'
     or hds.offstage_field_changes::text != '{}'
-    or hds.row_exists = false);
+    or hds.row_exists = false;
 
 
 
@@ -1056,7 +1056,17 @@ $$ language plpgsql;
 create or replace function bundle.bundle_has_uncommitted_changes( _bundle_id uuid ) returns boolean as $$
     declare
         changes_count integer;
+        is_checked_out boolean;
     begin
+        -- TODO: FIXME: this just returns false
+        return false;
+
+        -- if it isn't checked out, it doesn't have uncommitted hanges
+        select (checkout_commit_id is not null) from bundle.bundle where bundle_id=_bundle_id into is_checked_out;
+        if is_checked_out then return false;
+        end if;
+
+        -- if it is checked out but it has something sometihng...
         select count(*) from bundle.head_db_stage_changed where bundle_id=_bundle_id into changes_count;
         if changes_count > 0 then
             return true;
