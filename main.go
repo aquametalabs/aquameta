@@ -164,12 +164,11 @@ func main() {
 		fmt.Sprintf("set statement_timeout=0"),
 	}
 	for i := 0; i < len(settingsQueries); i++ {
-		rows, err := dbpool.Query(context.Background(), settingsQueries[i])
+		_, err := dbpool.Exec(context.Background(), settingsQueries[i])
 		if err != nil {
 			epg.Stop()
 			log.Fatalf("Unable to update settings: %v", err)
 		}
-		rows.Close()
 	}
 	log.Print("PostgreSQL settings have been set.")
 
@@ -212,14 +211,13 @@ func main() {
 
 		for i := 0; i < len(installQueries); i++ {
 			log.Print(installQueries[i])
-			rows, err := dbpool.Query(context.Background(), installQueries[i])
+			_, err := dbpool.Exec(context.Background(), installQueries[i])
 			if err != nil {
 				log.Fatalf("Unable to install extensions: %v", err)
 				if config.Database.Mode == "embedded" {
 					epg.Stop()
 				}
 			}
-			rows.Close()
 		}
 		log.Print("Extensions were successfully installed.")
 
@@ -298,25 +296,23 @@ func main() {
 
 		for i := 0; i < len(coreBundles); i++ {
 			q := "select bundle.bundle_import_csv('" + workingDirectory + "/bundles/" + coreBundles[i] + "')"
-			rows, err := dbpool.Query(context.Background(), q)
+			_, err := dbpool.Exec(context.Background(), q)
 			if err != nil {
 				if config.Database.Mode == "embedded" {
 					epg.Stop()
 				}
 				log.Fatalf("Unable to install Aquameta bundles: %v", err)
 			}
-			rows.Close()
 		}
 
 		//
 		// check out core bundles
 		//
 		log.Print("Checking out core bundles...")
-		rows, err = dbpool.Query(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id")
+		_, err = dbpool.Exec(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id")
 		if err != nil {
 			log.Fatalf("Unable to checkout core bundles: %v", err)
 		}
-		rows.Close()
 
 		log.Print("Installation complete!")
 
