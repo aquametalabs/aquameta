@@ -1,0 +1,6 @@
+[submodule "extensions/meta"]
+	path = extensions/meta
+	url = https://github.com/aquameta/meta.git
+[submodule "extensions/meta_triggers"]
+	path = extensions/meta_triggers
+	url = https://github.com/aquameta/meta_triggers.git
