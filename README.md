@@ -1,7 +1,55 @@
 Aquameta
 ========
 
-A web stack built almost entirely in PostgreSQL.  
+A web stack built in PostgreSQL.  
+
+Overview
+--------
+
+Aquameta is an experimental "all data" web stack.  It's made up of seven
+PostgreSQL extensions, each of which corresponds loosely to a part of a typical
+web stack.   Under the hood, the structure of a typical web framework is
+represented as a big database schema containing ~60 tables, ~50 views and ~90
+stored procedures.
+
+Apps developed in Aquameta are represented entirely as relational data, and all
+development, at an atomic level, is some form of data manipulation.  Together,
+they make up a functional web development envirionment built mostly within the
+database.  A thin [Golang](http://golang.org/) daemon handles the connection to
+the database and runs a web server.
+
+Core Extensions
+---------------
+
+- [meta](https://github.com/aquameta/meta) - Writable system catalog for
+  PostgreSQL, making most database admin tasks (e.g. `CREATE TABLE ...`)
+  possible by changing live data.  Makes the database self-aware, and makes it
+  possible to represent schema and procedures as data.
+- [bundle](extensions/bundle) - Version control system similar to `git` but for
+  database rows instead of files.
+- [event](extensions/event) - Hooks for monitoring changes to tables, rows and
+  columns for inserts, updates and deletes using triggers and fire off events
+  via PostgreSQL `NOTIFY`.
+- [filesystem](extensions/filesystem) - Makes the file system accessible from
+  SQL.
+- [endpoint](extensions/endpoint) - Minimalist web request handlers,
+  implemented as PostgreSQL procedures:  A REST API, static recources, function
+  maps, WebSocket events and URL-pattern templates.
+- [widget](extensions/widget) - Web component framework for building modular
+  user interface components.  Each widget is a row with columns for HTML, CSS
+  and Javascript, and a mechanism for attaching JS dependencies.
+- [semantics](extensions/semantics) - Schema decorators, for describing tables
+  and columns, and binding custom UI widgets handlers for display and edit.
+
+Together, these extensions make a simple, fairly un-opinionated web stack.
+
+User Interface
+--------------
+
+On top of the core extensions, Aquameta has a web-based IDE.  Check out the
+demos and such on
+[youtube](https://www.youtube.com/channel/UCq0MVZeXqJhcpdDpQQtOs8w).
+
 
 Status
 ------
@@ -9,43 +57,6 @@ Status
 Aquameta is an experimental project, still in early stages of development.  It
 is not suitable for production development and should not be used in an
 untrusted or mission-critical environment.
-
-Overview
---------
-Aquameta is a web stack composed of seven PostgreSQL extensions that loosely
-correspond to the layers of a typical web stack. Under the hood, the structure
-of a typical web framework is represented as a big database schema containing
-~60 tables, ~50 views and ~90 stored procedures.
-
-Apps developed in Aquameta are represented entirely as relational data, and all
-development, at an atomic level, is some form of data manipulation." Together,
-they make up a functional programming envirionment built with mostly just the
-database.  A thin [Golang](http://golang.org/) binary handles the connection to
-the database and runs a web server.
-
-Core extensions:
-
-- [meta](https://github.com/aquameta/meta) - Writable system catalog for
-  PostgreSQL, making most database admin tasks possible by changing live data.
-  Makes the database self-aware.
-- [bundle](extensions/bundle) - Version control system similar to `git` but for
-  database rows instead of files.
-- [event](extensions/event) - Lets you monitor tables, rows and columns for
-  inserts, updates and deletes, and get a PostgreSQL NOTIFY as such.
-- [filesystem](extensions/filesystem) - Makes the file system accessible from
-  SQL
-- [endpoint](extensions/endpoint) - Minimalist web framekwork implemented as
-  PostgreSQL procedures:  A REST API, static recources, function maps and URL
-  templates.
-- [widget](extensions/widget) - Minimalist web component framework for building
-  modular user interface components.
-- [semantics](extensions/semantics) - Schema decorators, for describing
-  columns, tables etc.
-
-On top of these, there's a web-based IDE for developing apps.  Check out the
-demos and such on
-[youtube](https://www.youtube.com/channel/UCq0MVZeXqJhcpdDpQQtOs8w).
-
 
 Motivation
 ----------
