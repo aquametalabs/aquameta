@@ -107,7 +107,17 @@ cd aquameta/
 
 2. Install [PostgreSQL](https://www.postgresql.org/download/) version 13 or
    higher.  Once it's installed, make sure the `pg_config` command is in your
-   path.
+   path.  Then create an empty database that Aquameta will be installed into,
+   and then create yourself a superuser, typically the same name as your unix
+   username.
+
+```bash
+pg_config --version
+createdb aquameta
+psql aquameta
+aquameta=# CREATE ROLE eric;
+aquameta=# ALTER ROLE eric superuser login password 'changeme';
+```
 
 3. Install Aquameta's extensions into PostgreSQL's `extensions/` directory.
 
@@ -125,12 +135,13 @@ go build
 
 This should create a binary in Aquameta's root directory called `./aquameta`.
 
-5. Edit `conf/boot.conf` to match your settings
+5. Edit `conf/boot.conf` to match your PostgreSQL settings.
 
 ```bash
 cd conf/
-cp boot.conf.dist boot.conf
-vi boot.conf
+cp boot.toml.dist boot.toml
+vi boot.toml
+cd ../
 ```
 
 6. Start the Aquameta server:
@@ -139,6 +150,12 @@ vi boot.conf
 ./aquameta --help
 ./aquameta -c conf/boot.toml
 ```
+
+When Aquameta starts, it checks to see if the core extensions are installed on 
+the database, and if they are not, it will automatically install them.  Then it
+starts the webserver and provides a URL where you can start using the IDE.
+
+Congrats!  The end.
 
 Usage
 -----
