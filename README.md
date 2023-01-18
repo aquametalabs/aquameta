@@ -3,20 +3,28 @@ Aquameta
 
 A web stack built in PostgreSQL.  
 
+Status
+------
+
+Aquameta is an experimental project, still in early stages of development.  It
+is not suitable for production development and should not be used in an
+untrusted or mission-critical environment.
+
+
 Overview
 --------
 
-Aquameta is an experimental "all data" web stack.  It's made up of seven
-PostgreSQL extensions, each of which corresponds loosely to a part of a typical
-web stack.   Under the hood, the structure of a typical web framework is
-represented as a big database schema containing ~60 tables, ~50 views and ~90
-stored procedures.
+Aquameta is an "all database" web development stack, an attempt to make web
+development more modular, simple, coherent and fun by making everything data.
+See [Motivation](#motivation) for more.
 
-Apps developed in Aquameta are represented entirely as relational data, and all
-development, at an atomic level, is some form of data manipulation.  Together,
-they make up a functional web development envirionment built mostly within the
-database.  A thin [Golang](http://golang.org/) daemon handles the connection to
-the database and runs a web server.
+Under the hood, Aquameta is organized into seven PostgreSQL extensions, that
+each corresponds to a layer or tool in a typical web stack.  The database
+schema contains ~60 tables, ~50 views and ~90 stored procedures that together
+make a minimalist, fairly unopinionated web stack that should be familiar to
+most web developers, except that it's all in the database.  A thin
+[Golang](http://golang.org/) daemon handles the connection to the database and 
+runs a web server. 
 
 Core Extensions
 ---------------
@@ -51,13 +59,6 @@ demos and such on
 [youtube](https://www.youtube.com/channel/UCq0MVZeXqJhcpdDpQQtOs8w).
 
 
-Status
-------
-
-Aquameta is an experimental project, still in early stages of development.  It
-is not suitable for production development and should not be used in an
-untrusted or mission-critical environment.
-
 Motivation
 ----------
 
@@ -85,15 +86,64 @@ components.  That means we can share code and data in a much more effective
 way, and build on each other's work more coherently than in the file-based
 paradigm.
 
-Install From Source
--------------------
 
-First install [Golang](https://golang.org/), then run:
+Download
+--------
+
+Coming soon?
+
+
+Build From Source
+-----------------
+
+1. Download the latest
+   [release](https://github.com/aquametalabs/aquameta/releases), or pull the
+   latest source code:
 
 ```bash
 git clone --recurse-submodules https://github.com/aquametalabs/aquameta.git
-cd aquameta
-go build
-./aquameta --help
-./aquameta -c conf/some_config_file.toml
+cd aquameta/
 ```
+
+2. Install [PostgreSQL](https://www.postgresql.org/download/) version 13 or
+   higher.  Once it's installed, make sure the `pg_config` command is in your
+   path.
+
+3. Install Aquameta's extensions into PostgreSQL's `extensions/` directory.
+
+```bash
+cd scripts/
+sudo ./make_install_extensions.sh
+cd ../
+```
+
+4. Install [Golang](https://golang.org/), then build the `./aquameta` binary:
+
+```bash
+go build
+```
+
+This should create a binary in Aquameta's root directory called `./aquameta`.
+
+5. Edit `conf/boot.conf` to match your settings
+
+```bash
+cd conf/
+cp boot.conf.dist boot.conf
+vi boot.conf
+```
+
+6. Start the Aquameta server:
+
+```bash
+./aquameta --help
+./aquameta -c conf/boot.toml
+```
+
+Usage
+-----
+
+See the [documentation](docs/).
+
+
+
