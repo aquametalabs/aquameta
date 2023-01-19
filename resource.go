@@ -22,7 +22,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
      * if count > 1, throw a 300 multiple choices
      * if count < 1, throw 404 not found
      *
-     * 2. grab the resource or template, serve the content
+     * 2. grab the resource or template or function, serve the content
      */
     resourceHandler := func(w http.ResponseWriter, req *http.Request) {
         log.Println(req.Proto, req.Method, req.RequestURI)
@@ -53,15 +53,18 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             select r.id::text, 'resource_binary'
             from endpoint.resource_binary r
             where path = %v
-            and active = true`
+            and active = true
+
+            union
+
+            select r.id::text, 'resource_function'
+            from endpoint.resource_function r
+            -- 1. rewrite path_pattern to a regex:
+            --     /blog/{$1}/article/{$2} goes to ^/blog/(\S+)/article/(\S+)$
+            -- 2. matche against the request path
+            where %v ~ regexp_replace('^' || r.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')`
+
         /*
-
-           -- union
-
-           -- select r.id::text, 'resource_function'
-           -- from endpoint.resource_function r
-           -- where regexp_match(%v, regexp_replace('^' || r.path_pattern || '$', '{\$\d+}', '(\S+)', 'g'))
-
            union
 
            select r.id::text, 'template'
@@ -73,7 +76,9 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         matches, err := dbpool.Query(context.Background(), fmt.Sprintf(
             matchCountQ,
             pq.QuoteLiteral(path),
+            pq.QuoteLiteral(path),
             pq.QuoteLiteral(path)))
+
         if err != nil {
             log.Fatalf("Resource matching query failed: %v", err)
         }
@@ -96,13 +101,16 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             http.Error(w, http.StatusText(http.StatusMultipleChoices), http.StatusMultipleChoices)
             return // FIXME?
         } else {
-            // 404 Not Found
+
+        // 404 Not Found
             if n < 1 {
                 http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
                 return // FIXME?
             }
         }
 
+        // 200 OK
+        // get the resource/resource_binary/resource_function, process it and return the results
         var content string
         var contentBinary []byte
         var mimetype string
@@ -123,31 +131,12 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             w.WriteHeader(200)
             io.WriteString(w, content)
 
-        // this is a mess
-        /*
-           case "resource_function":
-               const resourceFunctionQ = `
-                   select f.path_pattern, m.mimetype
-                   from endpoint.resource_function r
-                       join endpoint.mimetype m on r.mimetype_id = m.id
-                       join %v.%v(%xxx)
-                   where r.id = %v`
-
-               err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceFunctionQ, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
-               if err != nil {
-                   log.Printf("QueryRow failed: %v", err)
-               }
-               w.Header().Set("Content-Type", mimetype)
-               w.WriteHeader(200)
-               w.Write(contentBinary)
-        */
-
         case "resource_binary":
             const resourceBinaryQ = `
-                select r.content, m.mimetype
-                from endpoint.resource_binary r
-                    join endpoint.mimetype m on r.mimetype_id = m.id
-                where r.id = %v`
+               select r.content, m.mimetype
+               from endpoint.resource_binary r
+                   join endpoint.mimetype m on r.mimetype_id = m.id
+               where r.id = %v`
 
             err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&contentBinary, &mimetype)
             if err != nil {
@@ -156,47 +145,46 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
             w.Write(contentBinary)
-        }
+
+        case "resource_function":
+            const resourceFunctionQ = `
+                select f.path_pattern as content /* wrong */, m.mimetype
+                from endpoint.resource_function rf
+                    join endpoint.mimetype m on rf.mimetype_id = m.id
+                where r.id = %v`
+
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceFunctionQ, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
+            if err != nil {
+                log.Printf("QueryRow failed: %v", err)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
+            io.WriteString(w, content)
 
         /*
-               failed attempt at using pl/go solution
-           case "template":
-               const templateQ = `
-                   select
-                       endpoint.template_render(
-                           t.id::text, -- FIXME
-                           r.args::json::text, -- FIXME
-                           (array_to_json( regexp_matches(%v, r.url_pattern) ))::text -- FIXME
-                       ) as content,
-                       m.mimetype
-                   from endpoint.template_route r
-                       join endpoint.template t on r.template_id = t.id
-                       join endpoint.mimetype m on t.mimetype_id = m.id`
+        failed attempt at using pl/go solution
+        case "template":
+            const templateQ = `
+                select
+                    endpoint.template_render(
+                        t.id::text, -- FIXME
+                        r.args::json::text, -- FIXME
+                        (array_to_json( regexp_matches(%v, r.url_pattern) ))::text -- FIXME
+                    ) as content,
+                    m.mimetype
+                from endpoint.template_route r
+                    join endpoint.template t on r.template_id = t.id
+                    join endpoint.mimetype m on t.mimetype_id = m.id`
 
-               err := dbpool.QueryRow(context.Background(), fmt.Sprintf(templateQ, pq.QuoteLiteral(path))).Scan(&content, &mimetype)
-               if err != nil {
-                   log.Printf("QueryRow failed: %v", err)
-               }
-               w.Header().Set("Content-Type", mimetype)
-               w.WriteHeader(200)
-               io.WriteString(w, content)
-           case "resource_binary":
-               const resourceBinaryQ = `
-                   select r.content, m.mimetype
-                   from endpoint.resource_binary r
-                       join endpoint.mimetype m on r.mimetype_id = m.id
-                   where r.id = %v`
-
-               err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceBinaryQ, pq.QuoteLiteral(id))).Scan(&contentBinary, &mimetype)
-               if err != nil {
-                   log.Printf("QueryRow failed: %v", err)
-               }
-               w.Header().Set("Content-Type", mimetype)
-               w.WriteHeader(200)
-               w.Write(contentBinary)
-
-           }
+            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(templateQ, pq.QuoteLiteral(path))).Scan(&content, &mimetype)
+            if err != nil {
+                log.Printf("QueryRow failed: %v", err)
+            }
+            w.Header().Set("Content-Type", mimetype)
+            w.WriteHeader(200)
+            io.WriteString(w, content)
         */
+        }
     }
     return resourceHandler
 }
