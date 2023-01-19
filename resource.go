@@ -154,37 +154,44 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
                     rf.path_pattern,
                     ((rf.function_id).schema_id).name as schema_name,
                     (rf.function_id).name as function_name,
-                    (rf.function_id).parameters as parameters,
+                    (rf.function_id).parameters as function_parameters,
                     rf.default_args as default_args,
-                    m.mimetype
+                    m.mimetype,
+                    regexp_match(%v, regexp_replace('^' || rf.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')) as args,
+--                    regexp_split_to_array(rf.path_pattern, '{\$(\d+)}') as arg_positions
+                    (select array_agg(m[1]) from regexp_matches(rf.path_pattern, '{\$(\d+)}', 'g') m) 
                 from endpoint.resource_function rf
                     join endpoint.mimetype m on rf.mimetype_id = m.id
                 where rf.id = %v`
 
-            var parameters []string
+            var function_parameters []string
             var default_args []string
             var path_pattern string
             var schema_name string
             var function_name string
+            var args []string
+            var arg_positions []string
 
             err := dbpool.QueryRow(context.Background(),
-                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &parameters, &default_args, &mimetype)
+                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(path), pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &function_parameters, &default_args, &mimetype, &args, &arg_positions)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
 
-            log.Printf("Path pattern: %v, schema_name: %v, function_name: %v, parameters: %v, default_args: %v, mimetype: %v", path_pattern, schema_name, function_name, parameters, default_args, mimetype);
+            log.Printf("Path pattern: %v, schema_name: %v, function_name: %v, function_parameters: %v, default_args: %v, mimetype: %v, args: %v, arg_positions: %v",
+                path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, args, arg_positions);
 
             // substitute {$1} vars for actual values
-            const resourceFunctionQ = `select ?`
+            const resourceFunctionQ = `select * from %v.%v()`
 
-            err = dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceFunctionQ, pq.QuoteLiteral(id))).Scan(&content) // ?
+            err = dbpool.QueryRow(context.Background(), fmt.Sprintf(
+                resourceFunctionQ,
+                pq.QuoteLiteral(schema_name),
+                pq.QuoteLiteral(function_name))).Scan(&content)
+
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
-
-
-
 
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
