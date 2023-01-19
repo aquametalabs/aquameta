@@ -140,7 +140,7 @@ create table endpoint.resource_function (
     id uuid not null default public.uuid_generate_v4() primary key,
     function_id meta.function_id not null,
     path_pattern text not null, -- /blogs/{$1}/posts/{$2}.html -- the numbers correspond to the position of the argument passed to the specified function
-    default_args text[], -- for setting fixed arguments to the function, when only some of the args are specified by the path. array position corresponds to function args position.  nulls mean no default.
+    default_args text[] not null default '{}', -- for setting fixed arguments to the function, when only some of the args are specified by the path. array position corresponds to function args position.
     mimetype_id uuid references mimetype(id) -- if this function always returns the same mimetype, set this
 );
 

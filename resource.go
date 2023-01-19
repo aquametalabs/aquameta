@@ -158,8 +158,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
                     rf.default_args as default_args,
                     m.mimetype,
                     regexp_match(%v, regexp_replace('^' || rf.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')) as args,
---                    regexp_split_to_array(rf.path_pattern, '{\$(\d+)}') as arg_positions
-                    (select array_agg(m[1]) from regexp_matches(rf.path_pattern, '{\$(\d+)}', 'g') m) 
+                    (select array_agg(m[1]::integer) from regexp_matches(rf.path_pattern, '{\$(\d+)}', 'g') m) 
                 from endpoint.resource_function rf
                     join endpoint.mimetype m on rf.mimetype_id = m.id
                 where rf.id = %v`
@@ -169,33 +168,68 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             var path_pattern string
             var schema_name string
             var function_name string
-            var args []string
-            var arg_positions []string
+            var path_args []string
+            var path_arg_positions []int
 
             err := dbpool.QueryRow(context.Background(),
-                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(path), pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &function_parameters, &default_args, &mimetype, &args, &arg_positions)
+                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(path), pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &function_parameters, &default_args, &mimetype, &path_args, &path_arg_positions)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
 
-            log.Printf("Path pattern: %v, schema_name: %v, function_name: %v, function_parameters: %v, default_args: %v, mimetype: %v, args: %v, arg_positions: %v",
-                path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, args, arg_positions);
+            log.Printf("Path pattern: %v\n    schema_name: %v\n    function_name: %v\n    function_parameters: %v\n    default_args: %v\n    mimetype: %v\n    path_args: %v\n    path_arg_positions: %v",
+                path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
 
-            // substitute {$1} vars for actual values
-            const resourceFunctionQ = `select * from %v.%v()`
+            // args is the array of strings to be cast to their appropriate type and passed to the function
+            // should probably use a slice here
+            var args [20]string
 
-            err = dbpool.QueryRow(context.Background(), fmt.Sprintf(
-                resourceFunctionQ,
-                pq.QuoteLiteral(schema_name),
-                pq.QuoteLiteral(function_name))).Scan(&content)
+            // write default_args into args
+            for i,v := range function_parameters {
+                log.Printf("function_parameters [%v] -> %v", i,v)
+                if len(default_args) >= len(function_parameters) {
+                    args[i] = default_args[i]
+                }
+            }
 
+            log.Printf("len(function_parameters) = %v", len(function_parameters));
+            log.Printf("default_args = %v", default_args);
+
+            for i,v := range path_args {
+                log.Printf("i=%v: path_args %v -> %v", i, i,v)
+                args[path_arg_positions[i]-1] = path_args[i] // path_arg_positions, first position is 1, hence -1 for array index
+            }
+
+            // build the function's argument string
+            var function_call_str string = pq.QuoteIdentifier(schema_name)+"."+pq.QuoteIdentifier(function_name)+"("
+            for i := 0; i<len(function_parameters);i++ {
+                function_call_str += pq.QuoteLiteral(args[i]) + "::" + function_parameters[i]; // not using pq.QuoteIdentifier for function_parametrs[i] here because e.g. integer is an alias for int4, but if you quote it, it uses only and exactly the literal type name
+                if i < len(function_parameters) -1 {
+                    function_call_str += ","
+                }
+            }
+            function_call_str += ")"
+
+            log.Printf("args = %v", args);
+
+            log.Printf("function call: %v", function_call_str)
+
+            const resourceFunctionQ = `select %v as content`
+
+            log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
+
+
+            err = dbpool.QueryRow(context.Background(),
+                fmt.Sprintf(resourceFunctionQ, function_call_str)).Scan(&content)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
 
+
+            // send the response
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
-            io.WriteString(w, "WIP")
+            io.WriteString(w, content)
 
         /*
         failed attempt at using pl/go solution
@@ -203,7 +237,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             const templateQ = `
                 select
                     endpoint.template_render(
-                        t.id::text, -- FIXME
+                        tkid::text, -- FIXME
                         r.args::json::text, -- FIXME
                         (array_to_json( regexp_matches(%v, r.url_pattern) ))::text -- FIXME
                     ) as content,
