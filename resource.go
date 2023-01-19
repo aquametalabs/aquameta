@@ -115,6 +115,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         var contentBinary []byte
         var mimetype string
 
+
         switch resourceTable {
         case "resource":
             const resourceQ = `
@@ -147,19 +148,47 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             w.Write(contentBinary)
 
         case "resource_function":
-            const resourceFunctionQ = `
-                select f.path_pattern as content /* wrong */, m.mimetype
+            // get the endpoint.resource_function row, propagate path_pattern, defalt_args and mimetype
+            const resourceFunctionPrepQ = `
+                select
+                    rf.path_pattern,
+                    ((rf.function_id).schema_id).name as schema_name,
+                    (rf.function_id).name as function_name,
+                    (rf.function_id).parameters as parameters,
+                    rf.default_args as default_args,
+                    m.mimetype
                 from endpoint.resource_function rf
                     join endpoint.mimetype m on rf.mimetype_id = m.id
-                where r.id = %v`
+                where rf.id = %v`
 
-            err := dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceFunctionQ, pq.QuoteLiteral(id))).Scan(&content, &mimetype)
+            var parameters []string
+            var default_args []string
+            var path_pattern string
+            var schema_name string
+            var function_name string
+
+            err := dbpool.QueryRow(context.Background(),
+                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &parameters, &default_args, &mimetype)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
+
+            log.Printf("Path pattern: %v, schema_name: %v, function_name: %v, parameters: %v, default_args: %v, mimetype: %v", path_pattern, schema_name, function_name, parameters, default_args, mimetype);
+
+            // substitute {$1} vars for actual values
+            const resourceFunctionQ = `select ?`
+
+            err = dbpool.QueryRow(context.Background(), fmt.Sprintf(resourceFunctionQ, pq.QuoteLiteral(id))).Scan(&content) // ?
+            if err != nil {
+                log.Printf("QueryRow failed: %v", err)
+            }
+
+
+
+
             w.Header().Set("Content-Type", mimetype)
             w.WriteHeader(200)
-            io.WriteString(w, content)
+            io.WriteString(w, "WIP")
 
         /*
         failed attempt at using pl/go solution
