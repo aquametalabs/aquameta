@@ -177,8 +177,8 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
                 log.Printf("QueryRow failed: %v", err)
             }
 
-            log.Printf("Path pattern: %v\n    schema_name: %v\n    function_name: %v\n    function_parameters: %v\n    default_args: %v\n    mimetype: %v\n    path_args: %v\n    path_arg_positions: %v",
-                path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
+            // log.Printf("Path pattern: %v\n    schema_name: %v\n    function_name: %v\n    function_parameters: %v\n    default_args: %v\n    mimetype: %v\n    path_args: %v\n    path_arg_positions: %v",
+            //    path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
 
             // args is the array of strings to be cast to their appropriate type and passed to the function
             // should probably use a slice here
@@ -186,7 +186,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
 
             // write default_args into args
             for i,v := range function_parameters {
-                log.Printf("function_parameters [%v] -> %v", i,v)
+                // log.Printf("function_parameters [%v] -> %v", i,v)
                 if len(default_args) >= len(function_parameters) {
                     args[i] = default_args[i]
                 }
@@ -196,7 +196,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             log.Printf("default_args = %v", default_args);
 
             for i,v := range path_args {
-                log.Printf("i=%v: path_args %v -> %v", i, i,v)
+                // log.Printf("i=%v: path_args %v -> %v", i, i,v)
                 args[path_arg_positions[i]-1] = path_args[i] // path_arg_positions, first position is 1, hence -1 for array index
             }
 
@@ -210,21 +210,17 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             }
             function_call_str += ")"
 
-            log.Printf("args = %v", args);
-
-            log.Printf("function call: %v", function_call_str)
+            // log.Printf("args = %v", args);
+            // log.Printf("function call: %v", function_call_str)
 
             const resourceFunctionQ = `select %v as content`
-
-            log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
-
+            // log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
 
             err = dbpool.QueryRow(context.Background(),
                 fmt.Sprintf(resourceFunctionQ, function_call_str)).Scan(&content)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
-
 
             // send the response
             w.Header().Set("Content-Type", mimetype)
