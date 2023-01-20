@@ -4,3 +4,6 @@
 [submodule "extensions/meta_triggers"]
 	path = extensions/meta_triggers
 	url = https://github.com/aquameta/meta_triggers.git
+[submodule "extensions/pg_catalog_get_defs"]
+	path = extensions/pg_catalog_get_defs
+	url = https://github.com/aquameta/pg_catalog_get_defs.git
