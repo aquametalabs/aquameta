@@ -1,2 +1,0 @@
-comment = 'Provides the missing pg_catalog.get_*def() functions'
-default_version = '0.1.0'
