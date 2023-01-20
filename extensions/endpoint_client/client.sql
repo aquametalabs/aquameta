@@ -4,6 +4,8 @@
  * Copyright (c) 2020 - Aquameta, LLC - http://aquameta.org/
  ******************************************************************************/
 
+begin;
+
 set search_path=endpoint;
 
 
@@ -200,3 +202,5 @@ $$ language sql;
     execute 'select into join_graph_table array_to_json(array_agg((''{ "row": '' || row_to_json(tmp)::text || '', "selector": "hi mom"}'')::json)) from bundle_push_1234 tmp;
     -- result := ('{"columns":[{"name":"row_id","type":"row_id"},{"name":"row","type":"json"}], "result": ' || result2 || '}')::json;
 */
+
+commit;

@@ -6,8 +6,8 @@
 
 begin;
 
--- create language plpython3u;
--- create schema http_client;
+create extension if not exists plpython3u;
+create schema http_client;
 set search_path=http_client;
 
 
