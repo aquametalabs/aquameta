@@ -185,7 +185,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             var args [20]string
 
             // write default_args into args
-            for i,v := range function_parameters {
+	    for i :=0; i<len(function_parameters); i++ {
                 // log.Printf("function_parameters [%v] -> %v", i,v)
                 if len(default_args) >= len(function_parameters) {
                     args[i] = default_args[i]
@@ -195,7 +195,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             log.Printf("len(function_parameters) = %v", len(function_parameters));
             log.Printf("default_args = %v", default_args);
 
-            for i,v := range path_args {
+	    for i :=0; i<len(path_args);i++ {
                 // log.Printf("i=%v: path_args %v -> %v", i, i,v)
                 args[path_arg_positions[i]-1] = path_args[i] // path_arg_positions, first position is 1, hence -1 for array index
             }
