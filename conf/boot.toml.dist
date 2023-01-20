@@ -3,19 +3,24 @@
 # A example configuration for booting to a non-managed, standalone database running on localhost
 
 [Database]
-    Mode = "standalone"               # { embedded | standalone } - if embedded, aquameta will create a new PostgreSQL
-                                    # server instance. If "standalone", use an existing server managed by Aquameta.
+    Mode = "standalone" # { embedded | standalone }
+
+			# If "standalone", Aquameta will attempt to connect to
+			# an existing PostgreSQL database managed by the user.
+			# Modify the settings below to match your database's
+			# configuration.
+			#
+			# If "embedded", Aquameta will create and manage an
+			# embedded PostgreSQL server instance (experimental).
 
     # the path where the embedded postgresql instance will be installed (embedded only)
     # EmbeddedPostgresRuntimePath = "./postgres"
 
     # connection settings
-    Host = "localhost"              # host
-    Port = 5432                     # instance will open (sometimes 5432)
-    DatabaseName = "aquameta"       # name of the database to be created where Aquameta will be installed
-
-    # authentication settings
-    Role = "youruser"
+    Host = "localhost"              # Host where the database is running (usually localhost)
+    Port = 5432                     # Database port (usually 5432)
+    DatabaseName = "aquameta"       # Name of the database to be created where Aquameta will be installed.
+    Role = "youruser"               # PostgreSQL role name (usually your unix username)
     Password = "whatevz"            # FIXME - we probably want to use local trust auth instead
 
 
@@ -24,10 +29,16 @@
     Email = "your.email@example.com"
 
 
-
 [HTTPServer]
     Protocol = "http"               # { http | https }
-    IP = "127.0.0.1"                # IP to bind to, change this to 0.0.0.0 to allow remote traffic
+
+				    # https (encrypted) is supported, but you
+				    # have to generate certificates.  See the
+				    # [certificates/](../certificates/README.md)
+				    # directory.
+
+    IP = "127.0.0.1"                # IP to bind to, change this to 0.0.0.0 to allow remote traffic (which is not recommended)
+
     Port = "4444"                   # Port to open
 
     # only used w/ https
