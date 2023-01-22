@@ -4,8 +4,8 @@ SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # install extensions into PostgreSQL's extensions/ directory
 echo "Building core PostgreSQL extensions..."
-cd $SRC/../extensions/pg_catalog_get_defs && make && make install
 cd $SRC/../extensions/meta && make && make install
+cd $SRC/../extensions/meta_triggers && make && make install
 cd $SRC/../extensions/bundle && make && make install
 cd $SRC/../extensions/event && make && make install
 
