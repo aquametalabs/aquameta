@@ -39,8 +39,8 @@ SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 rm -f $SRC/../extensions/*/*--0.3.0.sql
 
 echo "Building core PostgreSQL extensions..."
-cd $SRC/../extensions/pg_catalog_get_defs && make
 cd $SRC/../extensions/meta && make
+cd $SRC/../extensions/meta_triggers && make
 cd $SRC/../extensions/bundle && make
 cd $SRC/../extensions/event && make
 
