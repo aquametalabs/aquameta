@@ -7,7 +7,7 @@ Contents
 --------
 - [Status](#status)
 - [Overview](#overview)
-- [Extensions](#core-extensions)
+- [Core Extensions](#core-extensions)
 - [User Interface](#user-interface)
 - [Download](#download)
 - [Install From Source](#install-from-source)
@@ -105,8 +105,8 @@ Download
 Coming soon?
 
 
-Build From Source
------------------
+Install From Source
+-------------------
 
 1. Install [PostgreSQL](https://www.postgresql.org/download/) version 13 or
    higher.  Once it's installed, make sure the `pg_config` command is in your
