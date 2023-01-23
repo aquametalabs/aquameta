@@ -1,7 +1,17 @@
 Aquameta
 ========
 
-A web stack built in PostgreSQL.  
+A "datafied" web stack built in PostgreSQL
+
+Contents
+--------
+- [Status](#status)
+- [Overview](#overview)
+- [Core Extensions](#core-extensions)
+- [User Interface](#user-interface)
+- [Download](#download)
+- [Install From Source](#install-from-source)
+- [Usage](#usage)
 
 Status
 ------
@@ -44,12 +54,14 @@ Core Extensions
   implemented as PostgreSQL procedures:  A REST API, static recources, function
   maps, WebSocket events and URL-pattern templates.
 - [widget](extensions/widget) - Web component framework for building modular
-  user interface components.  Each widget is a row with columns for HTML, CSS
-  and Javascript, and a mechanism for attaching JS dependencies.
+  user interface components.  Each widget is a row in the database with columns
+  for HTML, CSS and Javascript, and a mechanism for attaching JS dependencies.
 - [semantics](extensions/semantics) - Schema decorators, for describing tables
   and columns, and binding custom UI widgets handlers for display and edit.
 
-Together, these extensions make a simple, fairly un-opinionated web stack.
+Together, these extensions make a simple, fairly un-opinionated web stack
+(other than that whole all-data thing).
+
 
 User Interface
 --------------
@@ -93,33 +105,38 @@ Download
 Coming soon?
 
 
-Build From Source
------------------
+Install From Source
+-------------------
 
-1. Download the latest
-   [release](https://github.com/aquametalabs/aquameta/releases), or pull the
-   latest source code:
+1. Install [PostgreSQL](https://www.postgresql.org/download/) version 13 or
+   higher.  Once it's installed, make sure the `pg_config` command is in your
+   path.  Then create an empty database that Aquameta will be installed into,
+   and then create yourself a superuser, typically the same name as your unix
+   username:
+
+```bash
+# make sure pg_config is present
+pg_config --version
+
+# sudo to the postgres user and create a user
+sudo -iu postgres
+createdb aquameta
+psql aquameta
+aquameta=# CREATE ROLE eric; -- use your unix username here instead of 'eric'
+aquameta=# ALTER ROLE eric superuser login password 'changeme';
+```
+
+2. Clone the bleeding-edge source and submodules via git (or download the
+latest [source release](https://github.com/aquametalabs/aquameta/releases)):
 
 ```bash
 git clone --recurse-submodules https://github.com/aquametalabs/aquameta.git
 cd aquameta/
 ```
 
-2. Install [PostgreSQL](https://www.postgresql.org/download/) version 13 or
-   higher.  Once it's installed, make sure the `pg_config` command is in your
-   path.  Then create an empty database that Aquameta will be installed into,
-   and then create yourself a superuser, typically the same name as your unix
-   username.
-
-```bash
-pg_config --version
-createdb aquameta
-psql aquameta
-aquameta=# CREATE ROLE eric;
-aquameta=# ALTER ROLE eric superuser login password 'changeme';
-```
-
-3. Install Aquameta's extensions into PostgreSQL's `extensions/` directory.
+3. Install Aquameta's extensions into PostgreSQL's `extensions/` directory.  If
+you get an error like `make: command not found`, install make via the
+`build-essential` package, e.g. `sudo apt install build-essential`.
 
 ```bash
 cd scripts/
@@ -127,13 +144,15 @@ sudo ./make_install_extensions.sh
 cd ../
 ```
 
-4. Install [Golang](https://golang.org/), then build the `./aquameta` binary:
+4. Install [Golang](https://golang.org/) version 1.18 or greater, then build
+the `./aquameta` binary from aquameta's root directory:
 
 ```bash
+go --version
 go build
 ```
 
-This should create a binary in Aquameta's root directory called `./aquameta`.
+This should create a binary called `./aquameta`.
 
 5. Edit `conf/boot.conf` to match your PostgreSQL settings.
 
@@ -151,7 +170,7 @@ cd ../
 ./aquameta -c conf/boot.toml
 ```
 
-When Aquameta starts, it checks to see if the core extensions are installed on 
+When Aquameta starts, it checks to see if the core extensions are installed on
 the database, and if they are not, it will automatically install them.  Then it
 starts the webserver and provides a URL where you can start using the IDE.
 
@@ -160,7 +179,4 @@ Congrats!  The end.
 Usage
 -----
 
-See the [documentation](docs/).
-
-
-
+See the (paltry) [documentation](docs/).
