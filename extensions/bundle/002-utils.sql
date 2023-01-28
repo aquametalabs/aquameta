@@ -59,6 +59,9 @@ begin
         join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id
         join bundle.blob on rrf.value_hash=blob.hash
         where b.name=%L order by blob.hash) to ''%s/blob.csv''', bundle_name, directory);
+
+    -- add a bundle_csv to track where this bundle was exported
+    execute format('insert into bundle.bundle_csv(directory, bundle_id) select %L, id from bundle.bundle where name=%L', directory, bundle_name);
 end
 $$;
 
