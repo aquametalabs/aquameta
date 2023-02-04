@@ -1,3 +1,6 @@
+begin;
+set search_path=bundle2;
+
 /*******************************************************************************
  * Bundle Utilities
  *
@@ -8,19 +11,19 @@
 -- saves bundle contents to filesystem.  overwrites if it is already there.
 -- directory must already exist and be writable by postgres user.
 
-create or replace function bundle.bundle_export_csv(bundle_name text, directory text)
+create or replace function bundle2.bundle_export_csv(bundle_name text, directory text)
  returns void
  language plpgsql
 as $$
 begin
     -- check if bundle exists
-    if not exists( select true from bundle.bundle b where b.name = bundle_name) then
+    if not exists( select true from bundle2.bundle b where b.name = bundle_name) then
         raise exception 'No such bundle with name %', bundle_name;
     end if;
 
     -- check that bundle has commits
     -- TODO: is this really a problem?
-    if not exists( select true from bundle.bundle b join bundle.commit c on c.bundle_id = b.id where b.name = bundle_name) then
+    if not exists( select true from bundle2.bundle b join bundle2.commit c on c.bundle_id = b.id where b.name = bundle_name) then
         raise exception 'No commits found in bundle %', bundle_name;
     end if;
 
@@ -69,7 +72,7 @@ $$;
 -- import
 -- import a bundle from a csv export (created by above).
 
-create or replace function bundle.bundle_import_csv(directory text)
+create or replace function bundle2.bundle_import_csv(directory text)
  returns uuid
  language plpgsql
 as $$
@@ -99,7 +102,7 @@ begin
 
     -- make sure that checkout_commit_is null
     select name from origin_temp into bundle_name;
-    update bundle.bundle set checkout_commit_id = NULL where name = bundle_name;
+    update bundle2.bundle set checkout_commit_id = NULL where name = bundle_name;
 
     -- return bundle.id
     select id from origin_temp into bundle_id;
@@ -110,12 +113,12 @@ $$;
 -- garbage_collect()
 -- deletes any blobs that are not referenced by any rowset_row_fields
 
-create or replace function bundle.garbage_collect() returns void
+create or replace function bundle2.garbage_collect() returns void
 as $$
-    delete from bundle.blob where hash is null;
-    delete from bundle.rowset_row_field where value_hash is null;
-    delete from bundle.blob where hash not in (select value_hash from bundle.rowset_row_field);
-    delete from bundle.rowset where id not in (select rowset_id from bundle.commit);
+    delete from bundle2.blob where hash is null;
+    delete from bundle2.rowset_row_field where value_hash is null;
+    delete from bundle2.blob where hash not in (select value_hash from bundle2.rowset_row_field);
+    delete from bundle2.rowset where id not in (select rowset_id from bundle2.commit);
 $$ language sql;
 
 
@@ -124,7 +127,7 @@ $$ language sql;
 create type search_method as enum ('like','ilike','regex', 'iregex');
 create type search_scope as enum ('head','stage','tracked','changed','history');
 
-create or replace function bundle.search(
+create or replace function bundle2.search(
     term text,
     search_method search_method,
     scope search_scope,
@@ -206,3 +209,4 @@ begin
     return query execute search_stmt;
 end;
 $$ language plpgsql;
+commit;

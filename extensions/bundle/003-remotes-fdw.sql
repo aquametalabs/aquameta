@@ -1,3 +1,7 @@
+begin;
+
+set search_path=bundle2;
+
 /*******************************************************************************
  * Bundle Remotes
  *
@@ -22,7 +26,7 @@
 -- setup a foreign server to a remote, and import it's bundle schema
 
 
-create or replace function bundle.remote_mount (
+create or replace function bundle2.remote_mount (
     foreign_server_name text,
     schema_name text,
     connection_string text,
@@ -77,7 +81,7 @@ end;
 $$ language plpgsql;
 
 
-create or replace function bundle.remote_mount( remote_database_id uuid ) returns boolean as $$
+create or replace function bundle2.remote_mount( remote_database_id uuid ) returns boolean as $$
 begin
     execute format ('select bundle.remote_mount(
         foreign_server_name,
@@ -96,12 +100,12 @@ $$ language plpgsql;
 
 
 
-create or replace function bundle.remote_unmount( remote_database_id uuid ) returns boolean as $$
+create or replace function bundle2.remote_unmount( remote_database_id uuid ) returns boolean as $$
 declare
     _schema_name text;
     _foreign_server_name text;
 begin
-    select foreign_server_name, schema_name from bundle.remote_database where id = remote_database_id into _foreign_server_name, _schema_name;
+    select foreign_server_name, schema_name from bundle2.remote_database where id = remote_database_id into _foreign_server_name, _schema_name;
     execute format('drop server if exists %I cascade', _foreign_server_name);
     execute format('drop schema f exists %I', _schema_name);
     return true;
@@ -110,7 +114,7 @@ $$ language plpgsql;
 
 
 
-create or replace function bundle.remote_is_mounted( remote_database_id uuid ) returns boolean as $$
+create or replace function bundle2.remote_is_mounted( remote_database_id uuid ) returns boolean as $$
 declare
     _schema_name text;
     _foreign_server_name text;
@@ -118,7 +122,7 @@ declare
     has_server boolean;
     has_tables boolean;
 begin
-    select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
+    select schema_name, foreign_server_name from bundle2.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
     execute format ('select (count(*) = 1) from meta.schema where name = %L', _schema_name) into has_schema;
     execute format ('select (count(*) = 1) from meta.foreign_server where name = %L', _foreign_server_name) into has_server;
     execute format ('select (count(*) = 7) from meta.foreign_table where schema_name = %L and name in (''bundle'',''commit'',''rowset'',''rowset_row'',''rowset_row_field'',''blob'',''_bundle_blob'')', _schema_name) into has_tables;
@@ -128,12 +132,12 @@ $$ language plpgsql;
 
 
 
-create or replace function bundle.remote_is_online( remote_database_id uuid ) returns boolean as $$
+create or replace function bundle2.remote_is_online( remote_database_id uuid ) returns boolean as $$
 declare
     _schema_name text;
     _foreign_server_name text;
 begin
-    select schema_name, foreign_server_name from bundle.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
+    select schema_name, foreign_server_name from bundle2.remote_database where id = remote_database_id into _schema_name, _foreign_server_name;
 
     -- xocolatl | you could do something like  create foreign table pg_temp.test(i int) server s options (table '(select 1)'); 
     execute format ('select count(*) from %I.bundle where name = ''connection_test''', _schema_name);
@@ -150,7 +154,7 @@ $$ language plpgsql;
 --
 -- contains a row for each bundle in a database, containing the "commit" row of each commit in the bundle
 
-create or replace function bundle.bundle_commits_array( bundle_relation_id meta.relation_id, bundle_id uuid default null )
+create or replace function bundle2.bundle_commits_array( bundle_relation_id meta2.relation_id, bundle_id uuid default null )
 returns table (
     id uuid, name text, head_commit_id uuid, commits json
 )
@@ -179,9 +183,9 @@ begin
         %s
         group by b.id, b.name, b.head_commit_id
     ',
-        (bundle_relation_id::meta.schema_id).name,
+        (bundle_relation_id::meta2.schema_id).name,
         bundle_relation_id.name,
-        (bundle_relation_id::meta.schema_id).name,
+        (bundle_relation_id::meta2.schema_id).name,
         bundle_filter_stmt
     );
 end;
@@ -193,7 +197,7 @@ $$ language plpgsql;
 --
 -- outer-joins the bundle tables of databases, one row per bundle.  the row also contains a json aggregate of every commit in that bundle.
 
-create or replace function bundle.remote_commits_diff(
+create or replace function bundle2.remote_commits_diff(
     remote_database_id uuid,
     bundle_id uuid default null
 ) returns table (
@@ -205,7 +209,7 @@ declare
     remote_schema_name text;
     remote_connection_string text;
 begin
-    select schema_name, connection_string from bundle.remote_database
+    select schema_name, connection_string from bundle2.remote_database
         where id = remote_database_id
 	into remote_schema_name, remote_connection_string;
 
@@ -249,7 +253,7 @@ $$ language sql;
 -- remote_pull_bundle()
 --
 -- copy a repository from one bundle schema (typically a remote) to another (typically a local one)
-create or replace function bundle.remote_pull_bundle( remote_database_id uuid, bundle_id uuid ) -- source_schema_name text, dest_schema_name text )
+create or replace function bundle2.remote_pull_bundle( remote_database_id uuid, bundle_id uuid ) -- source_schema_name text, dest_schema_name text )
 returns boolean as $$
 declare
     source_schema_name text;
@@ -257,7 +261,7 @@ declare
     source_bundle_id uuid;
     source_connection_string text;
 begin
-    select schema_name, connection_string from bundle.remote_database
+    select schema_name, connection_string from bundle2.remote_database
         where id = remote_database_id
 	into source_schema_name, source_connection_string;
 
@@ -330,7 +334,7 @@ language plpgsql;
 
 
 
-create or replace function bundle.remote_push_bundle( remote_database_id uuid, bundle_id uuid ) -- source_schema_name text, dest_schema_name text )
+create or replace function bundle2.remote_push_bundle( remote_database_id uuid, bundle_id uuid ) -- source_schema_name text, dest_schema_name text )
 returns boolean as $$
 declare
     remote_schema_name text;
@@ -339,11 +343,11 @@ declare
 begin
 
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, connection_string from bundle.remote_database
+    select schema_name, connection_string from bundle2.remote_database
         where id = remote_database_id
 	into remote_schema_name, remote_connection_string;
 
-    select name from bundle.bundle where id = bundle_id
+    select name from bundle2.bundle where id = bundle_id
     into source_bundle_name;
 
     raise notice 'Pushing bundle % (%) from %...', source_bundle_name, bundle_id, remote_connection_string;
@@ -352,7 +356,7 @@ begin
         select b.id, b.name from bundle.bundle b
         where b.id=%2$L', remote_schema_name, bundle_id);
 
-    perform bundle.remote_push_commits( remote_database_id, bundle_id );
+    perform bundle2.remote_push_commits( remote_database_id, bundle_id );
 
     raise notice '...updating bundle.head_commit_id';
     execute format ('update bundle.bundle b
@@ -372,7 +376,7 @@ language plpgsql;
  *
  */
 
-create or replace function bundle.remote_pull_commits( remote_database_id uuid, bundle_id uuid )
+create or replace function bundle2.remote_pull_commits( remote_database_id uuid, bundle_id uuid )
 returns boolean as $$
 declare
 	dest_schema_name text;
@@ -384,7 +388,7 @@ declare
     new_commits_count integer;
 begin
     -- these used to be arguments, but now they're not.  we need to track remote_database_id explicitly.
-    select schema_name, connection_string from bundle.remote_database
+    select schema_name, connection_string from bundle2.remote_database
         where id = remote_database_id
 	into source_schema_name, source_connection_string;
 
@@ -478,7 +482,7 @@ $$ language plpgsql;
  *
  */
 
-create or replace function bundle.remote_push_commits( remote_database_id uuid, bundle_id uuid )
+create or replace function bundle2.remote_push_commits( remote_database_id uuid, bundle_id uuid )
 returns boolean as $$
 declare
 	dest_schema_name text;
@@ -490,7 +494,7 @@ declare
     new_commits_count integer;
 begin
     -- remote_schema_name, connection_string
-    select schema_name, connection_string from bundle.remote_database
+    select schema_name, connection_string from bundle2.remote_database
         where id = remote_database_id
 	into remote_schema_name, remote_connection_string;
 
@@ -588,9 +592,11 @@ $$ language plpgsql;
 /* optimization view for postgres_fdw */
 
 create or replace view _bundle_blob as
-select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle.bundle b
-    join bundle.commit c on c.bundle_id = b.id
-    join bundle.rowset r on c.rowset_id = r.id
-    join bundle.rowset_row rr on rr.rowset_id = r.id
-    join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-    join bundle.blob bb on bb.hash = rrf.value_hash;
+select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle2.bundle b
+    join bundle2.commit c on c.bundle_id = b.id
+    join bundle2.rowset r on c.rowset_id = r.id
+    join bundle2.rowset_row rr on rr.rowset_id = r.id
+    join bundle2.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+    join bundle2.blob bb on bb.hash = rrf.value_hash;
+
+commit;
