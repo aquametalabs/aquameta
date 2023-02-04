@@ -241,19 +241,19 @@ and row_id not in
 create view offstage_row_deleted_by_schema as
 select
     row_id::meta.schema_id as schema_id,
-    (row_id::meta.schema_id).name as schema_name,
+    (row_id).schema_name as schema_name,
     count(*) as count
 from bundle.offstage_row_deleted
-group by schema_id;
+group by 1,2;
 
 create view offstage_row_deleted_by_relation as
 select row_id::meta.schema_id as schema_id,
-    (row_id::meta.schema_id).name as schema_name,
+    (row_id).schema_name as schema_name,
     row_id::meta.relation_id as relation_id,
-    (row_id::meta.relation_id).name as relation_name,
+    (row_id).relation_name as relation_name,
     count(*) as count
 from bundle.offstage_row_deleted
-group by schema_id, relation_id;
+group by 1,2,3,4;
 
 
 -- field changed
@@ -276,16 +276,16 @@ where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so 
 create view offstage_field_changed_by_schema as
 select
     row_id::meta.schema_id as schema_id,
-    (row_id::meta.schema_id).name as schema_name,
+    (row_id).schema_name as schema_name,
     count(*) as count
 from bundle.offstage_field_changed
 group by schema_id;
 
 create view offstage_field_changed_by_relation as
 select row_id::meta.schema_id as schema_id,
-    (row_id::meta.schema_id).name as schema_name,
+    (row_id).schema_name as schema_name,
     row_id::meta.relation_id as relation_id,
-    (row_id::meta.relation_id).name as relation_name,
+    (row_id).relation_name relation_name,
     count(*) as count
 from bundle.offstage_field_changed
 group by schema_id, relation_id;
@@ -364,7 +364,7 @@ select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex
         )::text as value
 
     from bundle.stage_row_added sr
-        join meta.relation re on sr.row_id::meta.relation_id = re.id
+        join meta.relation re on meta.relation_id((sr.row_id).schema_name, (sr.row_id).relation_name) = re.id
         join meta.relation_column c on c.relation_id=re.id
     ) r
 
@@ -528,10 +528,11 @@ from (
     from bundle.head_commit_row hcr
         join bundle b on hcr.bundle_id=b.id
         full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
-        left join stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
-        left join offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
+        left join stage_field_changed sfc on 
+            (sfc.field_id)::meta.row_id::text=hcr.row_id::text
+        left join offstage_field_changed ofc on (ofc.field_id)::meta.row_id::text=hcr.row_id::text
         -- where b.checkout_commit_id is not null -- TODO I added this for a reason but now I can't remember why and it is breaking stuff
-    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id)::meta.row_id, (ofc.field_id)::meta.row_id
 
     union
 
@@ -586,7 +587,10 @@ create or replace view trackable_relation as
 
     -- combined with every view in the meta schema
     UNION
-    select pk_column_id::meta.relation_id as relation_id, pk_column_id::meta.schema_id as schema_id, pk_column_id as primary_key_column_id
+    select
+        pk_column_id::meta.relation_id as relation_id,
+        pk_column_id::meta.schema_id as schema_id,
+        pk_column_id as primary_key_column_id
     from bundle.trackable_nontable_relation
 ) r
 
@@ -668,17 +672,18 @@ where r.row_id::text not in (
 
 
 create or replace view untracked_row_by_schema as
-select r.row_id::meta.schema_id schema_id, (r.row_id::meta.schema_id).name as schema_name, count(*) as count
+select meta.schema_id((r.row_id).schema_name) as schema_id, (r.row_id).schema_name as schema_name, count(*) as count
 from bundle.untracked_row r
-group by r.row_id::meta.schema_id, (r.row_id::meta.schema_id).name;
+group by 1,2;
 
 create or replace view untracked_row_by_relation as
 select
-    (r.row_id::meta.relation_id) relation_id,
-    (r.row_id::meta.relation_id).name relation_name,
-    (r.row_id::meta.schema_id) schema_id, count(*) as count
+    (r.row_id)::meta.relation_id as relation_id,
+    (r.row_id).relation_name as relation_name,
+    (r.row_id)::meta.schema_id as schema_id,
+    count(*) as count
 from bundle.untracked_row r
-group by (r.row_id::meta.relation_id), (r.row_id::meta.relation_id).name, r.row_id::meta.schema_id;
+group by 1,2,3;
 
 
 -- here's a table where you can stash some saved connections.
