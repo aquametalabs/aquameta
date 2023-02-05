@@ -18,3 +18,5 @@ cd
 cd dev/aquameta/extensions
 cat bundle/migrate_flat.sql|psql flat
 
+# export:
+# select bundle.bundle_export_csv(b.name, bc.directory) from bundle.bundle b join bundle.bundle_csv bc on bc.bundle_id = b.id;
