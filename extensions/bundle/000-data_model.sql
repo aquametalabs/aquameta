@@ -118,6 +118,9 @@ create table commit (
 -- circular
 alter table bundle add head_commit_id uuid references commit(id) on delete set null;
 alter table bundle add checkout_commit_id uuid references commit(id) on delete set null;
+-- relying on naming convention for constraints here :/
+alter table bundle alter constraint bundle_checkout_commit_id_fkey deferrable initially immediate;
+alter table bundle alter constraint bundle_head_commit_id_fkey deferrable initially immediate;
 
 create table merge_conflict (
     id uuid not null default public.uuid_generate_v4() primary key,

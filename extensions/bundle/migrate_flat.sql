@@ -2,6 +2,7 @@ begin;
 
 SET CONSTRAINTS ALL DEFERRED;
 
+insert into bundle2.bundle select * from bundle.bundle;
 
 insert into bundle2.blob select * from bundle.blob;
 insert into bundle2.rowset select * from bundle.rowset;
@@ -23,9 +24,7 @@ meta2.field_id(
 ),
 value_hash from bundle.rowset_row_field f;
 
-
 insert into bundle2.commit select id,bundle_id,rowset_id,null,parent_id,time,message from bundle.commit;
 
-insert into bundle2.bundle select * from bundle.bundle;
 
 commit;

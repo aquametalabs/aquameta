@@ -30,41 +30,41 @@ begin
 
     -- copy bundle contents to csv files
     -- checkout_commit_id is set to NULL explicitly, because it is only relevant to this current database
-    execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle.bundle b
+    execute format('copy (select b.id, b.name, b.head_commit_id, NULL /* checkout_commit_id */ from bundle2.bundle b
         where b.name=''%s'' order by b.id) to ''%s/bundle.csv''', bundle_name, directory);
 
-    execute format('copy (select distinct c.* from bundle.bundle b
-        join bundle.commit c on c.bundle_id=b.id
+    execute format('copy (select distinct c.* from bundle2.bundle b
+        join bundle2.commit c on c.bundle_id=b.id
         where b.name=%L order by c.id) to ''%s/commit.csv''', bundle_name, directory);
 
-    execute format('copy (select distinct r.* from bundle.bundle b
-        join bundle.commit c on c.bundle_id=b.id
-        join bundle.rowset r on c.rowset_id=r.id
+    execute format('copy (select distinct r.* from bundle2.bundle b
+        join bundle2.commit c on c.bundle_id=b.id
+        join bundle2.rowset r on c.rowset_id=r.id
         where b.name=%L order by r.id) to ''%s/rowset.csv''', bundle_name, directory);
 
-    execute format('copy (select distinct rr.* from bundle.bundle b
-        join bundle.commit c on c.bundle_id=b.id
-        join bundle.rowset r on c.rowset_id=r.id
-        join bundle.rowset_row rr on rr.rowset_id=r.id
+    execute format('copy (select distinct rr.* from bundle2.bundle b
+        join bundle2.commit c on c.bundle_id=b.id
+        join bundle2.rowset r on c.rowset_id=r.id
+        join bundle2.rowset_row rr on rr.rowset_id=r.id
         where b.name=%L order by rr.id) to ''%s/rowset_row.csv''', bundle_name, directory);
 
-    execute format('copy (select distinct rrf.* from bundle.bundle b
-        join bundle.commit c on c.bundle_id=b.id
-        join bundle.rowset r on c.rowset_id=r.id
-        join bundle.rowset_row rr on rr.rowset_id=r.id
-        join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id
+    execute format('copy (select distinct rrf.* from bundle2.bundle b
+        join bundle2.commit c on c.bundle_id=b.id
+        join bundle2.rowset r on c.rowset_id=r.id
+        join bundle2.rowset_row rr on rr.rowset_id=r.id
+        join bundle2.rowset_row_field rrf on rrf.rowset_row_id=rr.id
         where b.name=%L order by rrf.id) to ''%s/rowset_row_field.csv''', bundle_name, directory);
 
-    execute format('copy (select distinct blob.* from bundle.bundle b
-        join bundle.commit c on c.bundle_id=b.id
-        join bundle.rowset r on c.rowset_id=r.id
-        join bundle.rowset_row rr on rr.rowset_id=r.id
-        join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id
-        join bundle.blob on rrf.value_hash=blob.hash
+    execute format('copy (select distinct blob.* from bundle2.bundle b
+        join bundle2.commit c on c.bundle_id=b.id
+        join bundle2.rowset r on c.rowset_id=r.id
+        join bundle2.rowset_row rr on rr.rowset_id=r.id
+        join bundle2.rowset_row_field rrf on rrf.rowset_row_id=rr.id
+        join bundle2.blob on rrf.value_hash=blob.hash
         where b.name=%L order by blob.hash) to ''%s/blob.csv''', bundle_name, directory);
 
     -- add a bundle_csv to track where this bundle was exported
-    execute format('insert into bundle.bundle_csv(directory, bundle_id) select %L, id from bundle.bundle where name=%L', directory, bundle_name);
+    execute format('insert into bundle2.bundle_csv(directory, bundle_id) select %L, id from bundle2.bundle where name=%L', directory, bundle_name);
 end
 $$;
 
@@ -82,23 +82,23 @@ declare
 begin
     -- triggers must be disabled because bundle and commit have circular
     -- dependencies, and blob
-    execute format('alter table bundle.bundle disable trigger all');
-    execute format('alter table bundle.commit disable trigger all');
-    execute format('copy bundle.bundle from ''%s/bundle.csv''', directory);
-    execute format('copy bundle.commit from ''%s/commit.csv''', directory);
+    execute format('alter table bundle2.bundle disable trigger all');
+    execute format('alter table bundle2.commit disable trigger all');
+    execute format('copy bundle2.bundle from ''%s/bundle.csv''', directory);
+    execute format('copy bundle2.commit from ''%s/commit.csv''', directory);
 
     -- copy the commit data
-    execute format('copy bundle.rowset from ''%s/rowset.csv''', directory);
-    execute format('copy bundle.rowset_row from ''%s/rowset_row.csv''', directory);
-    execute format('copy bundle.blob from ''%s/blob.csv''', directory);
-    execute format('copy bundle.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
-    execute format('alter table bundle.bundle enable trigger all');
-    execute format('alter table bundle.commit enable trigger all');
+    execute format('copy bundle2.rowset from ''%s/rowset.csv''', directory);
+    execute format('copy bundle2.rowset_row from ''%s/rowset_row.csv''', directory);
+    execute format('copy bundle2.blob from ''%s/blob.csv''', directory);
+    execute format('copy bundle2.rowset_row_field from ''%s/rowset_row_field.csv''', directory);
+    execute format('alter table bundle2.bundle enable trigger all');
+    execute format('alter table bundle2.commit enable trigger all');
 
     -- set the origin for this bundle
     execute format('create temporary table origin_temp(id uuid, name text, head_commit_id uuid, checkout_commit_id uuid) on commit drop');
     execute format('copy origin_temp from ''%s/bundle.csv''', directory);
-    execute format('insert into bundle.bundle_csv(directory, bundle_id) select %L, id from origin_temp', directory);
+    execute format('insert into bundle2.bundle_csv(directory, bundle_id) select %L, id from origin_temp', directory);
 
     -- make sure that checkout_commit_is null
     select name from origin_temp into bundle_name;
@@ -164,24 +164,24 @@ begin
         array_agg(c.message),
         rrf.value_hash,
         value
-        from bundle.bundle b
-            join bundle.commit c on c.bundle_id=b.id ';
+        from bundle2.bundle b
+            join bundle2.commit c on c.bundle_id=b.id ';
     case scope
         when 'head' then
         search_stmt := search_stmt || '
-            join bundle.head_commit_row hcr on hcr.commit_id = c.id
-            join bundle.head_commit_field rrf on rrf.row_id = hcr.row_id
-            join bundle.blob bb on rrf.value_hash = bb.hash ';
+            join bundle2.head_commit_row hcr on hcr.commit_id = c.id
+            join bundle2.head_commit_field rrf on rrf.row_id = hcr.row_id
+            join bundle2.blob bb on rrf.value_hash = bb.hash ';
         when 'stage' then
         search_stmt := search_stmt || '
-            join bundle.stage_row sr on sr.bundle_id = b.id
-            join bundle.stage_row_field rrf on rrf.stage_row_id::text = sr.row_id::text '; --TODO: holy cown this cast to text speeds things up 70x
+            join bundle2.stage_row sr on sr.bundle_id = b.id
+            join bundle2.stage_row_field rrf on rrf.stage_row_id::text = sr.row_id::text '; --TODO: holy cown this cast to text speeds things up 70x
         when 'history' then
         search_stmt := search_stmt || '
-            join bundle.rowset r on c.rowset_id=r.id
-            join bundle.rowset_row rr on rr.rowset_id=r.id
-            join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-            join bundle.blob bb on rrf.value_hash = bb.hash ';
+            join bundle2.rowset r on c.rowset_id=r.id
+            join bundle2.rowset_row rr on rr.rowset_id=r.id
+            join bundle2.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+            join bundle2.blob bb on rrf.value_hash = bb.hash ';
         else raise exception 'Not Yet Implemented';
     end case;
 

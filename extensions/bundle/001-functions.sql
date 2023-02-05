@@ -281,7 +281,7 @@ create or replace function commit (bundle_name text, message text) returns void 
 
     raise notice 'bundle: Updating bundle.head_commit_id...';
     -- point HEAD at new commit
-    update bundle2.bundle bundle set head_commit_id=new_commit_id, checkout_commit_id=new_commit_id where bundle.id=_bundle_id;
+    update bundle2.bundle bundle set head_commit_id=new_commit_id, checkout_commit_id=new_commit_id where bundle2.id=_bundle_id;
 
     raise notice 'bundle: Cleaning up after commit...';
     -- clear the stage
@@ -335,11 +335,11 @@ as $$
         (row_id).relation_name,
         (row_id).pk_column_name,
         (row_id).pk_value
-    from bundle2.bundle bundle
-        join bundle2.commit c on bundle.head_commit_id=c.id
+    from bundle2.bundle b
+        join bundle2.commit c on b.head_commit_id=c.id
         join bundle2.rowset r on c.rowset_id = r.id
         join bundle2.rowset_row rr on rr.rowset_id = r.id
-    where bundle.name = bundle_name
+    where b.name = bundle_name
 $$ language sql;
 
 
@@ -536,13 +536,13 @@ create or replace function stage_row_delete (
 as $$
     insert into bundle2.stage_row_deleted (bundle_id, rowset_row_id)
     select
-        bundle.id as bundle_id,
+        b.id as bundle_id,
         rr.id as rowset_row_id
-    from bundle2.bundle bundle
-        join bundle2.commit c on bundle.head_commit_id = c.id
+    from bundle2.bundle b
+        join bundle2.commit c on b.head_commit_id = c.id
         join bundle2.rowset r on c.rowset_id = r.id
         join bundle2.rowset_row rr on rr.rowset_id = r.id
-    where bundle.name = bundle_name
+    where b.name = bundle_name
         and rr.row_id = meta2.row_id(schema_name, relation_name, pk_column_name, pk_value);
     select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
@@ -1210,11 +1210,11 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
             update_stmt := format('
                 update %I.%I set %I = (
                     select b.value
-                    from bundle.commit c
-                        join bundle.rowset r on c.rowset_id = r.id
-                        join bundle.rowset_row rr on rr.rowset_id = r.id
-                        join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-                        join bundle.blob b on rrf.value_hash = b.hash
+                    from bundle2.commit c
+                        join bundle2.rowset r on c.rowset_id = r.id
+                        join bundle2.rowset_row rr on rr.rowset_id = r.id
+                        join bundle2.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                        join bundle2.blob b on rrf.value_hash = b.hash
                     where c.id = %L
                         and rrf.field_id::text = %L
                 ) where %I = %L',
@@ -1270,11 +1270,11 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
             update_stmt := format('
                 update %I.%I set %I = (
                     select b.value
-                    from bundle.commit c
-                        join bundle.rowset r on c.rowset_id = r.id
-                        join bundle.rowset_row rr on rr.rowset_id = r.id
-                        join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-                        join bundle.blob b on rrf.value_hash = b.hash
+                    from bundle2.commit c
+                        join bundle2.rowset r on c.rowset_id = r.id
+                        join bundle2.rowset_row rr on rr.rowset_id = r.id
+                        join bundle2.rowset_row_field rrf on rrf.rowset_row_id = rr.id
+                        join bundle2.blob b on rrf.value_hash = b.hash
                     where c.id = %L
                         and rrf.field_id::text = %L
                 ) where %I = %L',
