@@ -1,4 +1,5 @@
 begin;
+set search_path=endpoint;
 
 
 /******************************************************************************
@@ -6,6 +7,148 @@ begin;
  * HTTP request handler for a datum REST interface
  * HTTP arbitrary resource server
  ******************************************************************************/
+
+/****************************************************************************************************
+ *
+ * FUNCTION suffix_clause
+ *
+ * Builds limit, offset, order by, and where clauses from json
+ *
+ ****************************************************************************************************/
+
+create or replace function endpoint.suffix_clause(
+    args json
+) returns text as $$
+
+    declare
+        _limit text := '';
+        _offset text := '';
+        _order_by text := '';
+        _where text := 'where true';
+        r record;
+
+    begin
+        for r in select * from json_each(args) loop
+
+            -- Limit clause
+            -- URL
+            -- /endpoint?$limit=10
+            if r.key = 'limit' then
+                select ' limit ' || quote_literal(json_array_elements_text)
+                from json_array_elements_text(r.value::text::json)
+                into _limit;
+
+            -- Offset clause
+            -- URL
+            -- /endpoint?$offest=5
+            elsif r.key = 'offset' then
+                select ' offset ' || quote_literal(json_array_elements_text)
+                from json_array_elements_text(r.value::text::json)
+                into _offset;
+
+            -- Order by clause
+            -- URL
+            -- /endpoint?$order_by=city
+            -- /endpoint?$order_by=[city,-state,-full_name]
+            elsif r.key = 'order_by' then
+                if pg_typeof(r.value) = 'json'::regtype then
+                    select ' order by ' ||
+                        string_agg(case substring(q.val from 1 for 1)
+                                       when '-' then substring(q.val from 2) || ' desc'
+                                       else q.val end,
+                        ', ')
+                    from (select json_array_elements_text as val from json_array_elements_text(r.value)) q
+                    into _order_by;
+                else
+                    select ' order by ' ||
+                        case substring(r.value::text from 1 for 1)
+                            when '-' then substring(r.value::text from 2) || ' desc'
+                            else r.value::text
+                            end
+                    into _order_by;
+                end if;
+
+            -- Where clause
+            -- URL
+            -- /endpoint?$where={name=NAME1,op=like,value=VALUE1}
+            -- /endpoint?$where=[{name=NAME1,op=like,value=VALUE1},{name=NAME2,op='=',value=VALUE2}]
+            elsif r.key = 'where' then
+
+                if pg_typeof(r.value) = 'json'::regtype then
+
+                    if json_typeof(r.value) = 'array' then -- { where: JSON array }
+
+                        /*
+                        select json->>'name' as name, json->>'op' as op, json->>'value' as value from
+                            (select json_array_elements_text(value)::json as json from
+                                (( select value from json_each('{"where": ["{\"name\":\"bundle_name\",\"op\":\"=\",\"value\":\"com.aquameta.core.ide\"}", "{\"name\":\"name\",\"op\":\"=\",\"value\":\"development\"}"]}'))
+                                ) v)
+                            b;
+                        */
+                        select _where || ' and ' || string_agg( name || ' ' || op || ' ' ||
+
+
+                            case when op = 'in' then
+                                -- Value is array
+                                case when json_typeof(json) = 'array' then
+                                   (select '(' || string_agg(quote_literal(array_val), ',') || ')'
+                                   from json_array_elements_text(json) as array_val)
+                                -- Value is object
+                                when json_typeof(json) = 'object' then
+                                   quote_literal(json) || '::json'
+                                else
+                                    quote_literal(value)
+                                end
+                            else
+                                quote_literal(value)
+                            end
+
+                            , ' and ' )
+
+                        from (
+                            select element->>'name' as name, element->>'op' as op, element->'value' as json, element->>'value' as value
+                            from (select json_array_elements_text::json as element from json_array_elements_text(r.value)) j
+                            ) v
+                        into _where;
+
+                    elsif json_typeof(r.value) = 'object' then -- { where: JSON object }
+                        select _where || ' and ' || name || ' ' || op || ' ' ||
+
+                            case when op = 'in' then
+                                -- Value is array
+                                case when json_typeof(value::json) = 'array' then
+                                   (select '(' || string_agg(quote_literal(array_val), ',') || ')'
+                                   from json_array_elements_text(value::json) as array_val)
+                                -- Value is object
+                                when json_typeof(value::json) = 'object' then
+                                   quote_literal(value) || '::json'
+                                else
+                                    quote_literal(value)
+                                end
+                            end
+
+                        from json_to_record(r.value::json) as x(name text, op text, value text)
+                        into _where;
+
+                    end if;
+
+                else -- Else { where: regular value } -- This is not used in the client
+
+                    select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' || quote_literal(value)
+                    from json_to_record(r.value::json) as x(name text, op text, value text)
+                    into _where;
+
+                end if;
+
+            else
+            end if;
+        end loop;
+        return  _where || _order_by || _limit || _offset;
+    end;
+$$
+language plpgsql;
+
+
 
 /******************************************************************************
  * REQUEST HANDLERS
@@ -257,7 +400,7 @@ declare
     column_list text;
 
 begin
-    select (relation_id).schema_id.name into schema_name;
+    select (relation_id).schema_name into schema_name;
     select (relation_id).name into relation_name;
 
     -- Suffix
@@ -419,11 +562,11 @@ create or replace function endpoint.field_select(
         field_type text;
 
     begin
-        -- raise notice 'FIELD SELECT ARGS: %, %, %, %, %', schema_name, table_name, queryable_type, pk, field_name;
+        raise notice 'FIELD SELECT ARGS: %', field_id;
         set local search_path = endpoint;
 
         select (field_id).schema_name into _schema_name;
-        select (field_id).column_name into _relation_name;
+        select (field_id).relation_name into _relation_name;
         select (field_id).pk_value into pk;
         select (field_id).pk_column_name into pk_column_name;
         select (field_id).column_name into field_name;
@@ -462,7 +605,7 @@ create or replace function endpoint.field_select(
                 || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
         else
             execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
-                || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
+                || ' as t where ' || quote_ident(pk_column_name) || '::text = ' || quote_literal(pk) || '::text' /* || pk_type */ into field;
         end if;
 
         -- implicitly returning field and mimetype
@@ -487,7 +630,7 @@ We also want to use column_mimetype if we are only sending one column back
 
  *****************************************************************************/
 
-create function endpoint.rows_select_function(
+create or replace function endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
     out result text,
@@ -607,7 +750,7 @@ create function endpoint.rows_select_function(
             /*** FIXME: this is broken */
 
             -- Loop through function call results
-            for _row in execute 'select * from ' || quote_ident((_function_id).schema_id.name) || '.' || quote_ident((_function_id).name)
+            for _row in execute 'select * from ' || quote_ident((_function_id).schema_name) || '.' || quote_ident((_function_id).name)
                                 || '(' || function_args || ') ' || suffix
             loop
                 rows_json := array_append(rows_json, '{ "row": ' || row_to_json(_row, true) || ' }');
@@ -663,7 +806,7 @@ $$
 language plpgsql;
 
 
-create function endpoint.anonymous_rows_select_function(
+create or replace function endpoint.anonymous_rows_select_function(
     _schema_name text,
     _function_name text,
     args json,
@@ -758,7 +901,7 @@ language plpgsql;
 
 
 -- This function should disappear. Factor column selection into previous rows_select_function()
-create function endpoint.rows_select_function(
+create or replace function endpoint.rows_select_function(
     function_id meta.function_id,
     args json,
     column_name text
@@ -840,7 +983,7 @@ language plpgsql;
  * FUNCTION row_delete
  *****************************************************************************/
 
-create function endpoint.row_delete(
+create or replace function endpoint.row_delete(
     row_id meta.row_id
 ) returns json as $$
 
@@ -873,7 +1016,7 @@ language plpgsql;
  * FUNCTION rows_delete                                                                             *
  ****************************************************************************************************/
 
-create function endpoint.rows_delete(
+create or replace function endpoint.rows_delete(
     relation_id meta.relation_id,
     args json
 ) returns json as $$
@@ -983,10 +1126,10 @@ create or replace function endpoint.request(
         op := substring(path from '([^/]+)(/{1})'); -- row, relation, function, etc.
         op_params := substring(path from char_length(op) + 2); -- everything after {op}/
 
-        -- raise notice '##### endpoint.request % % %', version, verb, path;
-        -- raise notice '##### op and params: % %', op, op_params;
-        -- raise notice '##### query string args: %', query_args::text;
-        -- raise notice '##### POST data: %', post_data::text;
+        raise notice '##### endpoint.request % % %', version, verb, path;
+        raise notice '##### op and params: % %', op, op_params;
+        raise notice '##### query string args: %', query_args::text;
+        raise notice '##### POST data: %', post_data::text;
 
         case op
         when 'row' then
@@ -1203,7 +1346,7 @@ language plpgsql;
  ******************************************************************************/
 
 /*
-create function endpoint.register (_email text,
+create or replace function endpoint.register (_email text,
     _password text,
     fullname text default '',
     send_email boolean default true,
@@ -1260,7 +1403,7 @@ $$;
  ******************************************************************************/
 
 /*
-create function endpoint.register_confirm (_email text, _confirmation_code text, send_email boolean default true) returns void
+create or replace function endpoint.register_confirm (_email text, _confirmation_code text, send_email boolean default true) returns void
     language plpgsql strict security definer
 as $$
 
@@ -1314,7 +1457,7 @@ $$;
  ******************************************************************************/
 
 /*
-create function endpoint.register_superuser (
+create or replace function endpoint.register_superuser (
     _email text,
     _password text,
     fullname text,
@@ -1352,7 +1495,7 @@ $$;
  ******************************************************************************/
 
 /*
-create function endpoint.login (_email text, _password text) returns uuid
+create or replace function endpoint.login (_email text, _password text) returns uuid
     language plpgsql strict security definer
 as $$
 
@@ -1391,7 +1534,7 @@ $$;
  ******************************************************************************/
 
 /*
-create function endpoint.logout (_email text) returns void
+create or replace function endpoint.logout (_email text) returns void
     language sql strict security definer
 as $$
     -- Should this delete all sessions associated with this user? I think so
@@ -1403,7 +1546,7 @@ $$;
  * endpoint.superuser
  ******************************************************************************/
 /*
-create function endpoint.superuser (_email text) returns void
+create or replace function endpoint.superuser (_email text) returns void
     language sql strict security invoker
 as $$
     insert into meta.role_inheritance (role_name, member_role_name) values ('aquameta', (select (role_id).name from endpoint."user" where email=_email));
@@ -1416,7 +1559,7 @@ $$;
  ******************************************************************************/
 
 /*
-create function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
+create or replace function endpoint.email (from_email text, to_email text[], subject text, body text) returns void as $$
 
 # -- Import smtplib for the actual sending function
 import smtplib

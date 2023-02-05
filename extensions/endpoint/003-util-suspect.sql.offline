@@ -69,22 +69,6 @@ $$
     language sql;
 
 
-/****************************************************************************************************
- * FUNCTION pk_name                                                                                 *
- ****************************************************************************************************/
-
-create function pk_name(
-    _schema_name name,
-    _relation_name name
-) returns text as $$
-select c.name
-from meta.relation_column c --TODO: either use relation_column maybe?  Or go look up the pk of a view somewhere else if we ever add that
-where c.schema_name = _schema_name and
-        c.relation_name = _relation_name and
-    c.primary_key
-$$
-    language sql security definer;
-
 
 /*******************************************************************************
  *
@@ -351,44 +335,6 @@ when invalid_text_representation then
 end;
 $$
     immutable language plpgsql;
-
-
-
-
-
-/****************************************************************************************************
- * FUNCTION column_list
- ****************************************************************************************************/
-
-create function endpoint.column_list(
-    _schema_name text,
-    _relation_name text,
-    table_alias text,
-    exclude text[],
-    include text[],
-    out column_list text
-) as $$
-begin
-    if table_alias = '' then
-        table_alias := _schema_name || '.' || _relation_name;
-    end if;
-
-    execute
-                                    'select string_agg(' || quote_literal(table_alias) || ' || ''.'' || name, '', '')
-            from meta.relation_column
-            where schema_name = ' || quote_literal(_schema_name) || ' and
-                relation_name = ' || quote_literal(_relation_name) ||
-                                    case when include is not null then
-                                                     ' and name = any(' || quote_literal(include) || ')'
-                                         else '' end ||
-                                    case when exclude is not null then
-                                                     ' and not name = any(' || quote_literal(exclude) || ')'
-                                         else '' end
-        -- || ' group by position order by position' wrong.
-        into column_list;
-
-end;
-$$ language plpgsql;
 
 
 

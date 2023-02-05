@@ -4,6 +4,8 @@
  * HTTP arbitrary resource server
  ******************************************************************************/
 
+ begin;
+
 create schema endpoint;
 set search_path=endpoint;
 
@@ -92,6 +94,22 @@ create table endpoint.resource_function (
 
 
 
+
+
+
+
+
+/********************************************* hold up hey *******************/
+/* below are undesirable tables enabled temporarily so bundles can be imported.
+*/
+
+
+
+
+
+
+
+
 /******************************************************************************
  * templates
  * - dynamic HTML fragments, parsed and rendered upon request.
@@ -129,6 +147,41 @@ create table endpoint.user (
     activation_code uuid not null default public.uuid_generate_v4(),
     created_at timestamp not null default now()
 );
+
+
+/******************************************************************************
+ * plv8 module
+ * libraries that plv8 can load in -- temporary until plv8 supports import
+ * natively.
+ ******************************************************************************/
+
+create table endpoint.js_module (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name text not null default '',
+    version text not null default '',
+    code text not null default ''
+);
+
+
+/******************************************************************************
+ * endpoint.site_settings
+ ******************************************************************************/
+
+create table endpoint.site_settings (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name text,
+    active boolean default false,
+
+    site_title text,
+    site_url text,
+
+    resource_function_regex text,
+
+    smtp_server_id uuid not null,
+    auth_from_email text
+);
+
+
 
 /*
 
@@ -241,3 +294,8 @@ $$
     language sql security definer;
 
 */
+
+
+
+
+commit;
