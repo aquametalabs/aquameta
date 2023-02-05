@@ -1,22 +1,32 @@
 reset
 dropdb flat
 createdb flat
-cd meta/flat/
-cat 0*.sql|psql flat
-cd ../../bundle
-cat 0*.sql|psql flat
-cd ../endpoint
-cat 000-data-model.sql 001-server.sql|psql flat
+
+# import the flat stuff
+cat meta/flat/0*.sql|psql flat
+cat bundle/0*.sql|psql flat
 cd ../
-cd ../
+
+# init the non-flat stuff
 ./aquameta -c conf/flat.toml
 
 
-cd ~orchestrator/aquameta/bundles.private
-./import.sh | psql flat
-cd
-cd dev/aquameta/extensions
+# import old private bundles
+# cd ~orchestrator/aquameta/bundles.private
+# ./import.sh | psql flat
+
+# 
+cd ~/dev/aquameta/extensions
 cat bundle/migrate_flat.sql|psql flat
 
 # export:
-# select bundle.bundle_export_csv(b.name, bc.directory) from bundle.bundle b join bundle.bundle_csv bc on bc.bundle_id = b.id;
+psql -c 'select bundle2.bundle_export_csv(b.name, bc.directory) from bundle2.bundle b join bundle2.bundle_csv bc on bc.bundle_id = b.id;' flat
+
+# convert meta2 to meta, bundle2 to bundle
+# sed -i 's/meta2/meta/g' meta/flat/0*.sql bundle/0*.sql endpoint/0*.sql
+# sed -i 's/bundle2/bundle/g' meta/flat/0*.sql bundle/0*.sql endpoint/0*.sql
+
+# then repeat the "import the flat" step
+# then swap out main.go for main.go.no-install
+
+
