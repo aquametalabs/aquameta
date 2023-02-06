@@ -12,6 +12,7 @@ Contents
 - [Download](#download)
 - [Install From Source](#install-from-source)
 - [Usage](#usage)
+- [History](#history)
 
 Status
 ------
@@ -180,3 +181,31 @@ Usage
 -----
 
 See the (paltry) [documentation](docs/).
+
+
+History
+-------
+Aquameta is the life-work of Eric Hanson for over two decades.  Prototypes have been built in MySQL/PHP, eXist/XML/XQuery/XForms, RDF/SPARQL and more, but finding PostgreSQL was a game changer and this codebase is the first to show some light at the end of the tunnel.
+
+This codebase originated as the startup idea of Aquameta, LLC, a Portland Oregon based software company.  Much blood, sweat and tears was put into formulating and evolving the concept in the RDBMS world.  Huge strides were made by Eric, Mike, Mickey and others in the late 2010s.  But, with zero users, a marginally functional prototype, and a wild idea about how to radically change the very foundations of how we program, the company was unsurprisingly unable to attract institutional investors.  We ran out of money and the company is now inactive.  In retrospect, rebuilding the entire web stack perhaps wasn't the most realistic idea for a startup.
+
+However, work continues on the project as open source, as time, resources and love permits.
+
+Here are some older materials from the early days.  They are woefully out of date from a technical perspective, but conceptually still fairly sound.
+
+* Old blog entries
+  * [Introducing Aquameta](https://web.archive.org/web/20150901192639/http://blog.aquameta.com/2015/08/28/introducing-aquameta/)
+  * [Aquameta Chapter 1: meta - Writable System Catalog for PostgreSQL](https://web.archive.org/web/20160615075450/http://blog.aquameta.com/2015/08/29/intro-meta/)
+  * [Aquameta Chapter 2: filesystem - PostgreSQL <==> File System Bridge](https://web.archive.org/web/20160401073006/http://blog.aquameta.com/2016/01/06/intro-chpater2-filesystem/)
+  * [Aquameta Chapter 3: event - The Atoms of Change](https://web.archive.org/web/0/https://blog.aquameta.com/2016/03/21/intro-event/)
+
+* [FLOSS Weekly interview](https://twit.tv/shows/floss-weekly/episodes/449) on TWiT (This Week in Tech)
+* [Hacker News](https://news.ycombinator.com/item?id=21281042) discussion
+* [Version 0.2 IDE demo](https://www.youtube.com/watch?v=ZOpj8lvNJtg)
+* [@twitter](https://twitter.com/aquameta)
+
+Currently, the project has come a very long way, but still has known architectural foot-guns and time-bombs.  It works fine for single users, but being well-equipped for a distributed development ecosystem with independent developers and out-of-step dependency management is a much more challenging problem.  Until the issues with operating at scale are even marginally addressed, we are not trying to lure new users into a swamp where they shalt surely perish.
+
+You're welcome to try the project, it actually works pretty well in a single user or small team environment.  But bring your mud boots and machete: The documentation is wrong, if it exists at all, the architecture can and will change without notice or regard for backwards compatibility.  User experience is not a priority at this time, getting the architecture correct for future users is all that matters.
+
+Architecture nerds and system architectures are welcome.  If you love the idea, help us make it a reality!  There are a vast number of [known issues](https://github.com/aquametalabs/aquameta/issues) in the issue tracker.
