@@ -46,3 +46,7 @@
     # SSLKeyFile = "certificates/server.key"
 
     StartupURL = "/"                # URL to open at startup
+
+
+[PGFS]
+    MountDirectory = "pgfs/"
