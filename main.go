@@ -15,6 +15,8 @@ import (
     "path/filepath"
     "syscall"
     "time"
+    "bazil.org/fuse"
+    "bazil.org/fuse/fs"
 )
 
 func main() {
@@ -349,6 +351,9 @@ func main() {
     http.HandleFunc("/endpoint/", endpoint(dbpool))
     http.HandleFunc("/", resource(dbpool))
 
+    httpDone := make(chan bool)
+    fuseDone := make(chan bool)
+
     //
     // start http server
     //
@@ -358,22 +363,59 @@ func main() {
         config.HTTPServer.Port,
         config.HTTPServer.StartupURL)
 
-    //    go func() { // make the HTTPServer the main thread since GUI is disabled
-    if config.HTTPServer.Protocol == "http" {
-        http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil)
-    } else {
-        if config.HTTPServer.Protocol == "https" {
-            // https://github.com/denji/golang-tls
-            log.Fatal(http.ListenAndServeTLS(
-                config.HTTPServer.IP+":"+config.HTTPServer.Port,
-                config.HTTPServer.SSLCertificateFile,
-                config.HTTPServer.SSLKeyFile,
-                nil))
+    go func() {
+        if config.HTTPServer.Protocol == "http" {
+            http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil)
         } else {
-            log.Fatal("Unrecognized protocol: " + config.HTTPServer.Protocol)
+            if config.HTTPServer.Protocol == "https" {
+                // https://github.com/denji/golang-tls
+                log.Fatal(http.ListenAndServeTLS(
+                    config.HTTPServer.IP+":"+config.HTTPServer.Port,
+                    config.HTTPServer.SSLCertificateFile,
+                    config.HTTPServer.SSLKeyFile,
+                    nil))
+            } else {
+                log.Fatal("Unrecognized protocol: " + config.HTTPServer.Protocol)
+            }
         }
-    }
-    //    }()
+
+        httpDone <- true
+
+    }()
+
+
+    log.Printf("Mounting PGFS Filesystem: %s\n\n", config.PGFS.MountDirectory)
+
+    go func() {
+        c, err := fuse.Mount(
+            config.PGFS.MountDirectory,
+            fuse.FSName("pgfsfs"),
+            fuse.Subtype("pgfs"),
+        )
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer c.Close()
+
+        err = fs.Serve(c, FS{/* dbpool: dbpool */})
+        if err != nil {
+            log.Fatal(err)
+        }
+/*
+        server, _, err := fuse.Mount(
+            "/tmp/mnt",
+            fs,
+            &fuse.MountOptions{
+                AllowOther: true,
+            },
+        )
+        if err != nil {
+            println("FUSE filesystem error:", err)
+        }
+        server.Wait()
+*/
+        fuseDone <- true
+    }()
 
     //
     // start gui
@@ -391,8 +433,14 @@ func main() {
        w.SetSize(800, 500, webview.HintNone)
        w.Navigate(config.HTTPServer.Protocol+"://"+config.HTTPServer.IP+":"+config.HTTPServer.Port+"/boot")
        w.Run()
-
     */
+
+    select {
+    case <-httpDone:
+        println("HTTP server stopped.")
+    case <-fuseDone:
+        println("FUSE filesystem stopped.")
+    }
 
     if config.Database.Mode == "embedded" {
         if epg.IsStarted() {

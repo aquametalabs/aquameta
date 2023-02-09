@@ -8,6 +8,7 @@ type tomlConfig struct {
     Database Database `toml:"Database"`
     AquametaUser AquametaUser `toml:"AquametaUser"`
     HTTPServer HTTPServer `toml:"HTTPServer"`
+    PGFS PGFS `toml:"PGFS"`
 }
 
 type Database struct {
@@ -33,6 +34,11 @@ type HTTPServer struct {
     SSLCertificateFile string
     SSLKeyFile string
     StartupURL string
+}
+
+
+type PGFS struct {
+    MountDirectory string
 }
 
 
