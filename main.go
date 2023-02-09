@@ -397,7 +397,7 @@ func main() {
         }
         defer c.Close()
 
-        err = fs.Serve(c, FS{/* dbpool: dbpool */})
+        err = fs.Serve(c, FS{dbpool: dbpool})
         if err != nil {
             log.Fatal(err)
         }
