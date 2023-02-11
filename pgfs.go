@@ -5,6 +5,7 @@ import (
     "log"
     "os"
     "fmt"
+    "syscall"
 
     "github.com/jackc/pgx/v4/pgxpool"
     // "github.com/jackc/pgx/v4"
@@ -12,7 +13,6 @@ import (
 
     "bazil.org/fuse"
     "bazil.org/fuse/fs"
-
 )
 
 // FS implements the hello world file system.
@@ -32,13 +32,14 @@ type Dir struct{
 
 func (Dir) Attr(ctx context.Context, a *fuse.Attr) error {
     a.Inode = 1
-    a.Mode = os.ModeDir | 0o555
+    a.Uid = uint32(syscall.Geteuid())
+    a.Gid = uint32(syscall.Getegid())
+    a.Mode = os.ModeDir | 0o400
     return nil
 }
 
 func (d Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
     return SchemaDir{d.fs}, nil
-    // return nil, syscall.ENOENT
 }
 
 func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
@@ -84,12 +85,14 @@ type SchemaDir struct{
 
 func (SchemaDir) Attr(ctx context.Context, a *fuse.Attr) error {
     a.Inode = 1
-    a.Mode = os.ModeDir | 0o555
+    a.Uid = uint32(syscall.Geteuid())
+    a.Gid = uint32(syscall.Getegid())
+    a.Mode = os.ModeDir | 0o400
     return nil
 }
 
 func (d SchemaDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
-        return TableDir{d.fs}, nil // File{}, nil
+        return TableDir{d.fs}, nil
 }
 
 func (d SchemaDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
@@ -112,7 +115,7 @@ func (d SchemaDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
             continue
         }
 
-        // log.Println("Schema:", name)
+        // log.Println("Relation: ", name)
         dirDirs = append(dirDirs, fuse.Dirent{
             Inode: 2,
             Name: name,
@@ -139,12 +142,14 @@ type TableDir struct{
 
 func (TableDir) Attr(ctx context.Context, a *fuse.Attr) error {
     a.Inode = 1
-    a.Mode = os.ModeDir | 0o555
+    a.Uid = uint32(syscall.Geteuid())
+    a.Gid = uint32(syscall.Getegid())
+    a.Mode = os.ModeDir | 0o400
     return nil
 }
 
 func (d TableDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
-        return RowDir{}, nil // File{}, nil
+        return RowDir{d.fs}, nil
 }
 
 func (d TableDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
@@ -196,7 +201,9 @@ type RowDir struct{
 
 func (RowDir) Attr(ctx context.Context, a *fuse.Attr) error {
     a.Inode = 1
-    a.Mode = os.ModeDir | 0o555
+    a.Uid = uint32(syscall.Geteuid())
+    a.Gid = uint32(syscall.Getegid())
+    a.Mode = os.ModeDir | 0o400
     return nil
 }
 
@@ -206,8 +213,8 @@ func (d RowDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 
 func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
      q := fmt.Sprintf("select name as column_name from meta.column where schema_name=%s and relation_name=%s",
-         pq.QuoteIdentifier("bundle"),
-         pq.QuoteIdentifier("commit"))
+         pq.QuoteLiteral("bundle"),
+         pq.QuoteLiteral("commit"))
     rows, err := d.fs.dbpool.Query(context.Background(), q)
 
     if err != nil {
@@ -248,15 +255,59 @@ type FieldFile struct{
     fs FS
 }
 
+
+
 const greeting = "hello, world\n"
 
-func (FieldFile) Attr(ctx context.Context, a *fuse.Attr) error {
+func (ff FieldFile) Attr(ctx context.Context, a *fuse.Attr) error {
+    var length int
+
+    q := fmt.Sprintf("select octet_length(%s) as length from %s.%s where %s = %s",
+         pq.QuoteIdentifier("message"), // column name
+         pq.QuoteIdentifier("bundle"), // bundle_name
+         pq.QuoteIdentifier("commit"), // schema_name
+         pq.QuoteIdentifier("id"), // pk_column_name
+         pq.QuoteLiteral("fdf62c69-544b-4f9a-ab2e-dc5a64cb2d44")) // pk_value
+
+    err := ff.fs.dbpool.QueryRow(context.Background(), q).Scan(&length)
+
+    if err != nil {
+        log.Fatal("Error querying database: ", err)
+    }
+
     a.Inode = 2
-    a.Mode = 0o444
-    a.Size = uint64(len(greeting))
+    a.Size = uint64(length)
+
+	// Set owner to current user
+    a.Uid = uint32(syscall.Geteuid())
+    a.Gid = uint32(syscall.Getegid())
+
+	// Set the file mode to read-only
+	a.Mode = a.Mode | syscall.S_IRUSR | syscall.S_IRGRP
+	a.Mode = a.Mode &^ (syscall.S_IWUSR | syscall.S_IWGRP)
+
+
+
     return nil
 }
 
-func (FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
+func (ff FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
+    var content string
+    var length int
+
+    q := fmt.Sprintf("select %s as content, octet_length(%s) as length from %s.%s where %s = %s",
+         pq.QuoteIdentifier("message"), // column name
+         pq.QuoteIdentifier("message"), // column name
+         pq.QuoteIdentifier("bundle"), // bundle_name
+         pq.QuoteIdentifier("commit"), // schema_name
+         pq.QuoteIdentifier("id"), // pk_column_name
+         pq.QuoteLiteral("fdf62c69-544b-4f9a-ab2e-dc5a64cb2d44")) // pk_value
+
+    err := ff.fs.dbpool.QueryRow(context.Background(), q).Scan(&content, &length)
+
+    if err != nil {
+        log.Fatal("Error querying database: ", err)
+    }
+
     return []byte(greeting), nil
 }
