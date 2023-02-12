@@ -15,7 +15,11 @@ import (
     "bazil.org/fuse/fs"
 )
 
-// FS implements the hello world file system.
+//
+// File System
+//
+
+
 type FS struct{
     dbpool *pgxpool.Pool
 }
@@ -24,8 +28,10 @@ func (f FS) Root() (fs.Node, error) {
     return Dir{f}, nil
 }
 
+//
+// Root Directory
+//
 
-// Dir implements both Node and Handle for the root directory.
 type Dir struct{
     fs FS
 }
@@ -43,7 +49,7 @@ func (d Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
     q := fmt.Sprintf("select exists(select 1 from meta.schema where name=%s)", pq.QuoteLiteral(name))
     err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
     if err != nil {
-        log.Println("Error querying database: ", err)
+        log.Println("Dir Lookup: Error querying database: ", err)
         return nil, fuse.ENOENT
     }
     if exists {
@@ -58,7 +64,7 @@ func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
     rows, err := d.fs.dbpool.Query(context.Background(), q)
 
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Fatal("Dir ReadDirAll: Error querying database: ", err)
     }
     defer rows.Close()
 
@@ -68,7 +74,7 @@ func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
         err := rows.Scan(&name)
         if err != nil {
-            log.Fatal("Error scanning row", err)
+            log.Fatal("Dir ReadDirAll: Error scanning row", err)
             continue
         }
 
@@ -80,11 +86,14 @@ func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
         })
     }
 
+
     if rows.Err() != nil {
-        log.Fatal("Error iterating rows", rows.Err())
+        log.Fatal("Dir ReadDirAll: Error iterating rows", rows.Err())
     }
 
-    return dirDirs, nil
+    return append(dirDirs,
+        fuse.Dirent{Name: ".", Type: fuse.DT_Dir},
+        fuse.Dirent{Name: "..", Type: fuse.DT_Dir}), nil
 }
 
 
@@ -130,7 +139,7 @@ func (d SchemaDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
     rows, err := d.fs.dbpool.Query(context.Background(), q)
 
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Fatal("SchemaDir ReadDirAll(): Error querying database: ", err)
     }
     defer rows.Close()
 
@@ -140,7 +149,7 @@ func (d SchemaDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
         err := rows.Scan(&name)
         if err != nil {
-            log.Fatal("Error scanning row", err)
+            log.Fatal("SchemaDir ReadDirAll(): Error scanning row", err)
             continue
         }
 
@@ -153,10 +162,12 @@ func (d SchemaDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
     }
 
     if rows.Err() != nil {
-        log.Fatal("Error iterating rows", rows.Err())
+        log.Fatal("SchemaDir ReadDirAll(): Error iterating rows", rows.Err())
     }
 
-    return dirDirs, nil
+    return append(dirDirs,
+        fuse.Dirent{Name: ".", Type: fuse.DT_Dir},
+        fuse.Dirent{Name: "..", Type: fuse.DT_Dir}), nil
 }
 
 
@@ -188,7 +199,7 @@ func (d TableDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
         pq.QuoteLiteral(name))
     err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
     if err != nil {
-        log.Println("Error querying database: ", err)
+        log.Println("TableDir Lookup(): Error querying database: ", err)
         return nil, fuse.ENOENT
     }
     if exists {
@@ -205,7 +216,7 @@ func (d TableDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
     rows, err := d.fs.dbpool.Query(context.Background(), q)
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Fatal("TableDir ReadDirAll(): Error querying database: ", err)
     }
     defer rows.Close()
 
@@ -215,7 +226,7 @@ func (d TableDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
         err := rows.Scan(&pk_value)
         if err != nil {
-            log.Fatal("Error scanning row", err)
+            log.Fatal("TableDir ReadDirAll(): Error scanning row", err)
             continue
         }
 
@@ -228,7 +239,7 @@ func (d TableDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
     }
 
     if rows.Err() != nil {
-        log.Fatal("Error iterating rows", rows.Err())
+        log.Fatal("TableDir ReadDirAll(): Error iterating rows", rows.Err())
     }
 
     return dirDirs, nil
@@ -270,13 +281,26 @@ func (d RowDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
         pq.QuoteIdentifier(d.table_name),
         pq.QuoteIdentifier(d.pk_column_name),
         pq.QuoteLiteral(d.pk_value))
+
+    log.Println("RowDir Lookup() exists query: ", q)
+
     err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
     if err != nil {
-        log.Println("Error querying database: ", err)
+        log.Println("RowDir Lookup(): Error querying database: ", err)
         return nil, fuse.ENOENT
     }
     if exists {
-        return FieldFile{d.fs, d.schema_name, d.table_name, name, d.pk_column_name, d.pk_value}, nil
+		f := FieldFile{
+			fs: d.fs,
+			buf: "",
+			schema_name: d.schema_name,
+			table_name: d.table_name,
+			column_name: name,
+			pk_column_name: d.pk_column_name,
+			pk_value: d.pk_value,
+		}
+        return f, nil;
+		// was: return FieldFile{d.fs, d.schema_name, d.table_name, name, d.pk_column_name, d.pk_value}, nil
     }
     return nil, fuse.ENOENT
 }
@@ -289,7 +313,7 @@ func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
     rows, err := d.fs.dbpool.Query(context.Background(), q)
 
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Fatal("RowDir ReadDirAll(): Error querying database: ", err)
     }
     defer rows.Close()
 
@@ -299,7 +323,7 @@ func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
         err := rows.Scan(&column_name)
         if err != nil {
-            log.Fatal("Error scanning row", err)
+            log.Fatal("RowDir ReadDirAll(): Error scanning row: ", err)
             continue
         }
 
@@ -312,10 +336,12 @@ func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
     }
 
     if rows.Err() != nil {
-        log.Fatal("Error iterating rows", rows.Err())
+        log.Fatal("RowDir ReadDirAll(): Error iterating rows", rows.Err())
     }
 
-    return dirDirs, nil
+    return append(dirDirs,
+        fuse.Dirent{Name: ".", Type: fuse.DT_Dir},
+        fuse.Dirent{Name: "..", Type: fuse.DT_Dir}), nil
 }
 
 
@@ -325,12 +351,14 @@ func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 type FieldFile struct{
     fs FS
+    buf string
     schema_name string
     table_name string
     column_name string
     pk_column_name string
     pk_value string
 }
+
 
 
 func (ff FieldFile) Attr(ctx context.Context, a *fuse.Attr) error {
@@ -348,7 +376,7 @@ func (ff FieldFile) Attr(ctx context.Context, a *fuse.Attr) error {
     err := ff.fs.dbpool.QueryRow(context.Background(), q).Scan(&octet_length)
 
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Fatal("FileField Attr(): Error querying database: ", err)
     }
 
     a.Inode = 2
@@ -373,7 +401,7 @@ func (ff FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
     err := ff.fs.dbpool.QueryRow(context.Background(), q).Scan(&content)
 
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Fatal("FileField ReadDirAll(): Error querying database: ", err)
     }
 
     return []byte(content), nil
@@ -381,6 +409,22 @@ func (ff FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
 
 
 func (ff FieldFile) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+
+    log.Printf("FieldFile Write(): req.Offeset: %s, req.Data: %s", req.Offset, string(req.Data))
+
+    // n, err := req.Data.Write(req.Data)
+    resp.Size = len(req.Data)
+    return nil
+}
+
+
+
+
+func (ff FieldFile) Flush(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+/*
+    fs.mu.Lock()
+    defer fs.mu.Unlock()
+*/
     q := fmt.Sprintf("update %s.%s set %s = %s where %s = %s",
          pq.QuoteIdentifier(ff.schema_name),
          pq.QuoteIdentifier(ff.table_name),
@@ -388,15 +432,10 @@ func (ff FieldFile) Write(ctx context.Context, req *fuse.WriteRequest, resp *fus
          pq.QuoteLiteral(string(req.Data)),
          pq.QuoteIdentifier(ff.pk_column_name),
          pq.QuoteLiteral(ff.pk_value))
-
-    rows, err := ff.fs.dbpool.Query(context.Background(), q)
-
+    _, err := ff.fs.dbpool.Exec(context.Background(), q)
     if err != nil {
-        log.Fatal("Error updating field in database: ", err)
+        // Handle error
     }
-    defer rows.Close()
 
-    // n, err := req.Data.Write(req.Data)
-    // resp.Size = n
     return nil
 }
