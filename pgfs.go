@@ -43,7 +43,8 @@ func (d Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
     q := fmt.Sprintf("select exists(select 1 from meta.schema where name=%s)", pq.QuoteLiteral(name))
     err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Println("Error querying database: ", err)
+        return nil, fuse.ENOENT
     }
     if exists {
         return SchemaDir{d.fs, name}, nil
@@ -107,12 +108,13 @@ func (d SchemaDir) Attr(ctx context.Context, a *fuse.Attr) error {
 func (d SchemaDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
     var pk_column_name string
     q := fmt.Sprintf("select (primary_key_column_ids[1]).name as pk_column_name from meta.relation where schema_name=%s and name=%s and primary_key_column_ids is not null",
-		pq.QuoteLiteral(d.schema_name),
-		pq.QuoteLiteral(name))
+        pq.QuoteLiteral(d.schema_name),
+        pq.QuoteLiteral(name))
 
     err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&pk_column_name)
     if err != nil {
-        log.Fatal("Error in SchemaDir Lookup: ", err)
+        log.Println("Error in SchemaDir Lookup: ", err)
+        return nil, fuse.ENOENT
     }
 
     if pk_column_name != "" {
@@ -186,7 +188,8 @@ func (d TableDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
         pq.QuoteLiteral(name))
     err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
     if err != nil {
-        log.Fatal("Error querying database: ", err)
+        log.Println("Error querying database: ", err)
+        return nil, fuse.ENOENT
     }
     if exists {
         return RowDir{d.fs, d.schema_name, d.table_name, d.pk_column_name, name}, nil
@@ -254,9 +257,30 @@ func (RowDir) Attr(ctx context.Context, a *fuse.Attr) error {
     return nil
 }
 
+/*
 func (d RowDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
         return FieldFile{d.fs, d.schema_name, d.table_name, name, d.pk_column_name, d.pk_value}, nil
 }
+*/
+func (d RowDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
+    var exists bool
+    q := fmt.Sprintf("select exists(select %s from %s.%s where %s=%s)",
+        pq.QuoteIdentifier(name),
+        pq.QuoteIdentifier(d.schema_name),
+        pq.QuoteIdentifier(d.table_name),
+        pq.QuoteIdentifier(d.pk_column_name),
+        pq.QuoteLiteral(d.pk_value))
+    err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
+    if err != nil {
+        log.Println("Error querying database: ", err)
+        return nil, fuse.ENOENT
+    }
+    if exists {
+        return FieldFile{d.fs, d.schema_name, d.table_name, name, d.pk_column_name, d.pk_value}, nil
+    }
+    return nil, fuse.ENOENT
+}
+
 
 func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
      q := fmt.Sprintf("select name as column_name from meta.column where schema_name=%s and relation_name=%s",
@@ -312,7 +336,7 @@ type FieldFile struct{
 func (ff FieldFile) Attr(ctx context.Context, a *fuse.Attr) error {
     var octet_length int
 
-    q := fmt.Sprintf("select octet_length(%s::text)::integer as octet_length from %s.%s where %s = %s",
+    q := fmt.Sprintf("select coalesce(octet_length(%s::text)::integer, 0) as octet_length from %s.%s where %s = %s",
          pq.QuoteIdentifier(ff.column_name),
          pq.QuoteIdentifier(ff.schema_name),
          pq.QuoteIdentifier(ff.table_name),
@@ -353,4 +377,26 @@ func (ff FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
     }
 
     return []byte(content), nil
+}
+
+
+func (ff FieldFile) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+    q := fmt.Sprintf("update %s.%s set %s = %s where %s = %s",
+         pq.QuoteIdentifier(ff.schema_name),
+         pq.QuoteIdentifier(ff.table_name),
+         pq.QuoteIdentifier(ff.column_name),
+         pq.QuoteLiteral(string(req.Data)),
+         pq.QuoteIdentifier(ff.pk_column_name),
+         pq.QuoteLiteral(ff.pk_value))
+
+    rows, err := ff.fs.dbpool.Query(context.Background(), q)
+
+    if err != nil {
+        log.Fatal("Error updating field in database: ", err)
+    }
+    defer rows.Close()
+
+    // n, err := req.Data.Write(req.Data)
+    // resp.Size = n
+    return nil
 }
