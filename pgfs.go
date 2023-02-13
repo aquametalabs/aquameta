@@ -115,22 +115,32 @@ func (d SchemaDir) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (d SchemaDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
+    var exists bool
     var pk_column_name string
-    q := fmt.Sprintf("select (primary_key_column_ids[1]).name as pk_column_name from meta.relation where schema_name=%s and name=%s and primary_key_column_ids is not null",
+
+    pkQ := fmt.Sprintf("select (primary_key_column_ids[1]).name as pk_column_name from meta.relation where schema_name=%s and name=%s and primary_key_column_ids is not null",
         pq.QuoteLiteral(d.schema_name),
         pq.QuoteLiteral(name))
 
-    err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&pk_column_name)
+    // check that relation exists
+    existsQ := fmt.Sprintf("select exists(%s)", pkQ)
+    err := d.fs.dbpool.QueryRow(context.Background(), existsQ).Scan(&exists)
     if err != nil {
-        log.Println("Error in SchemaDir Lookup: ", err)
+        log.Fatal("Error in SchemaDir Lookup exists: ", err)
         return nil, fuse.ENOENT
     }
 
-    if pk_column_name != "" {
-        return TableDir{d.fs, d.schema_name, name, pk_column_name}, nil
-    } else {
+    if !exists {
         return nil, fuse.ENOENT
     }
+
+    // get its primary key, for use as variable in TableDir struct
+    err = d.fs.dbpool.QueryRow(context.Background(), pkQ).Scan(&pk_column_name)
+    if err != nil {
+        log.Fatal("Error in SchemaDir Lookup pk query: ", err)
+        return nil, fuse.ENOENT
+    }
+    return TableDir{d.fs, d.schema_name, name, pk_column_name}, nil
 }
 
 func (d SchemaDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
@@ -192,7 +202,7 @@ func (TableDir) Attr(ctx context.Context, a *fuse.Attr) error {
 
 func (d TableDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
     var exists bool
-    q := fmt.Sprintf("select exists(select 1 from %s.%s where %s=%s)",
+    q := fmt.Sprintf("select exists(select 1 from %s.%s where %s::text=%s)",
         pq.QuoteIdentifier(d.schema_name),
         pq.QuoteIdentifier(d.table_name),
         pq.QuoteIdentifier(d.pk_column_name),
@@ -274,35 +284,50 @@ func (d RowDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 }
 */
 func (d RowDir) Lookup(ctx context.Context, name string) (fs.Node, error) {
-    var exists bool
-    q := fmt.Sprintf("select exists(select %s from %s.%s where %s=%s)",
+    // log.Println("RowDir Lookup(): name=", name)
+    var columnExists bool
+    var rowExists bool
+
+    // check that this column exists (we could probably make this a lot faster by sending garbage queries to the db)
+    existsQ := fmt.Sprintf("select exists(select 1 from meta.relation_column where schema_name=%s and relation_name=%s and name=%s)",
+        pq.QuoteLiteral(d.schema_name),
+        pq.QuoteLiteral(d.table_name),
+        pq.QuoteLiteral(name))
+    // log.Println("existsQ", existsQ)
+
+    err := d.fs.dbpool.QueryRow(context.Background(), existsQ).Scan(&columnExists)
+    if err != nil {
+        log.Fatal("RowDir Lookup(): Error in column exists check: ", err)
+    }
+    if !columnExists {
+        return nil, fuse.ENOENT
+    }
+
+    // check that row exists
+    q := fmt.Sprintf("select exists(select %s from %s.%s where %s::text=%s)",
         pq.QuoteIdentifier(name),
         pq.QuoteIdentifier(d.schema_name),
         pq.QuoteIdentifier(d.table_name),
         pq.QuoteIdentifier(d.pk_column_name),
         pq.QuoteLiteral(d.pk_value))
-
-    log.Println("RowDir Lookup() exists query: ", q)
-
-    err := d.fs.dbpool.QueryRow(context.Background(), q).Scan(&exists)
+    err = d.fs.dbpool.QueryRow(context.Background(), q).Scan(&rowExists)
     if err != nil {
-        log.Println("RowDir Lookup(): Error querying database: ", err)
+        log.Fatal("RowDir Lookup(): Error in row exists check: ", err)
+    }
+    if !rowExists {
         return nil, fuse.ENOENT
     }
-    if exists {
-		f := FieldFile{
-			fs: d.fs,
-			buf: "",
-			schema_name: d.schema_name,
-			table_name: d.table_name,
-			column_name: name,
-			pk_column_name: d.pk_column_name,
-			pk_value: d.pk_value,
-		}
-        return f, nil;
-		// was: return FieldFile{d.fs, d.schema_name, d.table_name, name, d.pk_column_name, d.pk_value}, nil
+
+    f := FieldFile{
+        fs: d.fs,
+        schema_name: d.schema_name,
+        table_name: d.table_name,
+        column_name: name,
+        pk_column_name: d.pk_column_name,
+        pk_value: d.pk_value,
     }
-    return nil, fuse.ENOENT
+    return f, nil;
+    // was: return FieldFile{d.fs, d.schema_name, d.table_name, name, d.pk_column_name, d.pk_value}, nil
 }
 
 
@@ -351,15 +376,12 @@ func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 type FieldFile struct{
     fs FS
-    buf string
     schema_name string
     table_name string
     column_name string
     pk_column_name string
     pk_value string
 }
-
-
 
 func (ff FieldFile) Attr(ctx context.Context, a *fuse.Attr) error {
     var octet_length int
@@ -409,33 +431,70 @@ func (ff FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
 
 
 func (ff FieldFile) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+    log.Printf("######## FieldFile Write():\n    req.Offset: %d\n    req.Data: %s...",
+        req.Offset, req.Data[0:19])
 
-    log.Printf("FieldFile Write(): req.Offeset: %s, req.Data: %s", req.Offset, string(req.Data))
+    /*
+	// expand the buffer if necessary
+	newLen := req.Offset + int64(len(req.Data))
+	if newLen > int64(maxInt) {
+		return fuse.Errno(syscall.EFBIG)
+	}
+	if newLen := int(newLen); newLen > len(f.data) {
+		f.data = append(f.data, make([]byte, newLen-len(f.data))...)
+	}
 
-    // n, err := req.Data.Write(req.Data)
+	n := copy(f.data[req.Offset:], req.Data)
+	resp.Size = n
+    */
     resp.Size = len(req.Data)
-    return nil
+	return nil
 }
 
 
+func (ff FieldFile) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
+    // log.Printf("!!!!!!!! Fsync called:\n    ff.buf: %s", ff.buf);
 
-
-func (ff FieldFile) Flush(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
 /*
-    fs.mu.Lock()
-    defer fs.mu.Unlock()
-*/
     q := fmt.Sprintf("update %s.%s set %s = %s where %s = %s",
          pq.QuoteIdentifier(ff.schema_name),
          pq.QuoteIdentifier(ff.table_name),
          pq.QuoteIdentifier(ff.column_name),
-         pq.QuoteLiteral(string(req.Data)),
          pq.QuoteIdentifier(ff.pk_column_name),
          pq.QuoteLiteral(ff.pk_value))
     _, err := ff.fs.dbpool.Exec(context.Background(), q)
+
+    log.Println("Fsync field update q: ",q)
     if err != nil {
         // Handle error
+        log.Printf("FieldFile Flush(): update stmt failed. ",q,err)
     }
+*/
+
+    return nil
+}
+
+
+func (ff FieldFile) Flush(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+    log.Printf("######## Flush()")
+
+/*
+    fs.mu.Lock()
+    defer fs.mu.Unlock()
+
+    q := fmt.sprintf("update %s.%s set %s = %s where %s = %s",
+         pq.quoteidentifier(ff.schema_name),
+         pq.quoteidentifier(ff.table_name),
+         pq.quoteidentifier(ff.column_name),
+         pq.quoteliteral(string(req.data)),
+         pq.quoteidentifier(ff.pk_column_name),
+         pq.quoteliteral(ff.pk_value))
+    _, err := ff.fs.dbpool.exec(context.background(), q)
+    if err != nil {
+        // handle error
+        log.printf("fieldfile flush(): update stmt failed. ",q,err)
+    }
+*/
 
     return nil
 }
