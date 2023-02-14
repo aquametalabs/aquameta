@@ -373,6 +373,7 @@ func (d RowDir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 //
 // FieldFile
 //
+var fileBuffers = make(map[string]string)
 
 type FieldFile struct{
     fs FS
@@ -431,35 +432,30 @@ func (ff FieldFile) ReadAll(ctx context.Context) ([]byte, error) {
 
 
 func (ff FieldFile) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+    /*
     log.Printf("######## FieldFile Write():\n    req.Offset: %d\n    req.Data: %s...",
         req.Offset, req.Data[0:19])
-
-    /*
-	// expand the buffer if necessary
-	newLen := req.Offset + int64(len(req.Data))
-	if newLen > int64(maxInt) {
-		return fuse.Errno(syscall.EFBIG)
-	}
-	if newLen := int(newLen); newLen > len(f.data) {
-		f.data = append(f.data, make([]byte, newLen-len(f.data))...)
-	}
-
-	n := copy(f.data[req.Offset:], req.Data)
-	resp.Size = n
+    log.Printf("         fileBuffers[%s] %s", key, fileBuffers[key]);
     */
+
+    var key = ff.schema_name+"/"+ff.table_name+"/"+ff.pk_value+"/"+ff.column_name
+    fileBuffers[key] = fileBuffers[key] + string(req.Data)
+
     resp.Size = len(req.Data)
 	return nil
 }
 
 
 func (ff FieldFile) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
-    // log.Printf("!!!!!!!! Fsync called:\n    ff.buf: %s", ff.buf);
+    var key = ff.schema_name+"/"+ff.table_name+"/"+ff.pk_value+"/"+ff.column_name
 
-/*
+    // log.Printf("!!!!!!!! Fsync called:\n    fileBuffers[%s] %s", key, fileBuffers[key]);
+
     q := fmt.Sprintf("update %s.%s set %s = %s where %s = %s",
          pq.QuoteIdentifier(ff.schema_name),
          pq.QuoteIdentifier(ff.table_name),
          pq.QuoteIdentifier(ff.column_name),
+         pq.QuoteLiteral(fileBuffers[key]),
          pq.QuoteIdentifier(ff.pk_column_name),
          pq.QuoteLiteral(ff.pk_value))
     _, err := ff.fs.dbpool.Exec(context.Background(), q)
@@ -469,7 +465,7 @@ func (ff FieldFile) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
         // Handle error
         log.Printf("FieldFile Flush(): update stmt failed. ",q,err)
     }
-*/
+    fileBuffers[key] = ""
 
     return nil
 }
