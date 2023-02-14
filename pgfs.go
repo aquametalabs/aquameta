@@ -460,7 +460,7 @@ func (ff FieldFile) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
          pq.QuoteLiteral(ff.pk_value))
     _, err := ff.fs.dbpool.Exec(context.Background(), q)
 
-    log.Println("Fsync field update q: ",q)
+    // log.Println("Fsync field update q: ",q)
     if err != nil {
         // Handle error
         log.Printf("FieldFile Flush(): update stmt failed. ",q,err)
@@ -472,7 +472,7 @@ func (ff FieldFile) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 
 
 func (ff FieldFile) Flush(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
-    log.Printf("######## Flush()")
+    log.Fatal("######## Flush() called and we don't know what this does.")
 
 /*
     fs.mu.Lock()
