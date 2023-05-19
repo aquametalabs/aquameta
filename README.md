@@ -145,6 +145,10 @@ sudo ./make_install_extensions.sh
 cd ../
 ```
 
+*Note for Mac users: this may fail with a cryptic permissions error if
+your terminal program does not have Full Disk Access. This can be set
+via System Preferences.*
+
 4. Install [Golang](https://golang.org/) version 1.18 or greater, then build
 the `./aquameta` binary from aquameta's root directory:
 
