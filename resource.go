@@ -178,25 +178,23 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             }
 
             // log.Printf("Path pattern: %v\n    schema_name: %v\n    function_name: %v\n    function_parameters: %v\n    default_args: %v\n    mimetype: %v\n    path_args: %v\n    path_arg_positions: %v",
-            //     path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
+                 // path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
 
             // args is the array of strings to be cast to their appropriate type and passed to the function
             // should probably use a slice here
-            var args [20]string
+            var args = make([]string, len(function_parameters))
 
             // write default_args into args
-            for i :=0; i<len(function_parameters); i++ {
-                // log.Printf("function_parameters [%v] -> %v", i, function_parameters[i])
-                if len(default_args) >= len(function_parameters) {
-                    args[i] = default_args[i]
-                }
+            for i :=0; i<len(default_args); i++ {
+                log.Printf("function_parameters [%v] -> %v", i, function_parameters[i])
+                args[i] = default_args[i]
             }
 
             // log.Printf("len(function_parameters) = %v", len(function_parameters));
             // log.Printf("default_args = %v", default_args);
 
-            for i :=0; i<len(path_args);i++ {
-                // log.Printf("i=%v: path_args i -> %v", i, i, path_args[i])
+            for i :=0; i<len(path_arg_positions);i++ {
+                // log.Printf("i: %v, pos: %v, path_args: %v", i, path_arg_positions[i], path_args[i])
                 args[path_arg_positions[i]-1] = path_args[i] // path_arg_positions, first position is 1, hence -1 for array index
             }
 
@@ -213,19 +211,22 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             // log.Printf("args = %v", args);
             // log.Printf("function call: %v", function_call_str)
 
-            const resourceFunctionQ = `select %v as content`
+            resourceFunctionQ := fmt.Sprintf("select %v as content", function_call_str);
             // log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
 
-            err = dbpool.QueryRow(context.Background(),
-                fmt.Sprintf(resourceFunctionQ, function_call_str)).Scan(&content)
+            err = dbpool.QueryRow(context.Background(), resourceFunctionQ).Scan(&content)
             if err != nil {
-                log.Printf("QueryRow failed: %v", err)
+              log.Printf("QueryRow failed: %v", err)
+              // send the response
+              w.Header().Set("Content-Type", mimetype)
+              w.WriteHeader(404)
+              io.WriteString(w, "")
+            } else {
+              // send the response
+              w.Header().Set("Content-Type", mimetype)
+              w.WriteHeader(200)
+              io.WriteString(w, content)
             }
-
-            // send the response
-            w.Header().Set("Content-Type", mimetype)
-            w.WriteHeader(200)
-            io.WriteString(w, content)
 
         /*
         failed attempt at using pl/go solution
