@@ -2,6 +2,7 @@ package main
 
 import (
     "context"
+    "encoding/json"
     "fmt"
     "github.com/jackc/pgx/v4/pgxpool"
     "github.com/lib/pq"
@@ -112,9 +113,9 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         // 200 OK
         // get the resource/resource_binary/resource_function, process it and return the results
         var content string
+        var headers []byte
         var contentBinary []byte
         var mimetype string
-
 
         switch resourceTable {
         case "resource":
@@ -211,19 +212,37 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             // log.Printf("args = %v", args);
             // log.Printf("function call: %v", function_call_str)
 
-            resourceFunctionQ := fmt.Sprintf("select %v as content", function_call_str);
+            resourceFunctionQ := fmt.Sprintf("select content, headers from %v as (content text, headers jsonb)", function_call_str);
             // log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
 
-            err = dbpool.QueryRow(context.Background(), resourceFunctionQ).Scan(&content)
+            err = dbpool.QueryRow(context.Background(), resourceFunctionQ).Scan(&content, &headers)
             if err != nil {
               log.Printf("QueryRow failed: %v", err)
               // send the response
               w.Header().Set("Content-Type", mimetype)
+              var extra_headers = map[string]string{}
+              if len(headers) > 0 {
+                err := json.Unmarshal(headers, &extra_headers)
+                if err == nil {
+                  for key, value := range extra_headers {
+                    w.Header().Add(key, value)
+                  }
+                }
+              }
               w.WriteHeader(404)
               io.WriteString(w, "")
             } else {
               // send the response
               w.Header().Set("Content-Type", mimetype)
+              var extra_headers = map[string]string{}
+              if len(headers) > 0 {
+                err := json.Unmarshal(headers, &extra_headers)
+                if err == nil {
+                  for key, value := range extra_headers {
+                    w.Header().Add(key, value)
+                  }
+                }
+              }
               w.WriteHeader(200)
               io.WriteString(w, content)
             }
