@@ -63,7 +63,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             -- 1. rewrite path_pattern to a regex:
             --     /blog/{$1}/article/{$2} goes to ^/blog/(\S+)/article/(\S+)$
             -- 2. matche against the request path
-            where %v ~ regexp_replace('^' || r.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')`
+            where %v ~ regexp_replace('^' || r.path_pattern || '$', '\${\d+}', '(\S+)', 'g')`
 
         /*
            union
@@ -158,8 +158,8 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
                     (rf.function_id).parameters as function_parameters,
                     rf.default_args as default_args,
                     m.mimetype,
-                    regexp_match(%v, regexp_replace('^' || rf.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')) as args,
-                    (select array_agg(m[1]::integer) from regexp_matches(rf.path_pattern, '{\$(\d+)}', 'g') m) 
+                    regexp_match(%v, regexp_replace('^' || rf.path_pattern || '$', '\${\d+}', '(\S+)', 'g')) as args,
+                    (select array_agg(m[1]::integer) from regexp_matches(rf.path_pattern, '\${(\d+)}', 'g') m) 
                 from endpoint.resource_function rf
                     join endpoint.mimetype m on rf.mimetype_id = m.id
                 where rf.id = %v`
