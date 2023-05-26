@@ -191,3 +191,178 @@ language sql stable rows 1;
 *******************************************************************************/
 create view widget_name as
 select id, name from widget.widget;
+
+
+/*******************************************************************************
+* TABLE component
+*******************************************************************************/
+
+-- TODO: All "not null" constraints have been removed for flexibility.
+--  Consider if this is should be widget creed.
+-- TODO: Insert trigger on table. Validate widget name and use it in the
+--  defaults.
+create table component (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name varchar(255) not null,
+    html text default '<div>
+</div>'::text,
+    css text default ':host {
+}'::text,
+    js text default 'import { register, WidgetElement } from ''/org.aquameta.core.widget/widget.module/widget-element.js'';
+import db from ''/org.aquameta.core.endpoint/widget.module/datum.js'';
+
+export default register(
+    class MyWidget extends WidgetElement(import.meta) {
+        constructor() {
+            super();
+            // Widget has been created
+        }
+        onWidgetConnected() {
+            // Widget is in the DOM
+        }
+        disconnectedCallback() {
+            // Widget has been removed from the DOM
+        }
+    }
+);'::text,
+    help text
+);
+
+
+
+/*******************************************************************************
+* ENUM module_type
+*******************************************************************************/
+
+create type module_type as enum ('js', 'css');
+
+
+
+/*******************************************************************************
+* TABLE module
+*******************************************************************************/
+
+create table module_js (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name varchar(255) not null,
+    content text not null,
+    type module_type not null
+);
+
+
+
+/*******************************************************************************
+* FUNCTION get_component
+*******************************************************************************/
+
+create or replace function widget.get_component(column_name text, bundle_name text, component_name text)
+returns record
+language plpgsql
+as $$
+  declare
+    row_query text;
+    ret record;
+  begin
+    row_query := '
+      select c.' || quote_ident(column_name) || ',
+        ''{}''::jsonb
+      from bundle.bundle b
+        join bundle.tracked_row tr on tr.bundle_id=b.id
+        join widget.component c on c.id=(tr.row_id).pk_value::uuid
+      where tr.row_id::meta.relation_id=meta.relation_id(''widget'', ''component'')
+        and b.name=' || quote_literal(bundle_name) || '
+        and c.name=' || quote_literal(component_name);
+
+    execute row_query into ret;
+    return ret;
+  end;
+$$;
+
+insert into endpoint.resource_function
+  (function_id, path_pattern, default_args, mimetype_id)
+values
+(
+  (select meta.function_id('widget', 'get_component', '{text, text, text}')),
+  '/${2}/widget.component/${3}.html',
+  '{"html"}',
+  (select id from endpoint.mimetype where mimetype='text/html')
+),
+(
+  (select meta.function_id('widget', 'get_component', '{text, text, text}')),
+  '/${2}/widget.component/${3}.css',
+  '{"css"}',
+  (select id from endpoint.mimetype where mimetype='text/css')
+),
+(
+  (select meta.function_id('widget', 'get_component', '{text, text, text}')),
+  '/${2}/widget.component/${3}.js',
+  '{"js"}',
+  (select id from endpoint.mimetype where mimetype='application/javascript')
+);
+
+
+
+/*******************************************************************************
+* FUNCTION get_component
+*******************************************************************************/
+
+create or replace function widget.get_module(type text, bundle_name text, module_name text, version text)
+returns record
+language plpgsql
+as $$
+  declare
+    row_query text;
+    ret record;
+  begin
+    -- TODO: version is ignored until releases are figured out
+    -- TODO: if version does not exist, fallback to versionless query
+    --  maybe can add a header that contains a warning, or a 301
+    row_query := '
+      select m.content,
+        ''{}''::jsonb
+      from bundle.bundle b
+        join bundle.tracked_row tr on tr.bundle_id=b.id
+        join widget.module m on m.id=(tr.row_id).pk_value::uuid
+      where tr.row_id::meta.relation_id=''widget.module''::meta.relation_id
+        and b.name=' || quote_literal(bundle_name) || '
+        and m.name=' || quote_literal(module_name) || '
+        and m."type"=' || quote_literal(type) || '::widget.module_type';
+
+    execute row_query into ret;
+    return ret;
+  end;
+$$;
+
+-- with version
+insert into endpoint.resource_function
+  (function_id, path_pattern, default_args, mimetype_id)
+values
+(
+  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
+  '/{$2}/widget.module/{$3}@{$4}.js',
+  '{"js"}',
+  (select id from endpoint.mimetype where mimetype='application/javascript')
+),
+(
+  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
+  '/{$2}/widget.module/{$3}@{$4}.css',
+  '{"css"}',
+  (select id from endpoint.mimetype where mimetype='text/css')
+);
+
+-- without version
+insert into endpoint.resource_function
+  (function_id, path_pattern, default_args, mimetype_id)
+values
+(
+  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
+  '/{$2}/widget.module/{$3}.js',
+  '{"js", null, null, ""}',
+  (select id from endpoint.mimetype where mimetype='application/javascript')
+),
+(
+  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
+  '/{$2}/widget.module/{$3}.css',
+  '{"css", null, null, ""}',
+  (select id from endpoint.mimetype where mimetype='text/css')
+);
