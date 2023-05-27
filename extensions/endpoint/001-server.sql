@@ -113,6 +113,13 @@ create table endpoint.resource_directory (
     indexes boolean
 );
 
+-- TODO: Reasonable default value for content
+--  This would need to be dependent on mimetype. Maybe template table?
+--  For HTML files, would need an update function to pass in bundle name
+--  Could have endpoint.create_resource_from_template(type, args);
+--  Get mimetype from template, and does find/replace with args in
+--  template content string. Could use args column of endpoint.template
+--  to create a form that you need to submit for each template creation.
 create table endpoint.resource (
     id uuid not null default public.uuid_generate_v4() primary key,
     path text not null,
@@ -139,7 +146,7 @@ create table endpoint.resource (
 create table endpoint.resource_function (
     id uuid not null default public.uuid_generate_v4() primary key,
     function_id meta.function_id not null,
-    path_pattern text not null, -- /blogs/{$1}/posts/{$2}.html -- the numbers correspond to the position of the argument passed to the specified function
+    path_pattern text not null, -- /blogs/${1}/posts/${2}.html -- the numbers correspond to the position of the argument passed to the specified function
     default_args text[] not null default '{}', -- for setting fixed arguments to the function, when only some of the args are specified by the path. array position corresponds to function args position.
     mimetype_id uuid references mimetype(id) -- if this function always returns the same mimetype, set this
 );
