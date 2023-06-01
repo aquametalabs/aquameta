@@ -242,7 +242,7 @@ create type module_type as enum ('js', 'css');
 * TABLE module
 *******************************************************************************/
 
-create table module_js (
+create table module (
     id uuid not null default public.uuid_generate_v4() primary key,
     name varchar(255) not null,
     content text not null,
@@ -332,37 +332,3 @@ as $$
     return ret;
   end;
 $$;
-
--- with version
-insert into endpoint.resource_function
-  (function_id, path_pattern, default_args, mimetype_id)
-values
-(
-  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
-  '/{$2}/widget.module/{$3}@{$4}.js',
-  '{"js"}',
-  (select id from endpoint.mimetype where mimetype='application/javascript')
-),
-(
-  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
-  '/{$2}/widget.module/{$3}@{$4}.css',
-  '{"css"}',
-  (select id from endpoint.mimetype where mimetype='text/css')
-);
-
--- without version
-insert into endpoint.resource_function
-  (function_id, path_pattern, default_args, mimetype_id)
-values
-(
-  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
-  '/{$2}/widget.module/{$3}.js',
-  '{"js", null, null, ""}',
-  (select id from endpoint.mimetype where mimetype='application/javascript')
-),
-(
-  (select meta.function_id('widget', 'get_module', '{text, text, text, text}')),
-  '/{$2}/widget.module/{$3}.css',
-  '{"css", null, null, ""}',
-  (select id from endpoint.mimetype where mimetype='text/css')
-);
