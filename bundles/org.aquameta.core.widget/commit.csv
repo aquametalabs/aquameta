@@ -1,5 +1,10 @@
 0902bb96-d77a-4d29-8c4c-f22e744d913a	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	d1d43a85-f8d7-43a6-8f67-0e2980e32fdf	\N	36b2c906-1269-42f1-a3a5-85924bc3ec55	2020-12-27 04:43:02.335408	include widget.js library in this bundle (removed from endpoint)
 27d69505-1dc1-432f-8fcc-2c1c97962e41	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	9384e1ac-ff25-4aca-9f14-347bf37c0cf1	\N	4798c7eb-66c8-46b4-8c11-973111bbac35	2022-04-07 20:39:37.587174	Use rowset event handlers for updating widgets
 36b2c906-1269-42f1-a3a5-85924bc3ec55	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	1e10a9c8-f21a-44e0-bd40-961cc632ead4	\N	\N	2019-01-25 08:47:32.81343	datum-plv8 first commit
+45edc30d-cb8a-4391-bef3-89f151978e2a	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	81635a3e-0c94-4ae3-bdc6-6947b91a0700	\N	8a86ab1b-1da8-40dd-9d2f-d7a0d0908180	2023-05-29 08:32:57.432444	Add datum modules
 4798c7eb-66c8-46b4-8c11-973111bbac35	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	248952c1-d7c9-45dc-8ea7-ad4aa2c92c3b	\N	0902bb96-d77a-4d29-8c4c-f22e744d913a	2022-04-06 20:11:29.570572	Turn events off for widget requests - https://github.com/aquametalabs/aquameta/pull/241
+65d74c81-4d1c-46bb-a94e-9ef41b845bae	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	25beacb6-b79d-45e8-93fa-c57c72364670	\N	45edc30d-cb8a-4391-bef3-89f151978e2a	2023-05-29 09:58:49.461146	New resource functions
 7e03b3a7-e27c-4636-9eb4-a1696ba73852	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	5df34e13-bfef-49d0-a503-c61cde530887	\N	36b2c906-1269-42f1-a3a5-85924bc3ec55	2019-05-15 06:19:29.993625	delete the plv8 version of datum, move it to the new endpoint.js_module table
+8a86ab1b-1da8-40dd-9d2f-d7a0d0908180	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	87b50903-5412-4b52-8d56-758cc676ff67	\N	27d69505-1dc1-432f-8fcc-2c1c97962e41	2023-05-29 08:27:02.5163	Add resource functions and widget modules
+a21c4028-885b-46bf-be60-15776badfc2c	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	a18104fd-8307-47cf-8439-12828869e23a	\N	65d74c81-4d1c-46bb-a94e-9ef41b845bae	2023-05-29 10:21:03.831038	Fix widget-element
+fceda887-7e24-4771-8194-936e58350d01	a5501b4d-c313-4fad-b1cb-d15e9557d5ee	2566c85f-6e6f-468c-947a-972a17ae38a8	\N	a21c4028-885b-46bf-be60-15776badfc2c	2023-06-01 07:31:44.030724	Add note
