@@ -71,6 +71,13 @@ create table semantics.relation (
     priority integer not null default 0
 );
 
+create table semantics.relation_component (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    relation_id meta.relation_id not null,
+    purpose_id uuid references semantics.relation_purpose(id) not null,
+    component_id uuid references widget.component(id) not null
+);
+
 /*
 moved to semantics bundle....
 insert into semantics.relation_purpose (purpose) values
@@ -103,6 +110,20 @@ create table semantics."column" (
     purpose_id uuid references semantics.column_purpose(id) not null,
     widget_id uuid references widget.widget(id) not null,
     priority integer not null default 0
+);
+
+create table semantics.type_component (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    type_id meta.type_id,
+    purpose_id uuid references semantics.column_purpose(id) not null,
+    component_id uuid references widget.component(id) not null
+);
+
+create table semantics.column_component (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    column_id meta.column_id,
+    purpose_id uuid references semantics.column_purpose(id) not null,
+    component_id uuid references widget.component(id) not null
 );
 
 
@@ -173,7 +194,7 @@ $$ language plpgsql;
  * semantics.row_widget()
  *
  */
-create or replace function semantics.row_widget (
+create or replace function semantics.row_component (
     relation_id meta.relation_id,
     purpose text,
     bundles text[]
@@ -182,13 +203,13 @@ $$
 begin
   -- TODO: this should use the order of the bundles array as the priority
   return query execute '
-    select json_build_object(''name'', w.name, ''bundleName'', b.name)
-    from semantics.relation r
-      join semantics.relation_purpose rp on rp.id=r.purpose_id
-      join widget.widget w on w.id=r.widget_id
-      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''widget'', ''id'', w.id::text)
+    select json_build_object(''name'', c.name, ''bundleName'', b.name)
+    from semantics.relation_component rc
+      join semantics.relation_purpose rp on rp.id=rc.purpose_id
+      join widget.component c on c.id=rc.component_id
+      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
       join bundle.bundle b on b.id=tr.bundle_id
-    where r.relation_id=meta.relation_id('
+    where rc.relation_id=meta.relation_id('
       || quote_literal((relation_id::meta.schema_id).name) || ','
       || quote_literal(relation_id.name) || ')
       and rp.purpose=' || quote_literal(purpose) || '
@@ -250,7 +271,7 @@ $$ language plpgsql;
  * semantics.field_widget()
  *
  */
-create or replace function semantics.field_widget (
+create or replace function semantics.field_component (
     column_id meta.column_id,
     purpose text,
     bundles text[]
@@ -259,13 +280,13 @@ $$
 begin
   -- TODO: this should use the order of the bundles array as the priority
   return query execute '
-    select json_build_object(''name'', w.name, ''bundleName'', b.name)
-    from semantics.column c
-      join semantics.column_purpose cp on cp.id=c.purpose_id
-      join widget.widget w on w.id=c.widget_id
-      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''widget'', ''id'', w.id::text)
+    select json_build_object(''name'', c.name, ''bundleName'', b.name)
+    from semantics.column_component cc
+      join semantics.column_purpose cp on cp.id=cc.purpose_id
+      join widget.component c on c.id=cc.component_id
+      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
       join bundle.bundle b on b.id=tr.bundle_id
-    where c.column_id=meta.column_id('
+    where cc.column_id=meta.column_id('
       || quote_literal((column_id::meta.schema_id).name) || ','
       || quote_literal((column_id::meta.relation_id).name) || ','
       || quote_literal(column_id.name) || ')
@@ -274,13 +295,13 @@ begin
 
     union
 
-    select json_build_object(''name'', w.name, ''bundleName'', b.name)
-    from semantics.type t
-      join semantics.column_purpose cp on cp.id=t.purpose_id
-      join widget.widget w on w.id=t.widget_id
-      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''widget'', ''id'', w.id::text)
+    select json_build_object(''name'', c.name, ''bundleName'', b.name)
+    from semantics.type_component tc
+      join semantics.column_purpose cp on cp.id=tc.purpose_id
+      join widget.component c on c.id=tc.component_id
+      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
       join bundle.bundle b on b.id=tr.bundle_id
-      join meta.column mc on mc.type_id=t.type_id
+      join meta.column mc on mc.type_id=tc.type_id
     where mc.id=meta.column_id('
       || quote_literal((column_id::meta.schema_id).name) || ','
       || quote_literal((column_id::meta.relation_id).name) || ','
