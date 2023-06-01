@@ -1704,6 +1704,19 @@ language plpgsql;
  * FUNCTION request
  ****************************************************************************************************/
 
+/**
+ * TODO: Ensure backwards compatibility with endpoint
+ * Endpoint is the entrypoint for all access to data
+ * Therefore, endpoint should always support backwards compatibility
+ * Every new version of the bundle should maintain old endpoints
+ * /endpoint/0.3/ and /endpoint/0.1/ should both try to find the endpoint bundle version they specify
+ *  *but* they should be able to fallback to querying the most recent version of endpoint if it is
+ *  greater than the requested version. it would take the version number and add it to the metadata
+ * so /endpoint/0.1/ to a database that only has 0.3 should turn into
+ * /endpoint/0.3/?endpoint_version=0.1
+ * and endpoint will call the old functions since 0.3 will contain 0.2 and 0.1
+ */
+
 create or replace function endpoint.request(
     version text,
     verb text,

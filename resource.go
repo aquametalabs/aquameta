@@ -61,7 +61,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             select r.id::text, 'resource_function'
             from endpoint.resource_function r
             -- 1. rewrite path_pattern to a regex:
-            --     /blog/{$1}/article/{$2} goes to ^/blog/(\S+)/article/(\S+)$
+            --     /blog/${1}/article/${2} goes to ^/blog/(\S+)/article/(\S+)$
             -- 2. matche against the request path
             where %v ~ regexp_replace('^' || r.path_pattern || '$', '\${\d+}', '(\S+)', 'g')`
 
