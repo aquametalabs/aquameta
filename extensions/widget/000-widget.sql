@@ -263,42 +263,28 @@ as $$
     row_query text;
     ret record;
   begin
+		-- TODO: add back the bundle check
     row_query := '
       select c.' || quote_ident(column_name) || ',
         ''{}''::jsonb
-      from bundle.bundle b
-        join bundle.tracked_row tr on tr.bundle_id=b.id
-        join widget.component c on c.id=(tr.row_id).pk_value::uuid
-      where tr.row_id::meta.relation_id=meta.relation_id(''widget'', ''component'')
-        and b.name=' || quote_literal(bundle_name) || '
-        and c.name=' || quote_literal(component_name);
+			from widget.component c
+			where c.name=' || quote_literal(component_name);
+
+		-- with bundle
+    -- row_query := '
+    --   select c.' || quote_ident(column_name) || ',
+    --     ''{}''::jsonb
+    --   from bundle.bundle b
+    --     join bundle.tracked_row tr on tr.bundle_id=b.id
+    --     join widget.component c on c.id=(tr.row_id).pk_value::uuid
+    --   where tr.row_id::meta.relation_id=meta.relation_id(''widget'', ''component'')
+    --     and b.name=' || quote_literal(bundle_name) || '
+    --     and c.name=' || quote_literal(component_name);
 
     execute row_query into ret;
     return ret;
   end;
 $$;
-
-insert into endpoint.resource_function
-  (function_id, path_pattern, default_args, mimetype_id)
-values
-(
-  (select meta.function_id('widget', 'get_component', '{text, text, text}')),
-  '/${2}/widget.component/${3}.html',
-  '{"html"}',
-  (select id from endpoint.mimetype where mimetype='text/html')
-),
-(
-  (select meta.function_id('widget', 'get_component', '{text, text, text}')),
-  '/${2}/widget.component/${3}.css',
-  '{"css"}',
-  (select id from endpoint.mimetype where mimetype='text/css')
-),
-(
-  (select meta.function_id('widget', 'get_component', '{text, text, text}')),
-  '/${2}/widget.component/${3}.js',
-  '{"js"}',
-  (select id from endpoint.mimetype where mimetype='application/javascript')
-);
 
 
 
@@ -317,16 +303,25 @@ as $$
     -- TODO: version is ignored until releases are figured out
     -- TODO: if version does not exist, fallback to versionless query
     --  maybe can add a header that contains a warning, or a 301
+
+		-- TODO: add back the bundle check
     row_query := '
       select m.content,
         ''{}''::jsonb
-      from bundle.bundle b
-        join bundle.tracked_row tr on tr.bundle_id=b.id
-        join widget.module m on m.id=(tr.row_id).pk_value::uuid
-      where tr.row_id::meta.relation_id=''widget.module''::meta.relation_id
-        and b.name=' || quote_literal(bundle_name) || '
-        and m.name=' || quote_literal(module_name) || '
+			from widget.module m
+			where m.name=' || quote_literal(module_name) || '
         and m."type"=' || quote_literal(type) || '::widget.module_type';
+
+    -- row_query := '
+    --   select m.content,
+    --     ''{}''::jsonb
+    --   from bundle.bundle b
+    --     join bundle.tracked_row tr on tr.bundle_id=b.id
+    --     join widget.module m on m.id=(tr.row_id).pk_value::uuid
+    --   where tr.row_id::meta.relation_id=''widget.module''::meta.relation_id
+    --     and b.name=' || quote_literal(bundle_name) || '
+    --     and m.name=' || quote_literal(module_name) || '
+    --     and m."type"=' || quote_literal(type) || '::widget.module_type';
 
     execute row_query into ret;
     return ret;
