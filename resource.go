@@ -177,52 +177,41 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
                 log.Printf("QueryRow failed: %v", err)
             }
 
-            // log.Printf("Path pattern: %v\n    schema_name: %v\n    function_name: %v\n    function_parameters: %v\n    default_args: %v\n    mimetype: %v\n    path_args: %v\n    path_arg_positions: %v",
-            //     path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
-
             // args is the array of strings to be cast to their appropriate type and passed to the function
-            // should probably use a slice here
             var args = make([]string, len(function_parameters))
 
             // write default_args into args
-            for i :=0; i<len(default_args); i++ {
-                //log.Printf("function_parameters [%v] -> %v", i, function_parameters[i])
-                args[i] = default_args[i]
-            }
-
-            // log.Printf("len(function_parameters) = %v", len(function_parameters));
-            // log.Printf("default_args = %v", default_args);
+            copy(args, default_args);
 
             for i :=0; i<len(path_arg_positions);i++ {
-              // log.Printf("i: %v, pos: %v, path_args: %v", i, path_arg_positions[i], path_args[i])
-                args[path_arg_positions[i]-1] = path_args[i] // path_arg_positions, first position is 1, hence -1 for array index
+                // path_arg_positions, first position is 1, hence -1 for array index
+                args[path_arg_positions[i]-1] = path_args[i]
             }
 
             // build the function's argument string
-            var function_call_str string = pq.QuoteIdentifier(schema_name)+"."+pq.QuoteIdentifier(function_name)+"("
+            var function_call_str = pq.QuoteIdentifier(schema_name)+"."+pq.QuoteIdentifier(function_name)+"("
             for i := 0; i<len(function_parameters);i++ {
-                function_call_str += pq.QuoteLiteral(args[i]) + "::" + function_parameters[i]; // not using pq.QuoteIdentifier for function_parametrs[i] here because e.g. integer is an alias for int4, but if you quote it, it uses only and exactly the literal type name.  FIXME?
+                // not using pq.QuoteIdentifier for function_parametrs[i] here because e.g. integer is an alias for int4, but if you quote it, it uses only and exactly the literal type name.  FIXME?
+                function_call_str += pq.QuoteLiteral(args[i]) + "::" + function_parameters[i];
                 if i < len(function_parameters) -1 {
                     function_call_str += ","
                 }
             }
             function_call_str += ")"
 
-            // log.Printf("args = %v", args);
-            // log.Printf("function call: %v", function_call_str)
-
             resourceFunctionQ := fmt.Sprintf("select %v as content", function_call_str);
-            // log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
-
             err = dbpool.QueryRow(context.Background(), resourceFunctionQ).Scan(&content)
             if err != nil {
-                log.Printf("QueryRow failed: %v", err)
+              // send 404
+              w.Header().Set("Content-Type", mimetype)
+              w.WriteHeader(404)
+              io.WriteString(w, "")
+            } else {
+              // send the response
+              w.Header().Set("Content-Type", mimetype)
+              w.WriteHeader(200)
+              io.WriteString(w, content)
             }
-
-            // send the response
-            w.Header().Set("Content-Type", mimetype)
-            w.WriteHeader(200)
-            io.WriteString(w, content)
 
         /*
         failed attempt at using pl/go solution
