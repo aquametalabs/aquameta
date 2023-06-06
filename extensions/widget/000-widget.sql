@@ -191,3 +191,139 @@ language sql stable rows 1;
 *******************************************************************************/
 create view widget_name as
 select id, name from widget.widget;
+
+
+/*******************************************************************************
+* TABLE component
+*******************************************************************************/
+
+-- TODO: All "not null" constraints have been removed for flexibility.
+--  Consider if this is should be widget creed.
+-- TODO: Insert trigger on table. Validate widget name and use it in the
+--  defaults.
+create table component (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name varchar(255) not null,
+    html text default '<div>
+</div>'::text,
+    css text default ':host {
+}'::text,
+    js text default 'import { register, WidgetElement } from ''/org.aquameta.core.widget/widget.module/widget-element.js'';
+import db from ''/org.aquameta.core.endpoint/widget.module/datum.js'';
+
+export default register(
+    class MyWidget extends WidgetElement(import.meta) {
+        constructor() {
+            super();
+            // Widget has been created
+        }
+        onWidgetConnected() {
+            // Widget is in the DOM
+        }
+        disconnectedCallback() {
+            // Widget has been removed from the DOM
+        }
+    }
+);'::text,
+    help text
+);
+
+
+
+/*******************************************************************************
+* ENUM module_type
+*******************************************************************************/
+
+create type module_type as enum ('js', 'css');
+
+
+
+/*******************************************************************************
+* TABLE module
+*******************************************************************************/
+
+create table module (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    name varchar(255) not null,
+    content text not null,
+    type module_type not null
+);
+
+
+
+/*******************************************************************************
+* FUNCTION get_component
+*******************************************************************************/
+
+create or replace function widget.get_component(column_name text, bundle_name text, component_name text)
+returns record
+language plpgsql
+as $$
+  declare
+    row_query text;
+    ret record;
+  begin
+		-- TODO: add back the bundle check
+    row_query := '
+      select c.' || quote_ident(column_name) || ',
+        ''{}''::jsonb
+			from widget.component c
+			where c.name=' || quote_literal(component_name);
+
+		-- with bundle
+    -- row_query := '
+    --   select c.' || quote_ident(column_name) || ',
+    --     ''{}''::jsonb
+    --   from bundle.bundle b
+    --     join bundle.tracked_row tr on tr.bundle_id=b.id
+    --     join widget.component c on c.id=(tr.row_id).pk_value::uuid
+    --   where tr.row_id::meta.relation_id=meta.relation_id(''widget'', ''component'')
+    --     and b.name=' || quote_literal(bundle_name) || '
+    --     and c.name=' || quote_literal(component_name);
+
+    execute row_query into ret;
+    return ret;
+  end;
+$$;
+
+
+
+/*******************************************************************************
+* FUNCTION get_component
+*******************************************************************************/
+
+create or replace function widget.get_module(type text, bundle_name text, module_name text, version text)
+returns record
+language plpgsql
+as $$
+  declare
+    row_query text;
+    ret record;
+  begin
+    -- TODO: version is ignored until releases are figured out
+    -- TODO: if version does not exist, fallback to versionless query
+    --  maybe can add a header that contains a warning, or a 301
+
+		-- TODO: add back the bundle check
+    row_query := '
+      select m.content,
+        ''{}''::jsonb
+			from widget.module m
+			where m.name=' || quote_literal(module_name) || '
+        and m."type"=' || quote_literal(type) || '::widget.module_type';
+
+    -- row_query := '
+    --   select m.content,
+    --     ''{}''::jsonb
+    --   from bundle.bundle b
+    --     join bundle.tracked_row tr on tr.bundle_id=b.id
+    --     join widget.module m on m.id=(tr.row_id).pk_value::uuid
+    --   where tr.row_id::meta.relation_id=''widget.module''::meta.relation_id
+    --     and b.name=' || quote_literal(bundle_name) || '
+    --     and m.name=' || quote_literal(module_name) || '
+    --     and m."type"=' || quote_literal(type) || '::widget.module_type';
+
+    execute row_query into ret;
+    return ret;
+  end;
+$$;
