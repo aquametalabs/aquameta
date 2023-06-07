@@ -5,4 +5,6 @@
 .idea
 aquameta
 bootloader.db/
-extensions/*/*--0.3.0.sql
+extensions/*/*--*.sql
+conf/boot.toml
+conf/*.local.toml
