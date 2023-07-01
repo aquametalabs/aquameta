@@ -1,13 +1,13 @@
-psql -c "select bundle.import_csv('org.aquameta.core.bootloader')";
-org.aquameta.core.bundle
-org.aquameta.core.endpoint
-org.aquameta.core.endpoint.tests
-org.aquameta.core.ide
-org.aquameta.core.mimetypes
-org.aquameta.core.semantics
-org.aquameta.core.widget
-org.aquameta.games.snake
-org.aquameta.ui.auth
-org.aquameta.ui.fsm
-org.aquameta.ui.layout
-org.aquameta.ui.tags
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.bootloader')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.bundle')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.endpoint')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.endpoint.tests')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.ide')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.mimetypes')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.semantics')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.core.widget')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.games.snake')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.ui.auth')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.ui.fsm')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.ui.layout')" flat2;
+psql -c "select bundle.bundle_import_csv('/home/eric/dev/aquameta/bundles/org.aquameta.ui.tags')" flat2;

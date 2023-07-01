@@ -182,7 +182,7 @@ func main() {
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&ct)
     log.Print("Checking for Aquameta installation....")
 
-    if ct != 7 {
+    if true { // ct != 7 {
 
         //
         // install aquameta extensions
@@ -196,20 +196,20 @@ func main() {
         }
 
         installQueries := [...]string{
-            "create extension if not exists hstore schema public",
-            "create extension if not exists dblink schema public",
-            "create extension if not exists \"uuid-ossp\"",
-            "create extension if not exists pgcrypto schema public",
-            "create extension if not exists postgres_fdw",
-            "create extension meta",
-            "create extension meta_triggers",
-            "create extension bundle",
-            "create extension event",
-            "create extension endpoint",
-            "create extension widget",
-            "create extension semantics",
-            "create extension ide",
-            "create extension documentation"}
+            // "create extension if not exists hstore schema public",
+            // "create extension if not exists dblink schema public",
+            // "create extension if not exists \"uuid-ossp\"",
+            // "create extension if not exists pgcrypto schema public",
+            // "create extension if not exists postgres_fdw",
+            // "create extension meta",
+            // "create extension meta_triggers",
+            // "create extension bundle",
+            "create extension if not exists event",
+            // "create extension endpoint",
+            "create extension if not exists widget",
+            "create extension if not exists semantics",
+            "create extension if not exists ide",
+            "create extension if not exists documentation"}
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])
@@ -284,7 +284,7 @@ func main() {
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
             "org.aquameta.core.bootloader",
-            "org.aquameta.core.bundle",
+            // "org.aquameta.core.bundle",
             "org.aquameta.core.endpoint",
             "org.aquameta.core.ide",
             "org.aquameta.core.mimetypes",

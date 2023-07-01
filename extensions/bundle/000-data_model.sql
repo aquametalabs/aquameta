@@ -1,7 +1,7 @@
 begin;
 
-create schema bundle2;
-set search_path=bundle2;
+create schema bundle;
+set search_path=bundle;
 create extension "uuid-ossp" schema public;
 create extension "pgcrypto" schema public;
 
@@ -63,7 +63,7 @@ create or replace function blob_hash_gen_trigger() returns trigger as $$
         end if;
 
         NEW.hash = public.digest(NEW.value, 'sha256');
-        if exists (select 1 from bundle2.blob b where b.hash = NEW.hash) then
+        if exists (select 1 from bundle.blob b where b.hash = NEW.hash) then
             return NULL;
         end if;
 
@@ -94,13 +94,13 @@ create table rowset (
 create table rowset_row (
     id uuid not null default public.uuid_generate_v4() primary key,
     rowset_id uuid references rowset(id) on delete cascade,
-    row_id meta2.row_id
+    row_id meta.row_id
 );
 
 create table rowset_row_field (
     id uuid not null default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
-    field_id meta2.field_id,
+    field_id meta.field_id,
     value_hash text references blob(hash) on delete cascade,
     unique(rowset_row_id, field_id)
 );
@@ -109,7 +109,7 @@ create table commit (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
     rowset_id uuid references rowset(id) on delete cascade,
-    role_id meta2.role_id,
+    role_id meta.role_id,
     parent_id uuid references commit(id),
     -- TODO: merge_parent_id uuid references commit(id),
     time timestamp not null default now(),
@@ -125,9 +125,9 @@ alter table bundle alter constraint bundle_head_commit_id_fkey deferrable initia
 create table merge_conflict (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid references bundle(id) on delete cascade,
-    field_id meta2.field_id not null,
+    field_id meta.field_id not null,
     conflict_value text,
-    rowset_row_field_id uuid not null references bundle2.rowset_row_field(id) on delete cascade
+    rowset_row_field_id uuid not null references bundle.rowset_row_field(id) on delete cascade
 );
 
 
@@ -140,29 +140,29 @@ create table merge_conflict (
 
 -- head_commit_row: show the rows head commit
 create view head_commit_row as
-select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle2.bundle bundle
-    join bundle2.commit c on bundle.head_commit_id=c.id
-    join bundle2.rowset r on r.id = c.rowset_id
-    join bundle2.rowset_row rr on rr.rowset_id = r.id;
+select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle.bundle bundle
+    join bundle.commit c on bundle.head_commit_id=c.id
+    join bundle.rowset r on r.id = c.rowset_id
+    join bundle.rowset_row rr on rr.rowset_id = r.id;
 
 
 -- head_commit_row: show the fields in each head commit
 create view head_commit_field as
-select bundle.id as bundle_id, rr.row_id, f.field_id, f.value_hash from bundle2.bundle bundle
-    join bundle2.commit c on bundle.head_commit_id=c.id
-    join bundle2.rowset r on r.id = c.rowset_id
-    join bundle2.rowset_row rr on rr.rowset_id = r.id
-    join bundle2.rowset_row_field f on f.rowset_row_id = rr.id;
+select bundle.id as bundle_id, rr.row_id, f.field_id, f.value_hash from bundle.bundle bundle
+    join bundle.commit c on bundle.head_commit_id=c.id
+    join bundle.rowset r on r.id = c.rowset_id
+    join bundle.rowset_row rr on rr.rowset_id = r.id
+    join bundle.rowset_row_field f on f.rowset_row_id = rr.id;
 
 
 -- head_commit_row_with_exists: rows in the head commit, along with whether or
 -- not that row actually exists in the database
 create view head_commit_row_with_exists as
-select bundle.id as bundle_id, c.id as commit_id, rr.row_id, meta2.row_exists(rr.row_id) as exists
-from bundle2.bundle bundle
-    join bundle2.commit c on bundle.head_commit_id=c.id
-    join bundle2.rowset r on r.id = c.rowset_id
-    join bundle2.rowset_row rr on rr.rowset_id = r.id;
+select bundle.id as bundle_id, c.id as commit_id, rr.row_id, meta.row_exists(rr.row_id) as exists
+from bundle.bundle bundle
+    join bundle.commit c on bundle.head_commit_id=c.id
+    join bundle.rowset r on r.id = c.rowset_id
+    join bundle.rowset_row rr on rr.rowset_id = r.id;
     -- order by meta.row_exists(rr.row_id), rr.row_id;
 
 
@@ -175,22 +175,22 @@ from bundle2.bundle bundle
 ------------------------------------------------------------------------------
 create table ignored_row (
     id uuid not null default public.uuid_generate_v4() primary key,
-    row_id meta2.row_id
+    row_id meta.row_id
 );
 
 create table ignored_schema (
     id uuid not null default public.uuid_generate_v4() primary key,
-    schema_id meta2.schema_id not null
+    schema_id meta.schema_id not null
 );
 
 create table ignored_relation (
     id uuid not null default public.uuid_generate_v4() primary key,
-    relation_id meta2.relation_id not null
+    relation_id meta.relation_id not null
 );
 
 create table ignored_column (
     id uuid not null default public.uuid_generate_v4() primary key,
-    column_id meta2.column_id not null
+    column_id meta.column_id not null
 );
 
 
@@ -205,7 +205,7 @@ create table ignored_column (
 create table stage_row_added (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id) on delete cascade,
-    row_id meta2.row_id,
+    row_id meta.row_id,
     unique (bundle_id, row_id)
 ); -- TODO: check that rows inserted into this table ARE NOT in the head commit's rowset
 
@@ -222,7 +222,7 @@ create table stage_row_deleted (
 create table stage_field_changed (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id),
-    field_id meta2.field_id,
+    field_id meta.field_id,
     new_value text,
     unique (bundle_id, field_id)
 ); -- TODO: check that rows inserted into this table ARE in the head commit's rowset
@@ -241,28 +241,28 @@ create table stage_field_changed (
 -- deleted
 create view offstage_row_deleted as
 select row_id, bundle_id
-from bundle2.head_commit_row_with_exists
+from bundle.head_commit_row_with_exists
 where exists = false
 -- TODO make this an except
 and row_id not in
-(select rr.row_id from bundle2.stage_row_deleted srd join bundle2.rowset_row rr on rr.id = srd.rowset_row_id)
+(select rr.row_id from bundle.stage_row_deleted srd join bundle.rowset_row rr on rr.id = srd.rowset_row_id)
 ;
 
 create view offstage_row_deleted_by_schema as
 select
-    row_id::meta2.schema_id as schema_id,
+    row_id::meta.schema_id as schema_id,
     (row_id).schema_name as schema_name,
     count(*) as count
-from bundle2.offstage_row_deleted
+from bundle.offstage_row_deleted
 group by 1,2;
 
 create view offstage_row_deleted_by_relation as
-select row_id::meta2.schema_id as schema_id,
+select row_id::meta.schema_id as schema_id,
     (row_id).schema_name as schema_name,
-    row_id::meta2.relation_id as relation_id,
+    row_id::meta.relation_id as relation_id,
     (row_id).relation_name as relation_name,
     count(*) as count
-from bundle2.offstage_row_deleted
+from bundle.offstage_row_deleted
 group by 1,2,3,4;
 
 
@@ -273,13 +273,13 @@ select
     field_id,
     row_id,
     b.value as old_value,
-    meta2.field_id_literal_value(field_id) as new_value,
+    meta.field_id_literal_value(field_id) as new_value,
     bundle_id
-from bundle2.head_commit_field f
-join bundle2.blob b on f.value_hash = b.hash
+from bundle.head_commit_field f
+join bundle.blob b on f.value_hash = b.hash
 where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so slow?  workaround by nesting selects.  still slow.
     and */ f.field_id not in
-    (select ofc.field_id from bundle2.stage_field_changed ofc)
+    (select ofc.field_id from bundle.stage_field_changed ofc)
 ) x where old_value != new_value; -- FIXME: will break on nulls
 
 /*
@@ -314,22 +314,22 @@ group by schema_id, relation_id;
 create view stage_row as
     -- the head commit's rowset rows
     select b.id as bundle_id, rr.row_id as row_id, false as new_row
-        from bundle2.rowset_row rr
-        join bundle2.rowset r on rr.rowset_id=r.id
-        join bundle2.commit c on c.rowset_id = r.id
-        join bundle2.bundle b on c.bundle_id=b.id
+        from bundle.rowset_row rr
+        join bundle.rowset r on rr.rowset_id=r.id
+        join bundle.commit c on c.rowset_id = r.id
+        join bundle.bundle b on c.bundle_id=b.id
             and b.head_commit_id = c.id
 
     union
     -- plus stage_row_added
     select bundle_id, row_id, true as new_row
-    from bundle2.stage_row_added
+    from bundle.stage_row_added
 
     except
     -- minus stage_row_deleted
     select srd.bundle_id, rr.row_id, false
-        from bundle2.stage_row_deleted srd
-        join bundle2.rowset_row rr on srd.rowset_row_id = rr.id;
+        from bundle.stage_row_deleted srd
+        join bundle.rowset_row rr on srd.rowset_row_id = rr.id;
 
 
 
@@ -355,7 +355,7 @@ create or replace view stage_row_field as
 select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex') as value_hash from (
     select
         sr.row_id as stage_row_id,
-        meta2.field_id(
+        meta.field_id(
             re.schema_name,
             re.name,
             re.primary_key_column_names[1], -- FIXME
@@ -363,8 +363,8 @@ select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex
             c.name
         ) as field_id,
 
-        meta2.field_id_literal_value( ----  THIS IS SLOW!
-            meta2.field_id(
+        meta.field_id_literal_value( ----  THIS IS SLOW!
+            meta.field_id(
                 re.schema_name,
                 re.name,
                 re.primary_key_column_names[1], -- FIXME
@@ -373,9 +373,9 @@ select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex
             )
         )::text as value
 
-    from bundle2.stage_row_added sr
-        join meta2.relation re on meta2.relation_id((sr.row_id).schema_name, (sr.row_id).relation_name) = re.id
-        join meta2.relation_column c on c.relation_id=re.id
+    from bundle.stage_row_added sr
+        join meta.relation re on meta.relation_id((sr.row_id).schema_name, (sr.row_id).relation_name) = re.id
+        join meta.relation_column c on c.relation_id=re.id
     ) r
 
 union all
@@ -390,9 +390,9 @@ select
         else b.value
     end as value,
     hcf.value_hash
-from bundle2.stage_row sr
-    left join bundle2.head_commit_field hcf on sr.row_id::text=hcf.row_id::text
-    left join bundle2.blob b on hcf.value_hash = b.hash
+from bundle.stage_row sr
+    left join bundle.head_commit_field hcf on sr.row_id::text=hcf.row_id::text
+    left join bundle.blob b on hcf.value_hash = b.hash
     left join stage_field_changed sfc on sfc.field_id::text = hcf.field_id::text
     where sr.new_row=false;
 
@@ -459,28 +459,28 @@ select * from bundle.stage_row_keys_to_fields(srk.relation_id, srk.pk_column_nam
 create table tracked_row_added (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id) on delete cascade,
-    row_id meta2.row_id,
+    row_id meta.row_id,
     unique (row_id)
 );
 
 
 create or replace view tracked_row as
    select b.id as bundle_id, hcr.row_id
-   from bundle2.bundle b
-   join bundle2.head_commit_row hcr on hcr.bundle_id=b.id
+   from bundle.bundle b
+   join bundle.head_commit_row hcr on hcr.bundle_id=b.id
 
    union
 
    -- tracked_row_added
    select b.id, tra.row_id
-   from bundle2.bundle b
-   join bundle2.tracked_row_added tra on tra.bundle_id=b.id
+   from bundle.bundle b
+   join bundle.tracked_row_added tra on tra.bundle_id=b.id
 
    union
 
    select b.id, sra.row_id
-   from bundle2.bundle b
-   join bundle2.stage_row_added sra on sra.bundle_id=b.id;
+   from bundle.bundle b
+   join bundle.stage_row_added sra on sra.bundle_id=b.id;
 
 
 
@@ -497,7 +497,7 @@ create or replace view tracked_row as
 create or replace view head_db_stage as
 select
     *,
-    meta2.row_exists(row_id) as row_exists,
+    meta.row_exists(row_id) as row_exists,
     case
         when change_type = 'same' then null
         when change_type = 'deleted' then (stage_row_id is null)
@@ -522,7 +522,7 @@ from (
             when
                 array_remove(array_agg(ofc.field_id), null) != '{}'
                 or array_remove(array_agg(sfc.field_id), null) != '{}' then  'modified'
-            when meta2.row_exists(sr.row_id) = false then 'deleted'
+            when meta.row_exists(sr.row_id) = false then 'deleted'
             else 'same'
         end as change_type,
 
@@ -535,19 +535,19 @@ from (
         array_agg(ofc.old_value) as stage_field_changes_old_vals,
         array_agg(sfc.new_value) as stage_field_changes_new_vals
 
-    from bundle2.head_commit_row hcr
+    from bundle.head_commit_row hcr
         join bundle b on hcr.bundle_id=b.id
-        full outer join bundle2.stage_row sr on hcr.row_id::text=sr.row_id::text
+        full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
         left join stage_field_changed sfc on 
-            (sfc.field_id)::meta2.row_id::text=hcr.row_id::text
-        left join offstage_field_changed ofc on (ofc.field_id)::meta2.row_id::text=hcr.row_id::text
+            (sfc.field_id)::meta.row_id::text=hcr.row_id::text
+        left join offstage_field_changed ofc on (ofc.field_id)::meta.row_id::text=hcr.row_id::text
         -- where b.checkout_commit_id is not null -- TODO I added this for a reason but now I can't remember why and it is breaking stuff
-    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id)::meta2.row_id, (ofc.field_id)::meta2.row_id
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id)::meta.row_id, (ofc.field_id)::meta.row_id
 
     union
 
     select tra.bundle_id, null, tra.row_id, null, null, 'tracked', null, null, null, null, null, null
-    from bundle2.tracked_row_added tra
+    from bundle.tracked_row_added tra
 
 ) c
 order by
@@ -561,8 +561,8 @@ end, row_id;
 
 
 create view head_db_stage_changed as
-select hds.* from bundle2.head_db_stage hds
-    join bundle2.bundle b on hds.bundle_id=b.id
+select hds.* from bundle.head_db_stage hds
+    join bundle.bundle b on hds.bundle_id=b.id
 where hds.change_type != 'same'
     or hds.stage_field_changes::text != '{}'
     or hds.offstage_field_changes::text != '{}'
@@ -580,7 +580,7 @@ where hds.change_type != 'same'
 
 create table trackable_nontable_relation (
     id uuid not null default public.uuid_generate_v4() primary key,
-    pk_column_id meta2.column_id not null
+    pk_column_id meta.column_id not null
 );
 
 
@@ -590,27 +590,27 @@ create or replace view trackable_relation as
     select relation_id, schema_id, primary_key_column_id from (
        -- every single table
     select t.id as relation_id, s.id as schema_id, r.primary_key_column_ids[1] as primary_key_column_id --TODO audit column
-    from meta2.schema s
-    join meta2.table t on t.schema_id=s.id
-    join meta2.relation r on r.id=t.id -- only work with relations that have a primary key
+    from meta.schema s
+    join meta.table t on t.schema_id=s.id
+    join meta.relation r on r.id=t.id -- only work with relations that have a primary key
     where primary_key_column_ids[1] is not null
 
     -- combined with every view in the meta schema
     UNION
     select
-        pk_column_id::meta2.relation_id as relation_id,
-        pk_column_id::meta2.schema_id as schema_id,
+        pk_column_id::meta.relation_id as relation_id,
+        pk_column_id::meta.schema_id as schema_id,
         pk_column_id as primary_key_column_id
-    from bundle2.trackable_nontable_relation
+    from bundle.trackable_nontable_relation
 ) r
 
     -- ...that is not ignored
     where relation_id not in (
-        select relation_id from bundle2.ignored_relation
+        select relation_id from bundle.ignored_relation
     )
     -- ...and is not in an ignored schema
     and schema_id not in (
-        select schema_id from bundle2.ignored_schema
+        select schema_id from bundle.ignored_schema
     )
 ;
 
@@ -657,42 +657,42 @@ select *, 'select meta.row_id(' ||
         else ''
     end
     as stmt
-from bundle2.trackable_relation r;
+from bundle.trackable_relation r;
 
 
 create or replace view untracked_row as
 select r.row_id /*, r.row_id::meta.relation_id as relation_id */
-    from bundle2.exec((
-        select array_agg (stmt) from bundle2.not_ignored_row_stmt
+    from bundle.exec((
+        select array_agg (stmt) from bundle.not_ignored_row_stmt
     )) r(
-        row_id meta2.row_id
+        row_id meta.row_id
     )
 where r.row_id::text not in (
-    select a.row_id::text from bundle2.stage_row_added a
+    select a.row_id::text from bundle.stage_row_added a
     union
-    select t.row_id::text from bundle2.tracked_row_added t
+    select t.row_id::text from bundle.tracked_row_added t
     union
-    select rr.row_id::text from bundle2.stage_row_deleted d join rowset_row rr on d.rowset_row_id=rr.id
+    select rr.row_id::text from bundle.stage_row_deleted d join rowset_row rr on d.rowset_row_id=rr.id
     union
-    select rr.row_id::text from bundle2.bundle bundle
-        join bundle2.commit c on bundle.head_commit_id=c.id
-        join bundle2.rowset r on c.rowset_id = r.id
-        join bundle2.rowset_row rr on rr.rowset_id=r.id
+    select rr.row_id::text from bundle.bundle bundle
+        join bundle.commit c on bundle.head_commit_id=c.id
+        join bundle.rowset r on c.rowset_id = r.id
+        join bundle.rowset_row rr on rr.rowset_id=r.id
 );
 
 
 create or replace view untracked_row_by_schema as
-select meta2.schema_id((r.row_id).schema_name) as schema_id, (r.row_id).schema_name as schema_name, count(*) as count
-from bundle2.untracked_row r
+select meta.schema_id((r.row_id).schema_name) as schema_id, (r.row_id).schema_name as schema_name, count(*) as count
+from bundle.untracked_row r
 group by 1,2;
 
 create or replace view untracked_row_by_relation as
 select
-    (r.row_id)::meta2.relation_id as relation_id,
+    (r.row_id)::meta.relation_id as relation_id,
     (r.row_id).relation_name as relation_name,
-    (r.row_id)::meta2.schema_id as schema_id,
+    (r.row_id)::meta.schema_id as schema_id,
     count(*) as count
-from bundle2.untracked_row r
+from bundle.untracked_row r
 group by 1,2,3;
 
 

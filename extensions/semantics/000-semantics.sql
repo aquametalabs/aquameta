@@ -152,7 +152,7 @@ begin
         from semantics.relation r
             join semantics.relation_purpose rp on rp.id = r.purpose_id
             join widget.widget w on w.id = r.widget_id
-        where r.relation_id = meta.relation_id(' || quote_literal((relation_id::meta.schema_id).name) || ', ' || quote_literal((relation_id).name) || ')
+        where r.relation_id = ' || quote_literal(relation_id) || '::text::meta.relation_id
             and rp.purpose = ' || quote_literal(widget_purpose) ||
         'union
         select *, -1 as priority from widget.bundled_widget(' || quote_literal(default_bundle) || ', ' || quote_literal(widget_purpose) || ')
@@ -164,7 +164,7 @@ $$ language plpgsql;
 
 
 /*
- * semantics.relation_widget()
+ * semantics.column_widget()
  *
  * first look for a widget specifically for this column.
  * second, look for a widget specifically for this column's type.
@@ -188,9 +188,7 @@ begin
         from semantics.column c
             join semantics.column_purpose cp on cp.id = c.purpose_id
             join widget.widget w on w.id = c.widget_id
-        where c.column_id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
-                                         quote_literal((column_id::meta.relation_id).name) || ', ' ||
-                                         quote_literal((column_id).name) || ')
+        where c.column_id = ' || quote_literal(column_id) || '::text::meta.column_id
             and cp.purpose = ' || quote_literal(widget_purpose) ||
         ' union
         select w.*, t.priority, ''t'' as type
@@ -198,9 +196,7 @@ begin
             join semantics.column_purpose cp on cp.id = t.purpose_id
             join widget.widget w on w.id = t.widget_id
             join meta.column mc on mc.type_id = t.type_id
-        where mc.id = meta.column_id(' || quote_literal((column_id::meta.schema_id).name) || ', ' ||
-                                         quote_literal((column_id::meta.relation_id).name) || ', ' ||
-                                         quote_literal((column_id).name) || ')
+        where mc.id = ' || quote_literal(column_id) || '::text::meta.column_id
             and cp.purpose = ' || quote_literal(widget_purpose) ||
         ' union
         select *, -1 as priority, ''z'' as type
