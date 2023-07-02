@@ -4,13 +4,6 @@
  * HTTP arbitrary resource server
  ******************************************************************************/
 
- begin;
-
-create schema endpoint;
-set search_path=endpoint;
-
-
-
 /******************************************************************************
  * endpoint.mimetype
  * A big table containing all the mimetypes
@@ -294,8 +287,3 @@ $$
     language sql security definer;
 
 */
-
-
-
-
-commit;

@@ -1,6 +1,3 @@
-begin;
-set search_path=bundle;
-
 /*******************************************************************************
  * Bundle
  * Data Version Control System
@@ -1343,5 +1340,3 @@ create or replace function merge_cancel(_bundle_id uuid) returns void as $$
         -- assert that head_commit_id
     end;
 $$ language plpgsql;
-
-commit;

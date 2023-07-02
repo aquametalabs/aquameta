@@ -1,7 +1,3 @@
-begin;
-
-set search_path=bundle;
-
 /*******************************************************************************
  * Bundle Remotes
  *
@@ -598,5 +594,3 @@ select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle.bundle b
     join bundle.rowset_row rr on rr.rowset_id = r.id
     join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
     join bundle.blob bb on bb.hash = rrf.value_hash;
-
-commit;

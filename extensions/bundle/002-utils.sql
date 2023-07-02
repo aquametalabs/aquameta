@@ -1,6 +1,3 @@
-begin;
-set search_path=bundle;
-
 /*******************************************************************************
  * Bundle Utilities
  *
@@ -209,4 +206,3 @@ begin
     return query execute search_stmt;
 end;
 $$ language plpgsql;
-commit;

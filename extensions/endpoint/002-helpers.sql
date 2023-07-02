@@ -1,7 +1,3 @@
-begin;
-
-set search_path=endpoint;
-
 create or replace function endpoint.get_mimetype_id(_mimetype text) returns uuid as $$
     select id from endpoint.mimetype where mimetype=_mimetype;
 $$ language sql;
@@ -125,5 +121,3 @@ begin
 end;
 $$ language plpgsql;
 
-
-commit;

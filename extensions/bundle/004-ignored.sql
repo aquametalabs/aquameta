@@ -6,10 +6,6 @@
  * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
-begin;
-
-set search_path=bundle;
-
 select bundle_create('org.aquameta.core.bundle');
 
 -- don't try to version control these tables in the version control system
@@ -39,5 +35,3 @@ select tracked_row_add('org.aquameta.core.bundle', 'bundle','ignored_schema','id
 -- select stage_row_add('org.aquameta.core.bundle', 'bundle','ignored_schema','id',id::text) from ignored_schema;
 
 -- select commit('org.aquameta.core.bundle', 'bundle bundle');
-
-commit;

@@ -1,7 +1,3 @@
-begin;
-set search_path=endpoint;
-
-
 /******************************************************************************
  * ENDPOINT SERVER
  * HTTP request handler for a datum REST interface
@@ -1694,5 +1690,3 @@ create or replace function endpoint.template_render(
     return template( bundle_name, template_name, args);
 $$ language plv8;
 */
-
-commit;

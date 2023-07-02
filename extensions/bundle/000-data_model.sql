@@ -1,10 +1,3 @@
-begin;
-
-create schema bundle;
-set search_path=bundle;
-create extension "uuid-ossp" schema public;
-create extension "pgcrypto" schema public;
-
 /*******************************************************************************
  * Bundle
  * Data Version Control System
@@ -772,5 +765,3 @@ select pg_catalog.pg_extension_config_dump('tracked_row_added','');
 select pg_catalog.pg_extension_config_dump('bundle_csv','');
 select pg_catalog.pg_extension_config_dump('bundle_remote_database','');
 */
-
-commit;
