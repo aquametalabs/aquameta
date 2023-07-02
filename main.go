@@ -182,7 +182,7 @@ func main() {
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&ct)
     log.Print("Checking for Aquameta installation....")
 
-    if true { // ct != 7 {
+    if ct != 7 {
 
         //
         // install aquameta extensions
@@ -196,16 +196,16 @@ func main() {
         }
 
         installQueries := [...]string{
-            // "create extension if not exists hstore schema public",
-            // "create extension if not exists dblink schema public",
-            // "create extension if not exists \"uuid-ossp\"",
-            // "create extension if not exists pgcrypto schema public",
-            // "create extension if not exists postgres_fdw",
-            // "create extension meta",
-            // "create extension meta_triggers",
-            // "create extension bundle",
+            "create extension if not exists hstore schema public",
+            "create extension if not exists dblink schema public",
+            "create extension if not exists \"uuid-ossp\"",
+            "create extension if not exists pgcrypto schema public",
+            "create extension if not exists postgres_fdw",
+            "create extension meta",
+            "create extension meta_triggers",
+            "create extension bundle",
             "create extension if not exists event",
-            // "create extension endpoint",
+            "create extension endpoint",
             "create extension if not exists widget",
             "create extension if not exists semantics",
             "create extension if not exists ide",
