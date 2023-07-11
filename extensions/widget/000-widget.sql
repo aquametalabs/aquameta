@@ -208,20 +208,27 @@ create table component (
 </div>'::text,
     css text default ':host {
 }'::text,
-    js text default 'import { register, WidgetElement } from ''/org.aquameta.core.widget/widget.module/widget-element.js'';
+    js text default 'import { define, Widget} from ''/org.aquameta.core.widget/widget.module/widget.js'';
 import db from ''/org.aquameta.core.endpoint/widget.module/datum.js'';
 
-export default register(
-    class MyWidget extends WidgetElement(import.meta) {
+export default define(
+    import.meta,
+    class MyWidget extends Widget.Element {
         constructor() {
             super();
-            // Widget has been created
+            // Widget has been created.
         }
+
         onWidgetConnected() {
-            // Widget is in the DOM
+            // Widget is in the DOM.
         }
-        disconnectedCallback() {
-            // Widget has been removed from the DOM
+
+        onWidgetUpdate(prop) {
+            // Prop/Attr value has changed.
+        }
+
+        onWidgetDisconnected() {
+            // Widget has been removed from the DOM.
         }
     }
 );'::text,
@@ -245,7 +252,7 @@ create type module_type as enum ('js', 'css');
 create table module (
     id uuid not null default public.uuid_generate_v4() primary key,
     name varchar(255) not null,
-    content text not null,
+    content text not null default '',
     type module_type not null
 );
 
