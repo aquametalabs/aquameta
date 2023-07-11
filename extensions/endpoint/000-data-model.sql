@@ -85,24 +85,6 @@ create table endpoint.resource_function (
     mimetype_id uuid references mimetype(id) -- if this function always returns the same mimetype, set this
 );
 
-
-
-
-
-
-
-
-/********************************************* hold up hey *******************/
-/* below are undesirable tables enabled temporarily so bundles can be imported.
-*/
-
-
-
-
-
-
-
-
 /******************************************************************************
  * templates
  * - dynamic HTML fragments, parsed and rendered upon request.
@@ -259,11 +241,11 @@ create trigger endpoint_user_delete_trigger before delete on endpoint.user for e
  * endpoint.current_user
  ******************************************************************************/
 
-/*
--- create view endpoint."current_user" AS SELECT "current_user"() AS "current_user";
 create view endpoint."current_user" as
-SELECT id, role_id, email, name from endpoint."user" where role_id=current_user::text::meta.role_id;
+SELECT id, role_id, email, name from endpoint."user" u where (u.role_id).name=current_user;
 
+/*
+is this ever even used??
 create function endpoint."current_user"() returns uuid as $$
 SELECT id from endpoint."user" as "current_user"  where role_id=current_user::text::meta.role_id;
 $$ language sql;
@@ -273,7 +255,6 @@ $$ language sql;
  * endpoint.session
  ******************************************************************************/
 
-/*
 create table endpoint.session (
     id uuid not null default public.uuid_generate_v4() primary key,
     role_id meta.role_id not null,
@@ -286,4 +267,3 @@ select * from endpoint.session where id=session_id;
 $$
     language sql security definer;
 
-*/
