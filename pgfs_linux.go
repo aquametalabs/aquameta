@@ -15,6 +15,37 @@ import (
     "bazil.org/fuse/fs"
 )
 
+func pgfs(config tomlConfig, dbpool *pgxpool.Pool, fuseDone chan bool) {
+    c, err := fuse.Mount(
+        config.PGFS.MountDirectory,
+        fuse.FSName("pgfsfs"),
+        fuse.Subtype("pgfs"),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer c.Close()
+
+    err = fs.Serve(c, FS{dbpool: dbpool})
+    if err != nil {
+        log.Fatal(err)
+    }
+    /*
+    server, _, err := fuse.Mount(
+        "/tmp/mnt",
+        fs,
+        &fuse.MountOptions{
+            AllowOther: true,
+        },
+    )
+    if err != nil {
+        println("FUSE filesystem error:", err)
+    }
+    server.Wait()
+    */
+    fuseDone <- true
+}
+
 //
 // File System
 //
