@@ -214,7 +214,7 @@ begin
         loop
         execute format ('delete from %I.%I where %I = %L',
             (temprow.row_id).schema_name,
-            (temprow.row_id).schema_name,
+            (temprow.row_id).relation_name,
             (temprow.row_id).pk_column_name,
             (temprow.row_id).pk_value);
     end loop;
