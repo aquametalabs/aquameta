@@ -49,4 +49,5 @@
 
 
 [PGFS]
+    Enabled = false
     MountDirectory = "pgfs/"

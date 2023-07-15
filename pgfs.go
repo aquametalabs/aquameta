@@ -1,3 +1,4 @@
+//go:build (linux || freebsd)
 package main
 
 import (
@@ -14,6 +15,35 @@ import (
     "bazil.org/fuse"
     "bazil.org/fuse/fs"
 )
+
+
+func pgfs(config tomlConfig, dbpool *pgxpool.Pool, fuseDone chan bool) {
+    if ! config.PGFS.Enabled {
+        log.Printf("PGFS is not enabled.")
+    } else {
+
+        log.Printf("Mounting PGFS Filesystem: %s\n\n", config.PGFS.MountDirectory)
+
+        c, err := fuse.Mount(
+            config.PGFS.MountDirectory,
+            fuse.FSName("pgfsfs"),
+            fuse.Subtype("pgfs"),
+        )
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer c.Close()
+
+        err = fs.Serve(c, FS{dbpool: dbpool})
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        fuseDone <- true
+    }
+}
+
+
 
 //
 // File System

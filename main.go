@@ -15,8 +15,6 @@ import (
     "path/filepath"
     "syscall"
     "time"
-    "bazil.org/fuse"
-    "bazil.org/fuse/fs"
 )
 
 func main() {
@@ -384,38 +382,12 @@ func main() {
     }()
 
 
-    log.Printf("Mounting PGFS Filesystem: %s\n\n", config.PGFS.MountDirectory)
+    //
+    // start pgfs (if OS is supported and it's enabled in config)
+    //
 
-    go func() {
-        c, err := fuse.Mount(
-            config.PGFS.MountDirectory,
-            fuse.FSName("pgfsfs"),
-            fuse.Subtype("pgfs"),
-        )
-        if err != nil {
-            log.Fatal(err)
-        }
-        defer c.Close()
+    go pgfs(config, dbpool, fuseDone)
 
-        err = fs.Serve(c, FS{dbpool: dbpool})
-        if err != nil {
-            log.Fatal(err)
-        }
-/*
-        server, _, err := fuse.Mount(
-            "/tmp/mnt",
-            fs,
-            &fuse.MountOptions{
-                AllowOther: true,
-            },
-        )
-        if err != nil {
-            println("FUSE filesystem error:", err)
-        }
-        server.Wait()
-*/
-        fuseDone <- true
-    }()
 
     //
     // start gui

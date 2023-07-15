@@ -38,6 +38,7 @@ type HTTPServer struct {
 
 
 type PGFS struct {
+    Enabled bool
     MountDirectory string
 }
 
