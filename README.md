@@ -179,4 +179,4 @@ Congrats!  The end.
 Usage
 -----
 
-See the (paltry) [documentation](docs/).
+See the [documentation](docs/).
