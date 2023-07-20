@@ -24,7 +24,7 @@ func main() {
     log.Print(` / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_`)
     log.Print(`(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /`)
     log.Print(`     \/    |__|          \/      \/     \/          \/ `)
-    log.Print(`                 [ version 0.3.0 ]                     `)
+    log.Print(`                 [ version 0.4.0 ]                     `)
 
     // log.SetPrefix("[💧 aquameta 💧] ")
     log.Print("Aquameta server... ENGAGE!")
