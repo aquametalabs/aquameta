@@ -152,11 +152,11 @@ begin
         b.name,
         array_agg(c.id) as commit_ids,
 
-        (rrf.field_id::meta.schema_id).name as row_schema_name,
-        (rrf.field_id::meta.relation_id).name as row_relation_name,
-        (((rrf.field_id).row_id).pk_column_id).name as row_pk_column_name,
-        ((rrf.field_id).row_id).pk_value as row_pk_value,
-        ((rrf.field_id).column_id).name as field_name,
+        (rrf.field_id).schema_name as row_schema_name,
+        (rrf.field_id).relation_name as row_relation_name,
+        (rrf.field_id).pk_column_name as row_pk_column_name,
+        (rrf.field_id).pk_value as row_pk_value,
+        (rrf.field_id).column_name as field_name,
 
         array_agg(c.message),
         rrf.value_hash,

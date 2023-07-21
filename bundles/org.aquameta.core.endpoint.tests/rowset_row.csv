@@ -1,4 +1,4 @@
-05bf876f-f589-4fb2-8996-bfa7894149aa	05c1febd-9774-4fbc-9364-e5b51cad7219	("(""(""""(endpoint)"""",resource)"",id)",e5d03b38-9c2d-4559-99b1-1d0db28b2107)
-0e0e71ea-e051-4d7b-951b-8c614008f214	05c1febd-9774-4fbc-9364-e5b51cad7219	("(""(""""(endpoint)"""",resource)"",id)",33fd6861-d140-459d-8f7e-cd1445c99205)
-1f75b59a-9285-4e4c-959c-2b9809be49db	05c1febd-9774-4fbc-9364-e5b51cad7219	("(""(""""(documentation)"""",bundle_doc)"",id)",9f4de3ce-c1bd-4c5b-8de6-21c58e64e250)
-9dbfc903-5d95-4345-bd75-5d2bc89327dc	05c1febd-9774-4fbc-9364-e5b51cad7219	("(""(""""(widget)"""",widget)"",id)",e0dae0a4-3e1a-4c2d-981e-71e266a87c3c)
+05bf876f-f589-4fb2-8996-bfa7894149aa	05c1febd-9774-4fbc-9364-e5b51cad7219	(endpoint,resource,id,e5d03b38-9c2d-4559-99b1-1d0db28b2107)
+0e0e71ea-e051-4d7b-951b-8c614008f214	05c1febd-9774-4fbc-9364-e5b51cad7219	(endpoint,resource,id,33fd6861-d140-459d-8f7e-cd1445c99205)
+1f75b59a-9285-4e4c-959c-2b9809be49db	05c1febd-9774-4fbc-9364-e5b51cad7219	(documentation,bundle_doc,id,9f4de3ce-c1bd-4c5b-8de6-21c58e64e250)
+9dbfc903-5d95-4345-bd75-5d2bc89327dc	05c1febd-9774-4fbc-9364-e5b51cad7219	(widget,widget,id,e0dae0a4-3e1a-4c2d-981e-71e266a87c3c)

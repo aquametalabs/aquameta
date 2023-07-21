@@ -24,7 +24,7 @@ func main() {
     log.Print(` / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_`)
     log.Print(`(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /`)
     log.Print(`     \/    |__|          \/      \/     \/          \/ `)
-    log.Print(`                 [ version 0.3.0 ]                     `)
+    log.Print(`                 [ version 0.4.0 ]                     `)
 
     // log.SetPrefix("[💧 aquameta 💧] ")
     log.Print("Aquameta server... ENGAGE!")
@@ -202,12 +202,12 @@ func main() {
             "create extension meta",
             "create extension meta_triggers",
             "create extension bundle",
-            "create extension event",
+            "create extension if not exists event",
             "create extension endpoint",
-            "create extension widget",
-            "create extension semantics",
-            "create extension ide",
-            "create extension documentation"}
+            "create extension if not exists widget",
+            "create extension if not exists semantics",
+            "create extension if not exists ide",
+            "create extension if not exists documentation"}
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])
@@ -282,7 +282,7 @@ func main() {
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
             "org.aquameta.core.bootloader",
-            "org.aquameta.core.bundle",
+            // "org.aquameta.core.bundle",
             "org.aquameta.core.endpoint",
             "org.aquameta.core.ide",
             "org.aquameta.core.mimetypes",
@@ -349,6 +349,9 @@ func main() {
     http.HandleFunc("/endpoint/", endpoint(dbpool))
     http.HandleFunc("/", resource(dbpool))
 
+    httpDone := make(chan bool)
+    fuseDone := make(chan bool)
+
     //
     // start http server
     //
@@ -358,22 +361,33 @@ func main() {
         config.HTTPServer.Port,
         config.HTTPServer.StartupURL)
 
-    //    go func() { // make the HTTPServer the main thread since GUI is disabled
-    if config.HTTPServer.Protocol == "http" {
-        http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil)
-    } else {
-        if config.HTTPServer.Protocol == "https" {
-            // https://github.com/denji/golang-tls
-            log.Fatal(http.ListenAndServeTLS(
-                config.HTTPServer.IP+":"+config.HTTPServer.Port,
-                config.HTTPServer.SSLCertificateFile,
-                config.HTTPServer.SSLKeyFile,
-                nil))
+    go func() {
+        if config.HTTPServer.Protocol == "http" {
+            http.ListenAndServe(config.HTTPServer.IP+":"+config.HTTPServer.Port, nil)
         } else {
-            log.Fatal("Unrecognized protocol: " + config.HTTPServer.Protocol)
+            if config.HTTPServer.Protocol == "https" {
+                // https://github.com/denji/golang-tls
+                log.Fatal(http.ListenAndServeTLS(
+                    config.HTTPServer.IP+":"+config.HTTPServer.Port,
+                    config.HTTPServer.SSLCertificateFile,
+                    config.HTTPServer.SSLKeyFile,
+                    nil))
+            } else {
+                log.Fatal("Unrecognized protocol: " + config.HTTPServer.Protocol)
+            }
         }
-    }
-    //    }()
+
+        httpDone <- true
+
+    }()
+
+
+    //
+    // start pgfs (if OS is supported and it's enabled in config)
+    //
+
+    go pgfs(config, dbpool, fuseDone)
+
 
     //
     // start gui
@@ -391,8 +405,14 @@ func main() {
        w.SetSize(800, 500, webview.HintNone)
        w.Navigate(config.HTTPServer.Protocol+"://"+config.HTTPServer.IP+":"+config.HTTPServer.Port+"/boot")
        w.Run()
-
     */
+
+    select {
+    case <-httpDone:
+        println("HTTP server stopped.")
+    case <-fuseDone:
+        println("FUSE filesystem stopped.")
+    }
 
     if config.Database.Mode == "embedded" {
         if epg.IsStarted() {

@@ -2,6 +2,7 @@ package main
 
 import (
     "context"
+    "encoding/json"
     "fmt"
     "github.com/jackc/pgx/v4/pgxpool"
     "github.com/lib/pq"
@@ -60,9 +61,9 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             select r.id::text, 'resource_function'
             from endpoint.resource_function r
             -- 1. rewrite path_pattern to a regex:
-            --     /blog/{$1}/article/{$2} goes to ^/blog/(\S+)/article/(\S+)$
-            -- 2. matche against the request path
-            where %v ~ regexp_replace('^' || r.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')`
+            --     /blog/{$1}/article/{$2} goes to ^/blog/([^\/\s]+)/article/([^\/\s]+)$
+            -- 2. match against the request path
+            where %v ~ regexp_replace('^' || r.path_pattern || '$', '\${\d+}', '([^\/\s]+)', 'g')`
 
         /*
            union
@@ -114,7 +115,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         var content string
         var contentBinary []byte
         var mimetype string
-
+        var headers []byte
 
         switch resourceTable {
         case "resource":
@@ -157,10 +158,12 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
                     (rf.function_id).parameters as function_parameters,
                     rf.default_args as default_args,
                     m.mimetype,
-                    regexp_match(%v, regexp_replace('^' || rf.path_pattern || '$', '{\$\d+}', '(\S+)', 'g')) as args,
-                    (select array_agg(m[1]::integer) from regexp_matches(rf.path_pattern, '{\$(\d+)}', 'g') m) 
+                    regexp_match(%v, regexp_replace('^' || rf.path_pattern || '$', '\${\d+}', '([^\/\s]+)', 'g')) as args,
+                    (select array_agg(m[1]::integer) from regexp_matches(rf.path_pattern, '\${(\d+)}', 'g') m),
+                    mf.return_type = 'record' as returns_record
                 from endpoint.resource_function rf
                     join endpoint.mimetype m on rf.mimetype_id = m.id
+                    join meta.function mf on mf.id=rf.function_id
                 where rf.id = %v`
 
             var function_parameters []string
@@ -170,62 +173,65 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             var function_name string
             var path_args []string
             var path_arg_positions []int
+            var returns_record bool
 
             err := dbpool.QueryRow(context.Background(),
-                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(path), pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &function_parameters, &default_args, &mimetype, &path_args, &path_arg_positions)
+                fmt.Sprintf(resourceFunctionPrepQ, pq.QuoteLiteral(path), pq.QuoteLiteral(id))).Scan(&path_pattern, &schema_name, &function_name, &function_parameters, &default_args, &mimetype, &path_args, &path_arg_positions, &returns_record)
             if err != nil {
                 log.Printf("QueryRow failed: %v", err)
             }
 
-            // log.Printf("Path pattern: %v\n    schema_name: %v\n    function_name: %v\n    function_parameters: %v\n    default_args: %v\n    mimetype: %v\n    path_args: %v\n    path_arg_positions: %v",
-            //     path_pattern, schema_name, function_name, function_parameters, default_args, mimetype, path_args, path_arg_positions);
-
             // args is the array of strings to be cast to their appropriate type and passed to the function
-            // should probably use a slice here
-            var args [20]string
+            var args = make([]string, len(function_parameters))
 
             // write default_args into args
-            for i :=0; i<len(function_parameters); i++ {
-                // log.Printf("function_parameters [%v] -> %v", i, function_parameters[i])
-                if len(default_args) >= len(function_parameters) {
-                    args[i] = default_args[i]
-                }
-            }
+            copy(args, default_args);
 
-            // log.Printf("len(function_parameters) = %v", len(function_parameters));
-            // log.Printf("default_args = %v", default_args);
-
-            for i :=0; i<len(path_args);i++ {
-                // log.Printf("i=%v: path_args i -> %v", i, i, path_args[i])
-                args[path_arg_positions[i]-1] = path_args[i] // path_arg_positions, first position is 1, hence -1 for array index
+            for i :=0; i<len(path_arg_positions);i++ {
+                // path_arg_positions, first position is 1, hence -1 for array index
+                args[path_arg_positions[i]-1] = path_args[i]
             }
 
             // build the function's argument string
-            var function_call_str string = pq.QuoteIdentifier(schema_name)+"."+pq.QuoteIdentifier(function_name)+"("
+            var function_call_str = pq.QuoteIdentifier(schema_name)+"."+pq.QuoteIdentifier(function_name)+"("
             for i := 0; i<len(function_parameters);i++ {
-                function_call_str += pq.QuoteLiteral(args[i]) + "::" + function_parameters[i]; // not using pq.QuoteIdentifier for function_parametrs[i] here because e.g. integer is an alias for int4, but if you quote it, it uses only and exactly the literal type name.  FIXME?
+                // not using pq.QuoteIdentifier for function_parametrs[i] here because e.g. integer is an alias for int4, but if you quote it, it uses only and exactly the literal type name.  FIXME?
+                function_call_str += pq.QuoteLiteral(args[i]) + "::" + function_parameters[i];
                 if i < len(function_parameters) -1 {
                     function_call_str += ","
                 }
             }
             function_call_str += ")"
 
-            // log.Printf("args = %v", args);
-            // log.Printf("function call: %v", function_call_str)
-
-            const resourceFunctionQ = `select %v as content`
-            // log.Printf("resourceFunctionQ: %v", resourceFunctionQ);
-
-            err = dbpool.QueryRow(context.Background(),
-                fmt.Sprintf(resourceFunctionQ, function_call_str)).Scan(&content)
-            if err != nil {
-                log.Printf("QueryRow failed: %v", err)
+            var resourceFunctionQ string
+            if (returns_record) {
+                resourceFunctionQ = fmt.Sprintf("select content, headers from %v as (content text, headers jsonb)", function_call_str);
+                err = dbpool.QueryRow(context.Background(), resourceFunctionQ).Scan(&content, &headers)
+            } else {
+                resourceFunctionQ = fmt.Sprintf("select %v as content", function_call_str);
+                err = dbpool.QueryRow(context.Background(), resourceFunctionQ).Scan(&content)
             }
 
-            // send the response
-            w.Header().Set("Content-Type", mimetype)
-            w.WriteHeader(200)
-            io.WriteString(w, content)
+            if err != nil {
+              // send 404
+              w.Header().Set("Content-Type", mimetype)
+              w.WriteHeader(404)
+              io.WriteString(w, "")
+            } else {
+              // send the response
+              w.Header().Set("Content-Type", mimetype)
+              var extra_headers = map[string]string{}
+              if len(headers) > 0 {
+                err := json.Unmarshal(headers, &extra_headers)
+                if err == nil {
+                  for key, value := range extra_headers {
+                    w.Header().Add(key, value)
+                  }
+                }
+              }
+              w.WriteHeader(200)
+              io.WriteString(w, content)
+            }
 
         /*
         failed attempt at using pl/go solution

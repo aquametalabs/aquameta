@@ -32,7 +32,7 @@ $$ language sql;
 -- STATUS FUNCTIONS
 ------------------------------------------------------------------------------
 
-create or replace function bundle.status()
+create or replace function status()
 returns setof text as $$
     select b.name || ' - '
         || hds.change_type || ' - '
@@ -47,8 +47,6 @@ $$ language sql;
 ------------------------------------------------------------------------------
 -- ROW HISTORY
 ------------------------------------------------------------------------------
-
-
 create type row_history_return_type as (
     field_hashes jsonb,
     commit_id uuid,
@@ -62,11 +60,11 @@ create type row_history_return_type as (
 -- create or replace function bundle.row_history(_row_id meta.row_id) returns setof record as $$
 -- broken out into fields because composite types hate endpoint
 -- this is wrong.  not traversing the commit tree, just using time
-create or replace function bundle.row_history(schema_name text, relation_name text, pk_column_name text, pk_value text) returns setof row_history_return_type as $$
+create or replace function row_history(schema_name text, relation_name text, pk_column_name text, pk_value text) returns setof row_history_return_type as $$
     select field_hashes, commit_id, commit_message, commit_parent_id, time, bundle_id, bundle_name
     from (
         with commits as (
-            select jsonb_object_agg(((rrf.field_id).column_id).name, rrf.value_hash::text) as field_hashes, c.id as commit_id, c.message as commit_message, c.parent_id as commit_parent_id, c.time, b.id as bundle_id, b.name as bundle_name
+            select jsonb_object_agg((rrf.field_id).column_name, rrf.value_hash::text) as field_hashes, c.id as commit_id, c.message as commit_message, c.parent_id as commit_parent_id, c.time, b.id as bundle_id, b.name as bundle_name
             from bundle.rowset_row rr
                 join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
                 join bundle.rowset r on rr.rowset_id = r.id
@@ -84,7 +82,7 @@ $$ language sql;
 
 
 -- this is mostly ganked from head_db_stage for performance reasons, seemed view was acting as an optimization barrier.  audit.
-create or replace function bundle.row_status(schema_name text, relation_name text, pk_column_name text, pk_value text) returns bundle.head_db_stage as $$
+create or replace function row_status(schema_name text, relation_name text, pk_column_name text, pk_value text) returns bundle.head_db_stage as $$
 select
     *,
     meta.row_exists(row_id) as row_exists,
@@ -137,9 +135,9 @@ from (
         where row_id::text = meta.row_id(schema_name, relation_name, pk_column_name, pk_value)::text
     ) hcr
     full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
-    left join bundle.stage_field_changed sfc on (sfc.field_id).row_id::text=hcr.row_id::text
-    left join bundle.offstage_field_changed ofc on (ofc.field_id).row_id::text=hcr.row_id::text
-    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id).row_id, (ofc.field_id).row_id
+    left join bundle.stage_field_changed sfc on (sfc.field_id)::meta.row_id::text=hcr.row_id::text
+    left join bundle.offstage_field_changed ofc on (ofc.field_id)::meta.row_id::text=hcr.row_id::text
+    group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id)::meta.row_id, (ofc.field_id)::meta.row_id
 
     union
 
@@ -158,11 +156,12 @@ end, row_id;
 
 $$ language sql;
 
+
+
 ------------------------------------------------------------------------------
 -- BUNDLE CREATE / DELETE
 ------------------------------------------------------------------------------
-
-create or replace function bundle.bundle_create (name text) returns uuid as $$
+create or replace function bundle_create (name text) returns uuid as $$
 declare
     bundle_id uuid;
 begin
@@ -173,7 +172,7 @@ begin
 end;
 $$ language plpgsql;
 
-create or replace function bundle.bundle_delete (in _bundle_id uuid) returns void as $$
+create or replace function bundle_delete (in _bundle_id uuid) returns void as $$
     -- TODO: delete blobs
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
     delete from bundle.bundle where id = _bundle_id;
@@ -184,8 +183,7 @@ $$ language sql;
 ------------------------------------------------------------------------------
 -- COMMIT DELETE
 ------------------------------------------------------------------------------
-
-create or replace function bundle.commit_delete(in _commit_id uuid) returns void as $$
+create or replace function commit_delete(in _commit_id uuid) returns void as $$
     -- TODO: delete blobs
     -- TODO: delete commits in order?
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
@@ -203,7 +201,7 @@ $$ language sql;
  * (usually bundle.head_commit_id).
  * TODO: this could be optimized to one delete per relation
  */
-create or replace function bundle.checkout_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
+create or replace function checkout_delete(in _bundle_id uuid, in _commit_id uuid) returns void as $$
 declare
         temprow record;
 begin
@@ -215,9 +213,9 @@ begin
         where b.id = _bundle_id and c.id = _commit_id
         loop
         execute format ('delete from %I.%I where %I = %L',
-            ((((temprow.row_id).pk_column_id).relation_id).schema_id).name,
-            (((temprow.row_id).pk_column_id).relation_id).name,
-            ((temprow.row_id).pk_column_id).name,
+            (temprow.row_id).schema_name,
+            (temprow.row_id).relation_name,
+            (temprow.row_id).pk_column_name,
             (temprow.row_id).pk_value);
     end loop;
 
@@ -262,7 +260,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     select f.value
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id::text = rr.row_id::text; -- TODO: should we be checking here to see if the staged value is different than the w.c. value??
+    join bundle.stage_row_field f on (f.field_id)::meta.row_id::text = rr.row_id::text; -- TODO: should we be checking here to see if the staged value is different than the w.c. value??
 
     raise notice 'bundle: Committing stage_row_fields...';
     -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
@@ -270,7 +268,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     select rr.id, f.field_id, public.digest(value, 'sha256')
     from bundle.rowset_row rr
     join bundle.rowset r on r.id=new_rowset_id and rr.rowset_id=r.id
-    join bundle.stage_row_field f on (f.field_id).row_id::text = rr.row_id::text;
+    join bundle.stage_row_field f on (f.field_id)::meta.row_id::text = rr.row_id::text;
 
     raise notice 'bundle: Creating the commit...';
     -- create the commit
@@ -296,7 +294,7 @@ $$ language plpgsql;
 
 -- checks to see if this bundle has anything present in head_db_stage_changed, which will catch
 -- added rows, deleted rows, changed rows, and staged rows
-create or replace function bundle.bundle_has_uncommitted_changes( _bundle_id uuid ) returns boolean as $$
+create or replace function bundle_has_uncommitted_changes( _bundle_id uuid ) returns boolean as $$
     declare
         changes_count integer;
         is_checked_out boolean;
@@ -330,15 +328,15 @@ create or replace function head_rows (
 returns setof record
 as $$
     select c.id,
-        (row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
-    from bundle.bundle bundle
-        join bundle.commit c on bundle.head_commit_id=c.id
+    from bundle.bundle b
+        join bundle.commit c on b.head_commit_id=c.id
         join bundle.rowset r on c.rowset_id = r.id
         join bundle.rowset_row rr on rr.rowset_id = r.id
-    where bundle.name = bundle_name
+    where b.name = bundle_name
 $$ language sql;
 
 
@@ -382,10 +380,11 @@ create or replace function tracked_row_add (
     row_id meta.row_id
 ) returns text
 as $$
-    select bundle.tracked_row_add(bundle_name, (
-        row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+    select bundle.tracked_row_add(
+        bundle_name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
     );
 $$ language sql;
@@ -413,10 +412,10 @@ create or replace function untrack_row (
     row_id meta.row_id
 ) returns text
 as $$
-    select bundle.untrack_row(bundle_name, (
-        row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+    select bundle.untrack_row(bundle_name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
     );
 $$ language sql;
@@ -463,10 +462,11 @@ create or replace function stage_row_add (
     row_id meta.row_id
 ) returns text
 as $$
-    select bundle.stage_row_add(bundle_name, (
-        row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+    select bundle.stage_row_add(
+        bundle_name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
     );
 $$ language sql;
@@ -512,10 +512,10 @@ create or replace function unstage_row_add (
     row_id meta.row_id
 ) returns text
 as $$
-    select bundle.unstage_row_add(bundle_name, (
-        row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+    select bundle.unstage_row_add(bundle_name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
     );
 $$ language sql;
@@ -533,13 +533,13 @@ create or replace function stage_row_delete (
 as $$
     insert into bundle.stage_row_deleted (bundle_id, rowset_row_id)
     select
-        bundle.id as bundle_id,
+        b.id as bundle_id,
         rr.id as rowset_row_id
-    from bundle.bundle bundle
-        join bundle.commit c on bundle.head_commit_id = c.id
+    from bundle.bundle b
+        join bundle.commit c on b.head_commit_id = c.id
         join bundle.rowset r on c.rowset_id = r.id
         join bundle.rowset_row rr on rr.rowset_id = r.id
-    where bundle.name = bundle_name
+    where b.name = bundle_name
         and rr.row_id = meta.row_id(schema_name, relation_name, pk_column_name, pk_value);
     select bundle_name || ' - ' || schema_name || '.' || relation_name || '.' || pk_value;
 $$ language sql;
@@ -549,10 +549,10 @@ create or replace function stage_row_delete (
     row_id meta.row_id
 ) returns text
 as $$
-    select bundle.stage_row_delete(bundle_name, (
-        row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+    select bundle.stage_row_delete(bundle_name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
     );
 $$ language sql;
@@ -580,10 +580,10 @@ create or replace function unstage_row_delete (
     row_id meta.row_id
 ) returns text
 as $$
-    select bundle.unstage_row_delete(bundle_name, (
-        row_id::meta.schema_id).name,
-        (row_id::meta.relation_id).name,
-        ((row_id).pk_column_id).name,
+    select bundle.unstage_row_delete(bundle_name,
+        (row_id).schema_name,
+        (row_id).relation_name,
+        (row_id).pk_column_name,
         (row_id).pk_value
     );
 $$ language sql;
@@ -664,28 +664,28 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
         query_str text;
     begin
         -- raise log '------------ checkout_row % ----------',
-        --    (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
+        --    (row_id).schema_name || '.' || (row_id).relation_name ;
         set local search_path=something_that_must_not_be;
 
         if meta.row_exists(row_id) then
             -- raise log '---------------------- row % already exists.... overwriting.',
-            -- (row_id::meta.schema_id).name || '.' || (row_id::meta.relation_id).name ;
+            -- (row_id).schema_name || '.' || (row_id).relation_name ;
 
             -- TODO: check to see if this row which is being merged is going to overwrite a row that is
             -- different from the head commit, maybe??  checkout() does a safety check for this
 
             -- overwrite existing values with new values.
             /*
-            execute 'update ' || quote_ident((row_id::meta.schema_id).name) || '.' || quote_ident((row_id::meta.relation_id).name)
+            execute 'update ' || quote_ident((row_id).schema_name) || '.' || quote_ident((row_id).relation_name)
                 || ' set (' || array_to_string(fields.name,', ','NULL') || ')'
                 || '   = (' || array_to_string(fields.value || '::'||fields.type_name, ', ','NULL') || ')'
                 || ' where ' || (row_id.pk_column_id).name
                 || '     = ' || row_id.pk_value;
             */
             query_str := 'update '
-                || quote_ident((row_id::meta.schema_id).name)
+                || quote_ident((row_id).schema_name)
                 || '.'
-                || quote_ident((row_id::meta.relation_id).name)
+                || quote_ident((row_id).relation_name)
                 || ' set (';
 
             for i in 1 .. array_upper(fields, 1)
@@ -717,7 +717,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
             query_str := query_str
                 || ')'
-                || ' where ' || quote_ident((row_id.pk_column_id).name)
+                || ' where ' || quote_ident((row_id).pk_column_name)
                 || '::text = ' || quote_literal(row_id.pk_value) || '::text'; -- cast them both to text instead of look up the column's type... maybe lazy?
 
             -- raise log 'query_str: %', query_str;
@@ -727,9 +727,9 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
         else
             -- raise log '---------------------- row doesn''t exists.... INSERT:';
             query_str := 'insert into '
-                || quote_ident((row_id::meta.schema_id).name)
+                || quote_ident((row_id).schema_name)
                 || '.'
-                || quote_ident((row_id::meta.relation_id).name)
+                || quote_ident((row_id).relation_name)
                 || ' (';
 
             for i in 1 .. array_upper(fields, 1)
@@ -779,6 +779,7 @@ $$ language plpgsql;
  * described here:
  * http://blog.endpoint.com/2012/10/postgres-system-triggers-error.html
  */
+
 
 create or replace function checkout (in commit_id uuid, in comment text default null) returns void as $$
     declare
@@ -842,7 +843,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 rr.row_id,
                 array_agg(
                     row(
-                        ((f.field_id).column_id).name,
+                        (f.field_id).column_name,
                         b.value,
                         col.type_name
                     )::bundle.checkout_field
@@ -852,7 +853,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
                 join bundle.blob b on f.value_hash=b.hash
-                join meta.relation_column col on (f.field_id).column_id = col.id
+                join meta.relation_column col on (f.field_id)::meta.column_id = col.id
             where c.id=commit_id
             and (rr.row_id::meta.schema_id).name = 'meta'
             group by rr.id
@@ -891,13 +892,13 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         -- in the case of circular dependencies we might still need to briefly and microscopically disable them.
         for commit_row in
             select distinct
-                (rr.row_id).pk_column_id.relation_id.name as relation_name,
-                (rr.row_id).pk_column_id.relation_id.schema_id.name as schema_name
+                (rr.row_id).relation_name as relation_name,
+                (rr.row_id).schema_name as schema_name
             from bundle.commit c
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 where c.id = commit_id
-                and (rr.row_id::meta.schema_id).name != 'meta'
+                and (rr.row_id).schema_name != 'meta'
         loop
             -- raise log '-------------------------------- DISABLING TRIGGER on table %',
             --    quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name);
@@ -916,7 +917,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 rr.row_id,
                 array_agg(
                     row(
-                        ((f.field_id).column_id).name,
+                        (f.field_id).column_name,
                         b.value,
                         col.type_name
                     )::bundle.checkout_field
@@ -926,9 +927,9 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
                 join bundle.blob b on f.value_hash=b.hash
-                join meta.relation_column col on (f.field_id).column_id = col.id
+                join meta.relation_column col on (f.field_id)::meta.column_id = col.id
             where c.id=commit_id
-            and (rr.row_id::meta.schema_id).name != 'meta'
+            and (rr.row_id).schema_name != 'meta'
             group by rr.id
         loop
             -- raise log '------------------------------------------------------------------------CHECKOUT row: % %',
@@ -943,13 +944,13 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         -- raise notice '### ENABLING TRIGGERS % ###', commit_id;
         for commit_row in
             select distinct
-                (rr.row_id).pk_column_id.relation_id.name as relation_name,
-                (rr.row_id).pk_column_id.relation_id.schema_id.name as schema_name
+                (rr.row_id).relation_name as relation_name,
+                (rr.row_id).schema_name as schema_name
             from bundle.commit c
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 where c.id = commit_id
-                and (rr.row_id::meta.schema_id).name != 'meta'
+                and (rr.row_id).schema_name != 'meta'
         loop
             execute 'alter table '
                 || quote_ident(commit_row.schema_name) || '.' || quote_ident(commit_row.relation_name)
@@ -963,6 +964,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         return;
     end;
 $$ language plpgsql;
+
 
 
 /*
@@ -982,7 +984,7 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
                 rr.row_id,
                 array_agg(
                     row(
-                        ((f.field_id).column_id).name,
+                        (f.field_id).column_name,
                         b.value,
                         col.type_name
                     )::bundle.checkout_field
@@ -992,7 +994,7 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
                 join bundle.blob b on f.value_hash=b.hash
-                join meta.relation_column col on (f.field_id).column_id = col.id
+                join meta.relation_column col on (f.field_id)::meta.column_id = col.id
             where c.id=commit_id
                 and rr.row_id = _row_id::meta.row_id
             group by rr.id
@@ -1213,13 +1215,13 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
                     where c.id = %L
                         and rrf.field_id::text = %L
                 ) where %I = %L',
-                (((((f.field_id).row_id).pk_column_id).relation_id).schema_id).name,
-                 ((((f.field_id).row_id).pk_column_id).relation_id).name,
-                   ((f.field_id).column_id).name,
+                (f.field_id).schema_name,
+                (f.field_id).relation_name,
+                (f.field_id).column_name,
                 _merge_commit_id,
-                   f.field_id::text,
-                  (((f.field_id).row_id).pk_column_id).name,
-                   ((f.field_id).row_id).pk_value
+                f.field_id::text,
+                (f.field_id).pk_column_name,
+                (f.field_id).pk_value
             );
             -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;
@@ -1236,10 +1238,10 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
         for f in
             select bundle.rows_created_between_commits(_merge_commit_id, common_ancestor_id) as row_id
         loop
-            raise notice 'checking out new row %', f.row_id::text;
-            perform bundle.checkout_row(f.row_id::text, _merge_commit_id);
-            perform bundle.tracked_row_add(bundle_name, f.row_id);
-            perform bundle.stage_row_add(bundle_name, f.row_id);
+            raise notice 'checking out new row %', f::meta.row_id::text;
+            perform bundle.checkout_row(f::meta.row_id::text, _merge_commit_id);
+            perform bundle.tracked_row_add(bundle_name, f::meta.row_id);
+            perform bundle.stage_row_add(bundle_name, f::meta.row_id);
         end loop;
 
 
@@ -1273,13 +1275,13 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
                     where c.id = %L
                         and rrf.field_id::text = %L
                 ) where %I = %L',
-                (((((f.field_id).row_id).pk_column_id).relation_id).schema_id).name,
-                 ((((f.field_id).row_id).pk_column_id).relation_id).name,
-                   ((f.field_id).column_id).name,
+                (f.field_id).schema_name,
+                (f.field_id).relation_name,
+                (f.field_id).column_name,
                 _merge_commit_id,
-                   f.field_id::text,
-                  (((f.field_id).row_id).pk_column_id).name,
-                   ((f.field_id).row_id).pk_value
+                f.field_id::text,
+                (f.field_id).pk_column_name,
+                (f.field_id).pk_value
             );
             -- raise notice 'STMT: %', update_stmt;
             execute update_stmt;

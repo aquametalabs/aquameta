@@ -1,9 +1,9 @@
 EXTENSION = bundle
-EXTVERSION = 0.3.0
+EXTVERSION = 0.4.0
 DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
 
-$(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard *.sql)))
+$(EXTENSION)--$(EXTVERSION).sql: $(sort $(filter-out $(wildcard *--*.sql),$(wildcard 0*.sql)))
 	rm -f $@
 	cat $^ > $@
 
