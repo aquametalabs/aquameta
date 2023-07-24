@@ -153,7 +153,7 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             const resourceFunctionPrepQ = `
                 select
                     rf.path_pattern,
-                    ((rf.function_id).schema_id).name as schema_name,
+                    (rf.function_id).schema_name,
                     (rf.function_id).name as function_name,
                     (rf.function_id).parameters as function_parameters,
                     rf.default_args as default_args,
