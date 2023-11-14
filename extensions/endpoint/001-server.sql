@@ -72,6 +72,7 @@ create or replace function endpoint.suffix_clause(
 
                 if pg_typeof(r.value) = 'json'::regtype then
 
+                    -- multiple where clauses in an array
                     if json_typeof(r.value) = 'array' then -- { where: JSON array }
 
                         /*
@@ -81,9 +82,9 @@ create or replace function endpoint.suffix_clause(
                                 ) v)
                             b;
                         */
-                        select _where || ' and ' || string_agg( name || ' ' || op || ' ' ||
-
-
+                        select _where || ' and ' ||
+                        
+                        string_agg( name || '::text ' || op || ' ' ||
                             case when op = 'in' then
                                 -- Value is array
                                 case when json_typeof(json) = 'array' then
@@ -93,13 +94,13 @@ create or replace function endpoint.suffix_clause(
                                 when json_typeof(json) = 'object' then
                                    quote_literal(json) || '::json'
                                 else
-                                    quote_literal(value)
+                                    quote_literal(value) || '::text'
                                 end
                             else
-                                quote_literal(value)
+                                quote_literal(value) || '::text' -- not sure what this does, added cast to text
                             end
-
-                            , ' and ' )
+                            , ' and ' -- put an and between each where clause -- TODO: expand this
+                        ) --string_agg
 
                         from (
                             select element->>'name' as name, element->>'op' as op, element->'value' as json, element->>'value' as value
@@ -107,9 +108,9 @@ create or replace function endpoint.suffix_clause(
                             ) v
                         into _where;
 
+                    -- single where clause in an object
                     elsif json_typeof(r.value) = 'object' then -- { where: JSON object }
-                        select _where || ' and ' || name || ' ' || op || ' ' ||
-
+                        select _where || ' and ' || name || '::text ' || op || ' ' ||
                             case when op = 'in' then
                                 -- Value is array
                                 case when json_typeof(value::json) = 'array' then
@@ -119,15 +120,15 @@ create or replace function endpoint.suffix_clause(
                                 when json_typeof(value::json) = 'object' then
                                    quote_literal(value) || '::json'
                                 else
-                                    quote_literal(value)
+                                    quote_literal(value) || '::text'
                                 end
                             end
-
                         from json_to_record(r.value::json) as x(name text, op text, value text)
                         into _where;
 
                     end if;
 
+                -- no idea what this is
                 else -- Else { where: regular value } -- This is not used in the client
 
                     select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' || quote_literal(value)
@@ -136,7 +137,10 @@ create or replace function endpoint.suffix_clause(
 
                 end if;
 
+            elsif r.key = 'meta_data' then
+                -- do nothing, this is ok
             else
+                raise exception using message = format ('Unrecognized key in request params: %s', r.key);
             end if;
         end loop;
         return  _where || _order_by || _limit || _offset;
