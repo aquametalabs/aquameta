@@ -136,11 +136,8 @@ create or replace function endpoint.suffix_clause(
                     into _where;
 
                 end if;
-
-            elsif r.key = 'meta_data' then
-                -- do nothing, this is ok
             else
-                raise exception using message = format ('Unrecognized key in request params: %s', r.key);
+                -- param not handled here
             end if;
         end loop;
         return  _where || _order_by || _limit || _offset;
