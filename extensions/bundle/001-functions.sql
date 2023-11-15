@@ -212,7 +212,7 @@ begin
             join bundle.rowset_row rr on rr.rowset_id = r.id
         where b.id = _bundle_id and c.id = _commit_id
         loop
-        execute format ('delete from %I.%I where %I = %L',
+        execute format ('delete from %I.%I where %I::text = %L::text',
             (temprow.row_id).schema_name,
             (temprow.row_id).relation_name,
             (temprow.row_id).pk_column_name,
