@@ -1038,6 +1038,131 @@ create or replace function endpoint.rows_delete(
 $$
 language plpgsql;
 
+
+/****************************************************************************************************
+ * path conversion functions for row_id, relation_id, field_id
+ ****************************************************************************************************/
+
+/*
+ * Function: urldecode_arr
+ * Author: Marc Mamin
+ * Source: PostgreSQL Tricks (http://postgres.cz/wiki/postgresql_sql_tricks#function_for_decoding_of_url_code)
+ * Decode URLs
+ */
+create or replace function endpoint.urldecode_arr(url text)
+returns text as $$
+begin
+  return
+   (with str as (select case when $1 ~ '^%[0-9a-fa-f][0-9a-fa-f]' then array[''] end
+                                      || regexp_split_to_array ($1, '(%[0-9a-fa-f][0-9a-fa-f])+', 'i') plain,
+                       array(select (regexp_matches ($1, '((?:%[0-9a-fa-f][0-9a-fa-f])+)', 'gi'))[1]) encoded)
+     select  coalesce(string_agg(plain[i] || coalesce( convert_from(decode(replace(encoded[i], '%',''), 'hex'), 'utf8'), ''), ''), $1)
+        from str,
+             (select  generate_series(1, array_upper(encoded,1) + 2) i from str) blah);
+end
+$$ language plpgsql immutable strict;
+
+
+------------------------------ function
+
+create or replace function endpoint.path_to_function_id(value text) returns meta.function_id as $$
+select meta.function_id(
+    endpoint.urldecode_arr((string_to_array(value, '/'))[1]::text), -- schema name
+    endpoint.urldecode_arr((string_to_array(value, '/'))[2]::text), -- function name
+    endpoint.urldecode_arr((string_to_array(value, '/'))[3]::text)::text[] -- array of ordered parameter types, e.g. {uuid,text,text}
+)
+$$ immutable language sql;
+
+
+create or replace function endpoint.function_id_to_path(value meta.function_id) returns text as $$
+select (value).schema_name || '/' ||
+    (value).name || '/' ||
+    (value).parameters::text
+$$ immutable language sql;
+
+
+
+------------------------------ relation
+
+create or replace function endpoint.path_to_relation_id(value text) returns meta.relation_id as $$
+select meta.relation_id(
+    endpoint.urldecode_arr((string_to_array(value, '/'))[1]::text), -- Schema name
+    endpoint.urldecode_arr((string_to_array(value, '/'))[2]::text) -- Relation name
+)
+$$ immutable language sql;
+
+
+create or replace function endpoint.relation_id_to_path(value meta.relation_id) returns text as $$
+select (value).schema_name || '/' || value.name
+$$ immutable language sql;
+
+
+
+------------------------------ field
+
+create or replace function endpoint.path_to_field_id(value text) returns meta.field_id as $$
+declare
+    parts text[];
+    schema_name text;
+    relation_name text;
+    pk_value text;
+    column_name text;
+    pk_column_name text;
+begin
+    select string_to_array(value, '/') into parts;
+    select endpoint.urldecode_arr(parts[1]::text) into schema_name;
+    select endpoint.urldecode_arr(parts[2]::text) into relation_name;
+    select endpoint.urldecode_arr(parts[3]::text) into pk_column_name;
+    select endpoint.urldecode_arr(parts[4]::text) into pk_value;
+    select endpoint.urldecode_arr(parts[5]::text) into column_name;
+
+    return meta.field_id(
+        schema_name,
+        relation_name,
+        pk_column_name,
+        pk_value,
+        column_name
+    );
+
+end;
+$$ immutable language plpgsql;
+
+create or replace function endpoint.field_id_to_path(value meta.field_id) returns text as $$
+select (value).schema_name || '/' ||
+    (value).relation_name || '/' ||
+    (value).pk_column_name || '/' ||
+    (value).pk_value || '/' ||
+    (value).column_name
+$$ immutable language sql;
+
+------------------------------ row
+
+create or replace function endpoint.path_to_row_id(value text) returns meta.row_id as $$
+declare
+    parts text[];
+    schema_name text;
+    relation_name text;
+    pk_value text;
+    pk_column_name text;
+begin
+    select string_to_array(value, '/') into parts;
+    select endpoint.urldecode_arr(parts[1]::text) into schema_name;
+    select endpoint.urldecode_arr(parts[2]::text) into relation_name;
+    select endpoint.urldecode_arr(parts[3]::text) into pk_column_name;
+    select endpoint.urldecode_arr(parts[4]::text) into pk_value;
+
+    return meta.row_id(
+        schema_name,
+        relation_name,
+        pk_column_name,
+        pk_value
+    );
+
+end;
+$$ immutable language plpgsql;
+
+
+
 /****************************************************************************************************
 request (version, verb, path, query_args, post_data)
 
@@ -1128,10 +1253,11 @@ create or replace function endpoint.request(
         raise notice '##### POST data: %', post_data::text;
 
         case op
+        ------------------------------ row
         when 'row' then
 
             -- URL /endpoint/row/{row_id}
-            row_id := op_params::meta.row_id;
+            row_id := endpoint.path_to_row_id(op_params);
 
             if verb = 'GET' then
 
@@ -1168,10 +1294,13 @@ create or replace function endpoint.request(
                 return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
+
+        ------------------------------ relation
+
         when 'relation' then
 
             -- URL /endpoint/relation/{relation_id}
-            relation_id := op_params::meta.relation_id;
+            relation_id := endpoint.path_to_row_id(op_params);
 
             if verb = 'GET' then
 
@@ -1227,13 +1356,14 @@ create or replace function endpoint.request(
                 return query select 405, 'Method Not Allowed'::text, ('{"status_code": 405, "title": "Method not allowed"}')::text, 'application/json'::text;
             end if;
 
+        ------------------------------ function
+        
         when 'function' then
-
             -- If function is called without a parameter type list
             if array_length((string_to_array(op_params, '/')), 1) = 2 then
 
                 op_params := op_params || '/{}';
-                function_id := op_params::meta.function_id;
+                function_id := endpoint.path_to_function_id(op_params);
 
                 if verb = 'GET' then
                     -- Get record from function call
@@ -1249,11 +1379,11 @@ create or replace function endpoint.request(
 
                 end if;
 
-            -- Calling a function with a specified parameter type list -- Exact function id known
+            -- Calling a function with a specified parameter type list -- Exact function id known -- is this ever used??
             else
 
                 -- URL /endpoint/function/{function_id}
-                function_id := op_params::meta.function_id;
+                function_id := endpoint.path_to_function_id(op_params);
 
                 if verb = 'GET' then
                     -- Get record from function call
@@ -1271,10 +1401,11 @@ create or replace function endpoint.request(
 
             end if;
 
+        ------------------------------ field
         when 'field' then
 
             -- URL /endpoint/field/{field_id}
-            field_id := op_params::meta.field_id;
+            field_id := endpoint.path_to_field_id(op_params);
 
             if verb = 'GET' or verb = 'POST' then
 
