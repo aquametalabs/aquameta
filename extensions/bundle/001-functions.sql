@@ -207,12 +207,12 @@ declare
 begin
     for temprow in
         select rr.* from bundle.bundle b
-            join bundle.commit c on c.bundle_id = b.id
+            join bundle.commit c on c.bundle_id = b.id 
             join bundle.rowset r on r.id = c.rowset_id
-            join bundle.rowset_row rr on rr.rowset_id = r.id
+            join bundle.rowset_row rr on rr.rowset_id = r.id 
         where b.id = _bundle_id and c.id = _commit_id
         loop
-        execute format ('delete from %I.%I where %I = %L',
+        execute format ('delete from %I.%I where %I::text = %L::text',
             (temprow.row_id).schema_name,
             (temprow.row_id).relation_name,
             (temprow.row_id).pk_column_name,
@@ -222,7 +222,6 @@ begin
     update bundle.bundle set checkout_commit_id = null where id = _bundle_id;
 end;
 $$ language plpgsql;
-
 
 
 
@@ -236,6 +235,7 @@ create or replace function commit (bundle_name text, message text) returns void 
         new_commit_id uuid;
     begin
 
+    set local search_path=something_that_must_not_be;
     raise notice 'bundle: Committing to %', bundle_name;
 
     select id
@@ -797,14 +797,6 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         -- set local search_path=bundle,meta,public;
         set local search_path=something_that_must_not_be;
 
-        /* TODO
-        - is this bundle checked out?
-            - yes?
-                - does it have uncommitted changes?
-                    yes?  fail
-                - delete the current checkout
-        */
-
         -- propagate variables
         select b.name, b.id, b.head_commit_id, b.checkout_commit_id, c.id, c.message, c.time, (c.role_id).name
         into
@@ -861,13 +853,18 @@ create or replace function checkout (in commit_id uuid, in comment text default 
             order by
                 case
                     when row_id::meta.relation_id = meta.relation_id('meta','schema') then 0
-                    when row_id::meta.relation_id = meta.relation_id('meta','type_definition') then 1
-                    when row_id::meta.relation_id = meta.relation_id('meta','table') then 2
-                    when row_id::meta.relation_id = meta.relation_id('meta','column') then 3
-                    when row_id::meta.relation_id = meta.relation_id('meta','sequence') then 4
-                    when row_id::meta.relation_id = meta.relation_id('meta','constraint_check') then 4
-                    when row_id::meta.relation_id = meta.relation_id('meta','constraint_unique') then 4
-                    when row_id::meta.relation_id = meta.relation_id('meta','function_definition') then 5
+                    when row_id::meta.relation_id = meta.relation_id('meta','type') then 1
+                    when row_id::meta.relation_id = meta.relation_id('meta','cast') then 2
+                    when row_id::meta.relation_id = meta.relation_id('meta','operator') then 3
+                    when row_id::meta.relation_id = meta.relation_id('meta','table') then 4
+                    when row_id::meta.relation_id = meta.relation_id('meta','column') then 5
+                    when row_id::meta.relation_id = meta.relation_id('meta','foreign_key') then 6
+                    when row_id::meta.relation_id = meta.relation_id('meta','constraint') then 7
+                    when row_id::meta.relation_id = meta.relation_id('meta','sequence') then 8
+                    when row_id::meta.relation_id = meta.relation_id('meta','constraint_check') then 9
+                    when row_id::meta.relation_id = meta.relation_id('meta','constraint_unique') then 10 
+                    when row_id::meta.relation_id = meta.relation_id('meta','view') then 11
+                    when row_id::meta.relation_id = meta.relation_id('meta','function') then 12
                     else 100
                 end asc /*,
                 case
