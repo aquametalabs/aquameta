@@ -1073,13 +1073,11 @@ select meta.function_id(
 )
 $$ immutable language sql;
 
-
 create or replace function endpoint.function_id_to_path(value meta.function_id) returns text as $$
 select (value).schema_name || '/' ||
     (value).name || '/' ||
     (value).parameters::text
 $$ immutable language sql;
-
 
 
 ------------------------------ relation
@@ -1091,11 +1089,9 @@ select meta.relation_id(
 )
 $$ immutable language sql;
 
-
 create or replace function endpoint.relation_id_to_path(value meta.relation_id) returns text as $$
 select (value).schema_name || '/' || value.name
 $$ immutable language sql;
-
 
 
 ------------------------------ field
@@ -1134,6 +1130,7 @@ select (value).schema_name || '/' ||
     (value).pk_value || '/' ||
     (value).column_name
 $$ immutable language sql;
+
 
 ------------------------------ row
 
