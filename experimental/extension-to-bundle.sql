@@ -86,7 +86,7 @@ begin
     -- execute format (prefix || 'and (row_id::meta.relation_id).name=''foreign_column''       and (((row_id).pk_value)::meta.foreign_column_id).schema_name = %L',       bundle_name, extension_name);
     -- execute format (prefix || 'and (row_id::meta.relation_id).name=''table_privilege''      and (((row_id).pk_value)::meta.table_privilege_id).schema_name = %L',      bundle_name, extension_name);
     -- execute format (prefix || 'and (row_id::meta.relation_id).name=''policy''               and (((row_id).pk_value)::meta.policy_id).schema_name = %L',             bundle_name, extension_name);
-    -- execute format (prefix || 'and (row_id::meta.relation_id).name=''function''                and (((row_id).pk_value)::meta.function_id).schema_name = %L',             bundle_name, extension_name);
+    execute format (prefix || 'and (row_id::meta.relation_id).name=''function''                and (((row_id).pk_value)::meta.function_id).schema_name = %L',             bundle_name, extension_name);
 
     -- stage 'em
     execute format ('select bundle.stage_row_add(%L, row_id) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name=%L)', bundle_name, bundle_name);
