@@ -624,7 +624,7 @@ select *, 'select meta.row_id(' ||
     ') as row_id from ' ||
     quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) ||
 
-    -- special case meta rows so that ignored_* cascades down to all objects in it's scope
+    -- special case meta rows so that ignored_* cascades down to all objects in its scope
     case
         -- schemas
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'schema' then

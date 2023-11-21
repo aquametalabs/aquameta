@@ -1,4 +1,4 @@
-\timing
+\timing on
 
 begin;
 
@@ -11,10 +11,6 @@ create extension meta_triggers;
 create extension bundle;
 
 set search_path=bundle;
-
-insert into bundle.ignored_schema(schema_id) values (meta.schema_id('information_schema'));
-insert into bundle.ignored_schema(schema_id) values (meta.schema_id('public'));
-insert into bundle.ignored_schema(schema_id) values (meta.schema_id('pg_catalog'));
 
 ------------------------------------------------------------------------
 -- track meta entities
@@ -29,14 +25,13 @@ insert into bundle.trackable_nontable_relation (pk_column_id) values
 (meta.column_id('meta','constraint_check','id')),
 (meta.column_id('meta','constraint_unique','id')),
 -- (meta.column_id('meta','extension','id')), -- right now extensions are managed manually
-(meta.column_id('meta','foreign_column','id')),
-(meta.column_id('meta','foreign_data_wrapper','id')),
+-- (meta.column_id('meta','foreign_column','id')),
+-- (meta.column_id('meta','foreign_data_wrapper','id')),
 (meta.column_id('meta','foreign_key','id')),
-(meta.column_id('meta','foreign_server','id')),
-(meta.column_id('meta','foreign_table','id')),
-(meta.column_id('meta','function','id')), -- slow as heck, replaced with function_definition
+-- (meta.column_id('meta','foreign_server','id')),
+-- (meta.column_id('meta','foreign_table','id')),
+(meta.column_id('meta','function','id')),
 -- (meta.column_id('meta','function_parameter','id')), -- " "
--- (meta.column_id('meta','function_definition','id')),
 (meta.column_id('meta','operator','id')),
 -- (meta.column_id('meta','policy','id')), -- haven't thought through how vcs on permissions would work
 -- (meta.column_id('meta','policy_role','id')),
@@ -49,10 +44,8 @@ insert into bundle.trackable_nontable_relation (pk_column_id) values
 (meta.column_id('meta','table','id')),
 -- (meta.column_id('meta','table_privilege','id')),
 (meta.column_id('meta','trigger','id')),
-(meta.column_id('meta','type','id')), -- replaced by type_definnition
--- (meta.column_id('meta','type_definition','id')),
+(meta.column_id('meta','type','id')),
 (meta.column_id('meta','view','id'));
-
 
 
 create or replace function bundle.extension_to_bundle(extension_name text, bundle_name text) returns void as $$
@@ -70,8 +63,8 @@ begin
     -- track meta entities
     prefix := 'select bundle.tracked_row_add(%L, row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = ''meta''';
     execute format (prefix || 'and (row_id::meta.relation_id).name=''schema''               and (((row_id).pk_value)::meta.schema_id).name = %L',                      bundle_name, extension_name);
-    -- execute format (prefix || 'and (row_id::meta.relation_id).name=''type''                 and (((row_id).pk_value)::meta.type_id).schema_name = %L',                 bundle_name, extension_name);
-    -- execute format (prefix || 'and (row_id::meta.relation_id).name=''cast''                 and (((row_id).pk_value)::meta.cast_id).schema_name = %L',                 bundle_name, extension_name); -- no schema_id
+    execute format (prefix || 'and (row_id::meta.relation_id).name=''type''                 and (((row_id).pk_value)::meta.type_id).schema_name = %L',                 bundle_name, extension_name);
+--    execute format (prefix || 'and (row_id::meta.relation_id).name=''cast''                 and (((row_id).pk_value)::meta.cast_id).schema_name = %L',                 bundle_name, extension_name); -- no schema_id
     execute format (prefix || 'and (row_id::meta.relation_id).name=''operator''             and (((row_id).pk_value)::meta.operator_id).schema_name = %L',             bundle_name, extension_name);
     execute format (prefix || 'and (row_id::meta.relation_id).name=''table''                and (((row_id).pk_value)::meta.relation_id).schema_name = %L',             bundle_name, extension_name);
     execute format (prefix || 'and (row_id::meta.relation_id).name=''column''               and (((row_id).pk_value)::meta.column_id).schema_name = %L',               bundle_name, extension_name);
@@ -115,16 +108,3 @@ select bundle.extension_to_bundle('documentation', 'org.aquameta.ext.documentati
 
 -- rollback;
 commit;
-
-
-/*
-Additional things I had to do to get things working after running this:
-- insall documentation "extension" even though it isn't an extension
-- install the ide/sql stuff...
-- install and checkout all the core bundles, whose names collide with the core bundles created by this script, so those should be renamed
-- run the 001-anonymous-register.sql privilege and 002-user.sql privilege files
-- create a user....register_superuser() is broken...?
-- add default values for all primary key columns, which meta is somehow losing
-*/
-
-

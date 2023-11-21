@@ -207,9 +207,9 @@ declare
 begin
     for temprow in
         select rr.* from bundle.bundle b
-            join bundle.commit c on c.bundle_id = b.id 
+            join bundle.commit c on c.bundle_id = b.id
             join bundle.rowset r on r.id = c.rowset_id
-            join bundle.rowset_row rr on rr.rowset_id = r.id 
+            join bundle.rowset_row rr on rr.rowset_id = r.id
         where b.id = _bundle_id and c.id = _commit_id
         loop
         execute format ('delete from %I.%I where %I::text = %L::text',
@@ -862,7 +862,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                     when row_id::meta.relation_id = meta.relation_id('meta','constraint') then 7
                     when row_id::meta.relation_id = meta.relation_id('meta','sequence') then 8
                     when row_id::meta.relation_id = meta.relation_id('meta','constraint_check') then 9
-                    when row_id::meta.relation_id = meta.relation_id('meta','constraint_unique') then 10 
+                    when row_id::meta.relation_id = meta.relation_id('meta','constraint_unique') then 10
                     when row_id::meta.relation_id = meta.relation_id('meta','view') then 11
                     when row_id::meta.relation_id = meta.relation_id('meta','function') then 12
                     else 100
@@ -873,10 +873,23 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 end
                     */
         loop
+            -- columns in correct order
             -- raise log '-- CHECKOUT meta row: % %',
             --    (commit_row.row_id).pk_column_id.relation_id.name,
             --    (commit_row.row_id).pk_column_id.relation_id.schema_id.name;-- , commit_row.fields_agg;
-            perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
+            begin
+                perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
+            exception
+                /*
+                when ((commit_row).row_id).schema_name = 'meta' and ((commit_row).row_id).relation_name = 'function' then
+                    raise notice 'CHECKOUT FUNCTION EXCEPTION: %', SQLERRM;
+                    */
+
+                when others then
+                    -- when ((commit_row).row_id).schema_name = 'meta' and ((commit_row).row_id).relation_name = 'function' then
+                    raise notice 'CHECKOUT EXCEPTION checking out %: %', commit_row.row_id, SQLERRM;
+                    continue;
+            end;
         end loop;
 
 
