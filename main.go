@@ -295,6 +295,7 @@ func main() {
         }
 
         for i := 0; i < len(coreBundles); i++ {
+            log.Print("  - "+coreBundles[i])
             q := "select bundle.bundle_import_csv('" + workingDirectory + "/bundles/" + coreBundles[i] + "')"
             _, err := dbpool.Exec(context.Background(), q)
             if err != nil {
@@ -303,17 +304,17 @@ func main() {
                 }
                 log.Fatalf("Unable to install Aquameta bundles: %v", err)
             }
+
+            _, err = dbpool.Exec(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id where b.name = '" + coreBundles[i] + "'")
+            if err != nil {
+                log.Fatalf("Unable to checkout core bundles: %v", err)
+            }
+
         }
 
         //
         // check out core bundles
         //
-        log.Print("Checking out core bundles...")
-        _, err = dbpool.Exec(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id")
-        if err != nil {
-            log.Fatalf("Unable to checkout core bundles: %v", err)
-        }
-
         log.Print("Installation complete!")
 
     }
