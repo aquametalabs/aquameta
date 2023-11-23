@@ -56,12 +56,14 @@ begin
 
     -- craete the extensions
     execute format ('create extension %I', extension_name);
+    perform meta.refresh_all();
 
     -- create bundle
     execute format ('select bundle.bundle_create(%L)', bundle_name);
 
     -- track meta entities
     prefix := 'select bundle.tracked_row_add(%L, row_id) from bundle.untracked_row where (row_id::meta.schema_id).name = ''meta''';
+
     execute format (prefix || 'and (row_id::meta.relation_id).name=''schema''               and (((row_id).pk_value)::meta.schema_id).name = %L',                      bundle_name, extension_name);
     execute format (prefix || 'and (row_id::meta.relation_id).name=''type''                 and (((row_id).pk_value)::meta.type_id).schema_name = %L',                 bundle_name, extension_name);
 --    execute format (prefix || 'and (row_id::meta.relation_id).name=''cast''                 and (((row_id).pk_value)::meta.cast_id).schema_name = %L',                 bundle_name, extension_name); -- no schema_id
@@ -84,13 +86,16 @@ begin
     -- stage 'em
     execute format ('select bundle.stage_row_add(%L, row_id) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name=%L)', bundle_name, bundle_name);
 
+    perform meta.refresh_all();
     -- commit
     execute format ('select bundle.commit(%L,''initial import'')', bundle_name);
 
+    perform meta.refresh_all();
     -- drop the extension
     execute format ('drop extension %I', extension_name);
     execute format ('drop schema %I', extension_name);
 
+    perform meta.refresh_all();
     -- check it out
     execute format ('select bundle.checkout((select head_commit_id from bundle.bundle where name=%L))', bundle_name);
 
@@ -106,5 +111,45 @@ select bundle.extension_to_bundle('ide', 'org.aquameta.ext.ide');
 select bundle.extension_to_bundle('documentation', 'org.aquameta.ext.documentation');
 
 
--- rollback;
+/*
+swap them out
+*/
+
+drop schema documentation cascade;
+drop schema endpoint cascade;
+drop schema event cascade;
+drop schema ide cascade;
+drop schema semantics cascade;
+drop schema widget cascade;
+
+create extension event;
+create extension endpoint;
+create extension widget;
+create extension semantics;
+create extension ide;
+create extension documentation;
+
+select meta.refresh_all();
+
 commit;
+
+
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.bootloader');
+-- select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.bundle');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.endpoint');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.endpoint.tests');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.ide');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.mimetypes');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.semantics');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.core.widget');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.games.snake');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.ui.auth');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.ui.fsm');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.ui.layout');
+select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.ui.tags');
+
+select bundle.checkout(head_commit_id) from bundle.bundle where head_commit_id is not null and checkout_commit_id is null;
+
+select meta.refresh_all();
+
+-- rollback;

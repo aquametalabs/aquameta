@@ -176,11 +176,11 @@ func main() {
     // - install aquameta extensions
     //
     var ct int
-    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','bundle','endpoint','ide','documentation','widget','semantics')")
+    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','meta_triggers','bundle','event','endpoint','ide','documentation','widget','semantics')")
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&ct)
     log.Print("Checking for Aquameta installation....")
 
-    if ct != 7 {
+    if ct != 9 {
 
         //
         // install aquameta extensions
@@ -202,12 +202,12 @@ func main() {
             "create extension meta",
             "create extension meta_triggers",
             "create extension bundle",
-            "create extension if not exists event",
+            "create extension event",
             "create extension endpoint",
-            "create extension if not exists widget",
-            "create extension if not exists semantics",
-            "create extension if not exists ide",
-            "create extension if not exists documentation"}
+            "create extension widget",
+            "create extension semantics",
+            "create extension ide",
+            "create extension documentation"}
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])

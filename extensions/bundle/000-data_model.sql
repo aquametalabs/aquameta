@@ -259,14 +259,19 @@ from bundle.offstage_row_deleted
 group by 1,2,3,4;
 
 
--- field changed
-create view offstage_field_changed as
+
+create function raise_message(msg text) returns void as $$
+begin
+    raise notice '%', msg; end;
+$$ language plpgsql;
+
+create or replace view bundle.offstage_field_changed as
 select * from (
 select
     field_id,
     row_id,
     b.value as old_value,
-    meta.field_id_literal_value(field_id) as new_value,
+    meta.field_id_literal_value(field_id /*, true */) as new_value,
     bundle_id
 from bundle.head_commit_field f
 join bundle.blob b on f.value_hash = b.hash
@@ -274,6 +279,7 @@ where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so 
     and */ f.field_id not in
     (select ofc.field_id from bundle.stage_field_changed ofc)
 ) x where old_value != new_value; -- FIXME: will break on nulls
+
 
 /*
 create view offstage_field_changed_by_schema as
@@ -344,6 +350,10 @@ problem: stage_field_change contains W.C. data when there are unstaged changes.
 
 
 create or replace view stage_row_field as
+/*
+with mat as (
+    select raise_message('hitting stage_row_field'), meta.refresh_all()
+)*/
 ---------- new rows ----------
 select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex') as value_hash from (
     select
@@ -363,7 +373,8 @@ select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex
                 re.primary_key_column_names[1], -- FIXME
                 (sr.row_id).pk_value,
                 c.name
-            )
+            )/*,
+            true -- use meta_mat */
         )::text as value
 
     from bundle.stage_row_added sr
@@ -571,6 +582,9 @@ where hds.change_type != 'same'
 -- stage_row_added [or stage_row_deleted?].
 ------------------------------------------------------------------------------
 
+-- relations in this table will show up in untracked_rows, and can be staged etc.
+-- it uses pk_column_id because views, foreign tables, etc. do not have primary
+-- keys, so pk_column_id imposes one on the table, and will be treated as such.
 create table trackable_nontable_relation (
     id uuid not null default public.uuid_generate_v4() primary key,
     pk_column_id meta.column_id not null
@@ -607,8 +621,8 @@ create or replace view trackable_relation as
     )
 ;
 
-/*
 
+/*
 Generates a set of sql statements that select the row_id of all non-ignored rows, aka
 rows that are not ignored by schema- or relation-ignores.
 
@@ -653,6 +667,8 @@ select *, 'select meta.row_id(' ||
 from bundle.trackable_relation r;
 
 
+-- all rows in the database that are not tracked, staged, in stage_row_deleted,
+-- or in an existing bundle
 create or replace view untracked_row as
 select r.row_id /*, r.row_id::meta.relation_id as relation_id */
     from bundle.exec((
@@ -674,6 +690,7 @@ where r.row_id::text not in (
 );
 
 
+-- helper agg function, shows in which schema all the untracked rows exist
 create or replace view untracked_row_by_schema as
 select meta.schema_id((r.row_id).schema_name) as schema_id, (r.row_id).schema_name as schema_name, count(*) as count
 from bundle.untracked_row r
@@ -687,6 +704,7 @@ select
     count(*) as count
 from bundle.untracked_row r
 group by 1,2,3;
+
 
 
 -- here's a table where you can stash some saved connections.

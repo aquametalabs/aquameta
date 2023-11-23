@@ -81,7 +81,7 @@ create or replace function endpoint.suffix_clause(
                                 ) v)
                             b;
                         */
-                        select _where || ' and ' || string_agg( name || ' ' || op || ' ' ||
+                        select _where || ' and ' || string_agg( name || '::text ' || op || ' ' ||
 
 
                             case when op = 'in' then
@@ -99,7 +99,7 @@ create or replace function endpoint.suffix_clause(
                                 quote_literal(value)
                             end
 
-                            , ' and ' )
+                            , '::text and ' )
 
                         from (
                             select element->>'name' as name, element->>'op' as op, element->'value' as json, element->>'value' as value
@@ -108,7 +108,7 @@ create or replace function endpoint.suffix_clause(
                         into _where;
 
                     elsif json_typeof(r.value) = 'object' then -- { where: JSON object }
-                        select _where || ' and ' || name || ' ' || op || ' ' ||
+                        select _where || ' and ' || name || '::text ' || op || ' ' ||
 
                             case when op = 'in' then
                                 -- Value is array
@@ -122,6 +122,7 @@ create or replace function endpoint.suffix_clause(
                                     quote_literal(value)
                                 end
                             end
+                        || '::text'
 
                         from json_to_record(r.value::json) as x(name text, op text, value text)
                         into _where;
@@ -130,7 +131,7 @@ create or replace function endpoint.suffix_clause(
 
                 else -- Else { where: regular value } -- This is not used in the client
 
-                    select _where || ' and ' || quote_ident(name) || ' ' || op || ' ' || quote_literal(value)
+                    select _where || ' and ' || quote_ident(name) || '::text ' || op || ' ' || quote_literal(value) || '::text'
                     from json_to_record(r.value::json) as x(name text, op text, value text)
                     into _where;
 
@@ -429,6 +430,8 @@ begin
                           select ''{ "row":'' || row_to_json(t.*, true) || '' }'' js
                           from ((select ' || column_list || ' from ' || quote_ident(schema_name) || '.' || quote_ident(relation_name) || ' r ' || suffix || ')) as t
                      ) q';
+
+    raise notice 'ROW QUERY: %', row_query;
 
     execute row_query into rows_json;
 
