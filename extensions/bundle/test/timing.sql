@@ -1,0 +1,20 @@
+\timing on
+set search_path=bundle;
+select count(*) from _bundle_blob;
+select count(*) from head_commit_field;
+select count(*) from head_commit_row;
+select count(*) from head_commit_row_with_exists;
+select count(*) from head_db_stage;
+select count(*) from head_db_stage_changed;
+select count(*) from not_ignored_row_stmt;
+select count(*) from offstage_field_changed;
+select count(*) from offstage_row_deleted;
+select count(*) from offstage_row_deleted_by_relation;
+select count(*) from offstage_row_deleted_by_schema;
+select count(*) from stage_row;
+select count(*) from stage_row_field;
+select count(*) from trackable_relation;
+select count(*) from tracked_row;
+select count(*) from untracked_row;
+select count(*) from untracked_row_by_relation;
+select count(*) from untracked_row_by_schema;
