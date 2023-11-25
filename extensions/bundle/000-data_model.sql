@@ -90,6 +90,12 @@ create table rowset_row (
     row_id meta.row_id
 );
 
+create table rowset_row_dependency (
+    id uuid not null default public.uuid_generate_v4() primary key,
+    rowset_row_id uuid references rowset_row(id) on delete cascade,
+    dependent_row_id uuid references rowset_row(id) on delete cascade
+);
+
 create table rowset_row_field (
     id uuid not null default public.uuid_generate_v4() primary key,
     rowset_row_id uuid references rowset_row(id) on delete cascade,
@@ -258,28 +264,23 @@ select row_id::meta.schema_id as schema_id,
 from bundle.offstage_row_deleted
 group by 1,2,3,4;
 
-
-
-create function raise_message(msg text) returns void as $$
-begin
-    raise notice '%', msg; end;
-$$ language plpgsql;
-
 create or replace view bundle.offstage_field_changed as
-select * from (
-select
-    field_id,
-    row_id,
-    b.value as old_value,
-    meta.field_id_literal_value(field_id /*, true */) as new_value,
-    bundle_id
-from bundle.head_commit_field f
-join bundle.blob b on f.value_hash = b.hash
-where /* meta.field_id_literal_value(field_id) != f.value FIXME: Why is this so slow?  workaround by nesting selects.  still slow.
-    and */ f.field_id not in
-    (select ofc.field_id from bundle.stage_field_changed ofc)
-) x where old_value != new_value; -- FIXME: will break on nulls
-
+-- get literal_value (the expensive part) in a CTE
+with f as (
+    select
+        f.field_id,
+        f.row_id,
+        meta.field_id_literal_value(f.field_id) as new_value,
+        f.bundle_id,
+        f.value_hash
+    from bundle.head_commit_field f
+)
+select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
+from f
+    join bundle.blob b on f.value_hash = b.hash
+    left join bundle.stage_field_changed sfc on f.field_id = sfc.field_id
+where sfc.field_id is null
+    and b.value != f.new_value;
 
 /*
 create view offstage_field_changed_by_schema as
@@ -288,7 +289,7 @@ select
     (row_id).schema_name as schema_name,
     count(*) as count
 from bundle.offstage_field_changed
-group by schema_id;
+group by schema_id, row_id;
 
 create view offstage_field_changed_by_relation as
 select row_id::meta.schema_id as schema_id,
