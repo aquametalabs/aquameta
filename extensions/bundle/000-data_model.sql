@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Bundle
  * Data Version Control System
- * 
+ *
  * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
 
@@ -267,9 +267,11 @@ group by 1,2,3,4;
 create or replace view bundle.offstage_field_changed as
 -- get literal_value (the expensive part) in a CTE
 with f as (
+    -- for all the fields in this commit (with their working copy literal value)
     select
         f.field_id,
         f.row_id,
+        -- working copy value
         meta.field_id_literal_value(f.field_id) as new_value,
         f.bundle_id,
         f.value_hash
@@ -277,10 +279,41 @@ with f as (
 )
 select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
 from f
+    -- their value in the repository
     join bundle.blob b on f.value_hash = b.hash
+    -- if the change is staged, skip it
     left join bundle.stage_field_changed sfc on f.field_id = sfc.field_id
 where sfc.field_id is null
+    -- they have changed
     and b.value != f.new_value;
+
+create or replace function bundle.offstage_field_changed(_bundle_id uuid) returns setof bundle.offstage_field_changed as $$
+-- get literal_value (the expensive part) in a CTE
+with f as (
+    -- for all the fields in this commit (with their working copy literal value)
+    select
+        f.field_id,
+        f.row_id,
+        -- working copy value
+        meta.field_id_literal_value(f.field_id) as new_value,
+        f.bundle_id,
+        f.value_hash
+    from bundle.head_commit_field f
+    where f.bundle_id = _bundle_id
+)
+select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
+from f
+    -- their value in the repository
+    join bundle.blob b on f.value_hash = b.hash
+    -- if the change is staged, skip it
+    left join bundle.stage_field_changed sfc on sfc.bundle_id = _bundle_id and f.field_id = sfc.field_id
+where
+    sfc.bundle_id = _bundle_id
+        and sfc.field_id is null
+        -- they have changed
+        and b.value != f.new_value
+$$ language sql;
+
 
 /*
 create view offstage_field_changed_by_schema as
@@ -338,17 +371,19 @@ a virtual view of what the next commit's fields will look like.  it's centered
 around stage_row, we can definitely start there.  then, we get the field values
 from:
 
-a) if it was in the previous commit, those fields, but overwritten by stage_field_changed.  stage_row already takes care of removing stage_row_added and stage_row_deleted.
+a) if it was in the previous commit, those fields, but overwritten by
+stage_field_changed.  stage_row already takes care of removing stage_row_added
+and stage_row_deleted.
 
-b) if it is a newly added row (it'll be in stage_row_added), then use the working copy's fields
+b) if it is a newly added row (it'll be in stage_row_added), then use the
+working copy's fields
 
-c) what if you have a stage_field_changed on a newly added row?  then, not sure.  probably use it?
+c) what if you have a stage_field_changed on a newly added row?  then, not
+sure.  probably use it?
 
 problem: stage_field_change contains W.C. data when there are unstaged changes.
 
 */
-
-
 
 create or replace view stage_row_field as
 /*
@@ -489,7 +524,6 @@ create or replace view tracked_row as
 
 
 
-
 ------------------------------------------------------------------------------
 -- 8. STATUS
 --
@@ -542,10 +576,10 @@ from (
 
     from bundle.head_commit_row hcr
         join bundle b on hcr.bundle_id=b.id
-        full outer join bundle.stage_row sr on hcr.row_id::text=sr.row_id::text
-        left join stage_field_changed sfc on 
-            (sfc.field_id)::meta.row_id::text=hcr.row_id::text
-        left join offstage_field_changed ofc on (ofc.field_id)::meta.row_id::text=hcr.row_id::text
+        full outer join bundle.stage_row sr on hcr.bundle_id = b.id and hcr.row_id=sr.row_id
+        left join stage_field_changed sfc on sfc.bundle_id = b.id and (sfc.field_id)::meta.row_id=hcr.row_id
+        -- left join offstage_field_changed ofc on ofc.bundle_id = b.id and (ofc.field_id)::meta.row_id=hcr.row_id
+        left join offstage_field_changed(b.id) ofc on (ofc.field_id)::meta.row_id=hcr.row_id
         -- where b.checkout_commit_id is not null -- TODO I added this for a reason but now I can't remember why and it is breaking stuff
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id)::meta.row_id, (ofc.field_id)::meta.row_id
 
