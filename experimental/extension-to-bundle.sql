@@ -56,7 +56,7 @@ begin
 
     -- craete the extensions
     execute format ('create extension %I', extension_name);
-    perform meta.refresh_all();
+    -- perform meta.refresh_all();
 
     -- create bundle
     execute format ('select bundle.bundle_create(%L)', bundle_name);
@@ -86,16 +86,16 @@ begin
     -- stage 'em
     execute format ('select bundle.stage_row_add(%L, row_id) from bundle.tracked_row_added where bundle_id=(select id from bundle.bundle where name=%L)', bundle_name, bundle_name);
 
-    perform meta.refresh_all();
+    -- perform meta.refresh_all();
     -- commit
     execute format ('select bundle.commit(%L,''initial import'')', bundle_name);
 
-    perform meta.refresh_all();
+    -- perform meta.refresh_all();
     -- drop the extension
     execute format ('drop extension %I', extension_name);
     execute format ('drop schema %I', extension_name);
 
-    perform meta.refresh_all();
+    -- perform meta.refresh_all();
     -- check it out
     execute format ('select bundle.checkout((select head_commit_id from bundle.bundle where name=%L))', bundle_name);
 
@@ -129,7 +129,7 @@ create extension semantics;
 create extension ide;
 create extension documentation;
 
-select meta.refresh_all();
+-- select meta.refresh_all();
 
 commit;
 
@@ -150,6 +150,6 @@ select bundle.bundle_import_csv('/home/dev/dev/aquameta/bundles/org.aquameta.ui.
 
 select bundle.checkout(head_commit_id) from bundle.bundle where head_commit_id is not null and checkout_commit_id is null;
 
-select meta.refresh_all();
+-- select meta.refresh_all();
 
 -- rollback;
