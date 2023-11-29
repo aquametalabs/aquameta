@@ -323,13 +323,53 @@ create or replace view bundle.offstage_field_changed as
             and b.value != f.new_value
 $$ language sql;
 
+create or replace function offstage_field_changed(_bundle_id uuid) returns void /* setof meta.row_id */ as $$
+declare
+    rel record;
+    stmt text;
+begin
+    -- all relations in the head commit
+    for rel in
+        select
+            (row_id::meta.relation_id).name as relation_name,
+            (row_id::meta.relation_id).schema_name as schema_name,
+            (row_id).pk_column_name as pk_column_name
+        from bundle.head_commit_row
+        where bundle_id = _bundle_id
+        group by row_id::meta.relation_id, (row_id).pk_column_name
+    loop
+
+        -- for each relation,
+        stmt := format('
+            select hcr.row_id, row_to_jsonb(x)
+            from head_commit_row hcr
+                left join %I.%I x on
+                    (hcr.row_id).pk_value = x.%I::text and
+                    (hcr.row_id).schema_name = %L and
+                    (hcr.row_id).relation_name = %L
+            where hcr.bundle_id = %L;',
+            rel.schema_name,
+            rel.relation_name,
+            rel.pk_column_name,
+            rel.schema_name,
+            rel.relation_name,
+            _bundle_id
+        );
+
+        raise notice '%', stmt;
+    end loop;
+
+end
+$$ language plpgsql;
+
+
 /*
 strategy for optimizing this:
 
 The goal is to detect all differences between the database and and the head commit, independent of whether or not they are staged.
 We can use this for both looking at the stage and generating head_db_stage.  Strategy is:
 
-1. One query per relation in the bundle.  Join 
+1. One query per relation in the bundle.  Join
 
 select b.id as bundle_id, hcr.row_id, row_to_json(x)
 from head_commit_row hcr
