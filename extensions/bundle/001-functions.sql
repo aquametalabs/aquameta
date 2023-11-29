@@ -24,6 +24,8 @@ create function bundle.bundle_copy(_bundle_id uuid, new_name text) returns uuid 
     insert into bundle.rowset select * from bundle.rowset r join commit c on c.rowset_id=r.id where c.bundle_id = _bundle_id;
     insert into bundle.commit select * from bundle.commit where bundle_id = _bundle_id;
 
+    refresh materialized view bundle.head_commit_row;
+    refresh materialized view bundle.head_commit_field;
 $$ language sql;
 */
 
@@ -188,6 +190,10 @@ create or replace function commit_delete(in _commit_id uuid) returns void as $$
     -- TODO: delete commits in order?
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c where c.id = _commit_id);
     delete from bundle.commit c where c.id = _commit_id;
+
+    refresh materialized view bundle.head_commit_row;
+    refresh materialized view bundle.head_commit_field;
+
 $$ language sql;
 
 
@@ -285,6 +291,12 @@ create or replace function commit (bundle_name text, message text) returns void 
     delete from bundle.stage_row_added where bundle_id=_bundle_id;
     delete from bundle.stage_row_deleted where bundle_id=_bundle_id;
     delete from bundle.stage_field_changed where bundle_id=_bundle_id;
+
+    -- update head_commit_* materialized views
+    execute format ('refresh materialized view bundle.head_commit_row');
+    execute format ('refresh materialized view bundle.head_commit_field');
+
+    return;
 
     end
 

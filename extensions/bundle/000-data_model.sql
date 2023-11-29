@@ -80,6 +80,12 @@ create table bundle (
     unique(name)
 );
 
+
+
+-- TODO: Add triggers on these tables that block modification.  They must never
+-- be modified directly, as materialized views rely on them and must be kept in
+-- sync.
+
 create table rowset (
     id uuid not null default public.uuid_generate_v4() primary key
 );
@@ -138,37 +144,28 @@ create table merge_conflict (
 ------------------------------------------------------------------------------
 
 -- head_commit_row: show the rows head commit
--- TODO: make these materialized, update on commit?
-create view head_commit_row as
-select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle.bundle bundle
-    join bundle.commit c on bundle.head_commit_id=c.id
+create materialized view head_commit_row as
+select b.id as bundle_id, c.id as commit_id, rr.id as rowset_row_id, rr.row_id
+from bundle.bundle b
+    join bundle.commit c on b.head_commit_id=c.id
     join bundle.rowset r on r.id = c.rowset_id
     join bundle.rowset_row rr on rr.rowset_id = r.id;
 
 
 -- head_commit_row: show the fields in each head commit
--- TODO: select hcr.*, rrf.field_id from head_commit_row join rowset_row_field rrf on ...
--- TODO: make these materialized, update on commit?
-create view head_commit_field as
-select bundle.id as bundle_id, rr.row_id, f.field_id, f.value_hash from bundle.bundle bundle
-    join bundle.commit c on bundle.head_commit_id=c.id
-    join bundle.rowset r on r.id = c.rowset_id
-    join bundle.rowset_row rr on rr.rowset_id = r.id
-    join bundle.rowset_row_field f on f.rowset_row_id = rr.id;
+create materialized view head_commit_field as
+select hcr.*, rrf.field_id, rrf.value_hash
+from bundle.head_commit_row hcr
+    join bundle.rowset_row_field rrf on rrf.rowset_row_id = hcr.rowset_row_id;
 
 
 -- head_commit_row_with_exists: rows in the head commit, along with whether or
 -- not that row actually exists in the database
--- TODO: select hcf.*, meta.row_exists(rr.row_id) as exists from head_commit_field hcf ...
 -- can't be materialized because of call to row_exists()
 -- TODO: can we optimize this query by calling something like meta.rows_exist(row_id[])?
 create view head_commit_row_with_exists as
-select bundle.id as bundle_id, c.id as commit_id, rr.row_id, meta.row_exists(rr.row_id) as exists
-from bundle.bundle bundle
-    join bundle.commit c on bundle.head_commit_id=c.id
-    join bundle.rowset r on r.id = c.rowset_id
-    join bundle.rowset_row rr on rr.rowset_id = r.id;
-    -- order by meta.row_exists(rr.row_id), rr.row_id;
+select hcf.*, meta.row_exists(hcf.row_id) as exists
+from head_commit_field hcf;
 
 
 
@@ -296,6 +293,7 @@ create or replace view bundle.offstage_field_changed as
         -- they have changed
         and b.value != f.new_value;
 
+/*
     create or replace function bundle.offstage_field_changed(_bundle_id uuid) returns setof bundle.offstage_field_changed as $$
     -- get literal_value (the expensive part) in a CTE
     with f as (
@@ -317,13 +315,15 @@ create or replace view bundle.offstage_field_changed as
         -- if the change is staged, skip it
         left join bundle.stage_field_changed sfc on sfc.bundle_id = _bundle_id and f.field_id = sfc.field_id
     where
-    /*    sfc.bundle_id = _bundle_id
-            and */sfc.field_id is null
+        sfc.bundle_id = _bundle_id
+            and sfc.field_id is null
             -- they have changed
             and b.value != f.new_value
 $$ language sql;
+*/
 
-create or replace function offstage_field_changed(_bundle_id uuid) returns void /* setof meta.row_id */ as $$
+/*
+create or replace function offstage_field_changed(_bundle_id uuid) returns void / * setof meta.row_id * / as $$
 declare
     rel record;
     stmt text;
@@ -361,6 +361,8 @@ begin
 
 end
 $$ language plpgsql;
+
+*/
 
 
 /*
@@ -674,8 +676,8 @@ from (
         join bundle b on hcr.bundle_id=b.id
         full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
         left join stage_field_changed sfc on (sfc.field_id)::meta.row_id=hcr.row_id
-        -- left join offstage_field_changed ofc on ofc.bundle_id = b.id and (ofc.field_id)::meta.row_id=hcr.row_id
-        left join offstage_field_changed(b.id) ofc on (ofc.field_id)::meta.row_id=hcr.row_id
+        left join offstage_field_changed ofc on ofc.bundle_id = b.id and (ofc.field_id)::meta.row_id=hcr.row_id
+        -- left join offstage_field_changed(b.id) ofc on (ofc.field_id)::meta.row_id=hcr.row_id
         -- where b.checkout_commit_id is not null -- TODO I added this for a reason but now I can't remember why and it is breaking stuff
     group by hcr.bundle_id, hcr.commit_id, hcr.row_id, sr.bundle_id, sr.row_id, (sfc.field_id)::meta.row_id, (ofc.field_id)::meta.row_id
 

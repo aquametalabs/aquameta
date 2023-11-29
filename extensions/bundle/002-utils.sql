@@ -69,7 +69,7 @@ $$;
 -- import
 -- import a bundle from a csv export (created by above).
 
-create or replace function bundle.bundle_import_csv(directory text)
+create or replace function bundle.bundle_import_csv(directory text, refresh_materialized_views boolean default true)
  returns uuid
  language plpgsql
 as $$
@@ -98,8 +98,15 @@ begin
     execute format('insert into bundle.bundle_csv(directory, bundle_id) select %L, id from origin_temp', directory);
 
     -- make sure that checkout_commit_is null
+    -- FIXME: when you import multiple bundles in a transaction, this origin_temp table name collides...
     select name from origin_temp into bundle_name;
     update bundle.bundle set checkout_commit_id = NULL where name = bundle_name;
+
+    -- refresh materialized views
+    if refresh_materialized_views then
+        execute format('refresh materialized view bundle.head_commit_row');
+        execute format('refresh materialized view bundle.head_commit_field');
+    end if;
 
     -- return bundle.id
     select id from origin_temp into bundle_id;
