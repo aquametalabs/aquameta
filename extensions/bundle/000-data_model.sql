@@ -138,6 +138,7 @@ create table merge_conflict (
 ------------------------------------------------------------------------------
 
 -- head_commit_row: show the rows head commit
+-- TODO: make these materialized, update on commit?
 create view head_commit_row as
 select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle.bundle bundle
     join bundle.commit c on bundle.head_commit_id=c.id
@@ -146,6 +147,8 @@ select bundle.id as bundle_id, c.id as commit_id, rr.row_id from bundle.bundle b
 
 
 -- head_commit_row: show the fields in each head commit
+-- TODO: select hcr.*, rrf.field_id from head_commit_row join rowset_row_field rrf on ...
+-- TODO: make these materialized, update on commit?
 create view head_commit_field as
 select bundle.id as bundle_id, rr.row_id, f.field_id, f.value_hash from bundle.bundle bundle
     join bundle.commit c on bundle.head_commit_id=c.id
@@ -156,6 +159,9 @@ select bundle.id as bundle_id, rr.row_id, f.field_id, f.value_hash from bundle.b
 
 -- head_commit_row_with_exists: rows in the head commit, along with whether or
 -- not that row actually exists in the database
+-- TODO: select hcf.*, meta.row_exists(rr.row_id) as exists from head_commit_field hcf ...
+-- can't be materialized because of call to row_exists()
+-- TODO: can we optimize this query by calling something like meta.rows_exist(row_id[])?
 create view head_commit_row_with_exists as
 select bundle.id as bundle_id, c.id as commit_id, rr.row_id, meta.row_exists(rr.row_id) as exists
 from bundle.bundle bundle
@@ -205,6 +211,7 @@ create table stage_row_added (
     id uuid not null default public.uuid_generate_v4() primary key,
     bundle_id uuid not null references bundle(id) on delete cascade,
     row_id meta.row_id,
+    value jsonb,
     unique (bundle_id, row_id)
 ); -- TODO: check that rows inserted into this table ARE NOT in the head commit's rowset
 
@@ -239,80 +246,103 @@ create table stage_field_changed (
 ------------------------------------------------------------------------------
 -- deleted
 create view offstage_row_deleted as
-select row_id, bundle_id
-from bundle.head_commit_row_with_exists
-where exists = false
--- TODO make this an except
-and row_id not in
-(select rr.row_id from bundle.stage_row_deleted srd join bundle.rowset_row rr on rr.id = srd.rowset_row_id)
+    select row_id, bundle_id
+    from bundle.head_commit_row_with_exists
+    where exists = false
+    -- TODO make this an except
+    and row_id not in
+    (select rr.row_id from bundle.stage_row_deleted srd join bundle.rowset_row rr on rr.id = srd.rowset_row_id)
 ;
 
+
 create view offstage_row_deleted_by_schema as
-select
-    row_id::meta.schema_id as schema_id,
-    (row_id).schema_name as schema_name,
-    count(*) as count
-from bundle.offstage_row_deleted
+    select
+        row_id::meta.schema_id as schema_id,
+        (row_id).schema_name as schema_name,
+        count(*) as count
+    from bundle.offstage_row_deleted
 group by 1,2;
 
 create view offstage_row_deleted_by_relation as
-select row_id::meta.schema_id as schema_id,
-    (row_id).schema_name as schema_name,
-    row_id::meta.relation_id as relation_id,
-    (row_id).relation_name as relation_name,
-    count(*) as count
-from bundle.offstage_row_deleted
+    select row_id::meta.schema_id as schema_id,
+        (row_id).schema_name as schema_name,
+        row_id::meta.relation_id as relation_id,
+        (row_id).relation_name as relation_name,
+        count(*) as count
+    from bundle.offstage_row_deleted
 group by 1,2,3,4;
 
-create or replace view bundle.offstage_field_changed as
--- get literal_value (the expensive part) in a CTE
-with f as (
-    -- for all the fields in this commit (with their working copy literal value)
-    select
-        f.field_id,
-        f.row_id,
-        -- working copy value
-        meta.field_id_literal_value(f.field_id) as new_value,
-        f.bundle_id,
-        f.value_hash
-    from bundle.head_commit_field f
-)
-select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
-from f
-    -- their value in the repository
-    join bundle.blob b on f.value_hash = b.hash
-    -- if the change is staged, skip it
-    left join bundle.stage_field_changed sfc on f.field_id = sfc.field_id
-where sfc.field_id is null
-    -- they have changed
-    and b.value != f.new_value;
 
-create or replace function bundle.offstage_field_changed(_bundle_id uuid) returns setof bundle.offstage_field_changed as $$
--- get literal_value (the expensive part) in a CTE
-with f as (
-    -- for all the fields in this commit (with their working copy literal value)
-    select
-        f.field_id,
-        f.row_id,
-        -- working copy value
-        meta.field_id_literal_value(f.field_id) as new_value,
-        f.bundle_id,
-        f.value_hash
-    from bundle.head_commit_field f
-    where f.bundle_id = _bundle_id
-)
-select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
-from f
-    -- their value in the repository
-    join bundle.blob b on f.value_hash = b.hash
-    -- if the change is staged, skip it
-    left join bundle.stage_field_changed sfc on sfc.bundle_id = _bundle_id and f.field_id = sfc.field_id
-where
-    sfc.bundle_id = _bundle_id
-        and sfc.field_id is null
+create or replace view bundle.offstage_field_changed as
+    -- get literal_value (the expensive part) in a CTE
+    with f as (
+        -- for all the fields in this commit (with their working copy literal value)
+        select
+            f.field_id,
+            f.row_id,
+            -- working copy value
+            meta.field_id_literal_value(f.field_id) as new_value,
+            f.bundle_id,
+            f.value_hash
+        from bundle.head_commit_field f
+    )
+    select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
+    from f
+        -- their value in the repository
+        join bundle.blob b on f.value_hash = b.hash
+        -- if the change is staged, skip it
+        left join bundle.stage_field_changed sfc on f.field_id = sfc.field_id
+    where sfc.field_id is null
         -- they have changed
-        and b.value != f.new_value
+        and b.value != f.new_value;
+
+    create or replace function bundle.offstage_field_changed(_bundle_id uuid) returns setof bundle.offstage_field_changed as $$
+    -- get literal_value (the expensive part) in a CTE
+    with f as (
+        -- for all the fields in this commit (with their working copy literal value)
+        select
+            f.field_id,
+            f.row_id,
+            -- working copy value
+            meta.field_id_literal_value(f.field_id) as new_value,
+            f.bundle_id,
+            f.value_hash
+        from bundle.head_commit_field f
+        where f.bundle_id = _bundle_id
+    )
+    select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
+    from f
+        -- their value in the repository
+        join bundle.blob b on f.value_hash = b.hash
+        -- if the change is staged, skip it
+        left join bundle.stage_field_changed sfc on sfc.bundle_id = _bundle_id and f.field_id = sfc.field_id
+    where
+    /*    sfc.bundle_id = _bundle_id
+            and */sfc.field_id is null
+            -- they have changed
+            and b.value != f.new_value
 $$ language sql;
+
+/*
+strategy for optimizing this:
+
+The goal is to detect all differences between the database and and the head commit, independent of whether or not they are staged.
+We can use this for both looking at the stage and generating head_db_stage.  Strategy is:
+
+1. One query per relation in the bundle.  Join 
+
+select b.id as bundle_id, hcr.row_id, row_to_json(x)
+from head_commit_row hcr
+    left join %I.%I x on -- relation_name, schem_name
+        -- pks match
+        (hcr.row_id).pk_value = x.%I::text and --pk_value
+        -- schemas match
+        (hcr.row_id).schema_name = %I -- schema_name
+        -- relations match
+        (hcr.row_id).relation_name = %I -- relation_name
+where hcr.bundle_id = %L
+
+*/
 
 
 /*
@@ -437,9 +467,35 @@ from bundle.stage_row sr
     where sr.new_row=false;
 
 
+
 /*
+getting closer:
+
+create function stage_row_field(_bundle_id uuid) returns setof meta.field_id as $$
+begin;
+for keys in
+	select
+		count(*),
+		b.name,
+		sr.row_id::meta.relation_id as relation_id,
+		(sr.row_id).pk_column_name as pk_column_name,
+		string_agg((sr.row_id).pk_value, ',') as pk_values
+	from stage_row sr
+	join bundle b on sr.bundle_id = b.id
+	where b.id = _bundle_id
+	group by (sr.row_id)::meta.relation_id, ((sr.row_id).pk_column_name), b.name, b.id
+loop
+	execute format 'select * from %I join',
+	keys.relation_id
+	
+
+loop over keys
+	- select * from keys.relation_id
+
+*/
 
 
+/*
 ATTEMPT TO OPTIMIZE STAGE_ROW_FIELD, ended in tears.
 
 ok.
@@ -576,8 +632,8 @@ from (
 
     from bundle.head_commit_row hcr
         join bundle b on hcr.bundle_id=b.id
-        full outer join bundle.stage_row sr on hcr.bundle_id = b.id and hcr.row_id=sr.row_id
-        left join stage_field_changed sfc on sfc.bundle_id = b.id and (sfc.field_id)::meta.row_id=hcr.row_id
+        full outer join bundle.stage_row sr on hcr.row_id=sr.row_id
+        left join stage_field_changed sfc on (sfc.field_id)::meta.row_id=hcr.row_id
         -- left join offstage_field_changed ofc on ofc.bundle_id = b.id and (ofc.field_id)::meta.row_id=hcr.row_id
         left join offstage_field_changed(b.id) ofc on (ofc.field_id)::meta.row_id=hcr.row_id
         -- where b.checkout_commit_id is not null -- TODO I added this for a reason but now I can't remember why and it is breaking stuff
@@ -597,6 +653,8 @@ case c.change_type
     when 'same' then 3
     when 'added' then 4
 end, row_id;
+
+
 
 
 create view head_db_stage_changed as
@@ -673,11 +731,12 @@ select *, 'select meta.row_id(' ||
     ') as row_id from ' ||
     quote_ident((r.schema_id).name) || '.' || quote_ident((r.relation_id).name) ||
 
-    -- special case meta rows so that ignored_* cascades down to all objects in its scope
+    -- special case meta rows so that ignored_* cascades down to all objects in its scope:
+    -- exclude rows from meta that are in "normal" tables that are ignored
     case
         -- schemas
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'schema' then
-           ' where id not in (select schema_id from bundle.ignored_schema)'
+           ' where id not in (select schema_id from bundle.ignored_schema) '
         -- relations
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('table', 'view', 'relation') then
            ' where id not in (select relation_id from bundle.ignored_relation) and schema_id not in (select schema_id from bundle.ignored_schema)'
@@ -687,23 +746,33 @@ select *, 'select meta.row_id(' ||
         -- columns
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) = 'column' then
            ' where id not in (select column_id from bundle.ignored_column) and id::meta.relation_id not in (select relation_id from bundle.ignored_relation) and id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
+
         -- objects that exist in schema scope
+
+        -- operator
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('operator') then
            ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema)'
-        -- objects that exist in schema scope
+        -- type
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('type') then
            ' where id::meta.schema_id not in (select schema_id from bundle.ignored_schema)'
-        -- objects that exist in table scope
+        -- constraint_unique, constraint_check, table_privilege
         when (r.schema_id).name = 'meta' and ((r.relation_id).name) in ('constraint_check','constraint_unique','table_privilege') then
            ' where meta.schema_id(schema_name) not in (select schema_id from bundle.ignored_schema) and table_id not in (select relation_id from bundle.ignored_relation)'
         else ''
     end
+
+    -- when meta views are tracked via 'trackable_nontable_relation', they
+    -- setting a view as as a "trackable_non-table_relation",
+    -- exclude rows from meta that are in trackable non-table tables that are ignored
+
+
     as stmt
 from bundle.trackable_relation r;
 
 
 -- all rows in the database that are not tracked, staged, in stage_row_deleted,
--- or in an existing bundle
+-- ignored, or in an existing bundle
+
 create or replace view untracked_row as
 select r.row_id /*, r.row_id::meta.relation_id as relation_id */
     from bundle.exec((
