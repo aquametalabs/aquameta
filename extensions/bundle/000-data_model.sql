@@ -293,8 +293,31 @@ create or replace view bundle.offstage_field_changed as
         -- they have changed
         and b.value != f.new_value;
 
+create or replace view bundle.offstage_field_changed2 as
+    -- get literal_value (the expensive part) in a CTE
+    with f as (
+        -- for all the fields in this commit (with their working copy literal value)
+        select
+            f.field_id,
+            f.row_id,
+            -- working copy value
+            meta.field_id_literal_value(f.field_id) as new_value,
+            f.bundle_id,
+            f.value_hash
+        from bundle.head_commit_field f
+    )
+    select f.field_id, b.value as old_value, f.new_value, f.bundle_id, f.row_id
+    from f
+        -- their value in the repository
+        join bundle.blob b on f.value_hash = b.hash
+        -- if the change is staged, skip it
+        left join bundle.stage_field_changed sfc on f.field_id = sfc.field_id
+    where sfc.field_id is null
+        -- they have changed
+        and b.value != f.new_value;
+
 /*
-    create or replace function bundle.offstage_field_changed(_bundle_id uuid) returns setof bundle.offstage_field_changed as $$
+create or replace function bundle.offstage_field_changed(_bundle_id uuid) returns setof bundle.offstage_field_changed as $$
     -- get literal_value (the expensive part) in a CTE
     with f as (
         -- for all the fields in this commit (with their working copy literal value)
@@ -322,10 +345,13 @@ create or replace view bundle.offstage_field_changed as
 $$ language sql;
 */
 
-/*
-create or replace function offstage_field_changed(_bundle_id uuid) returns void / * setof meta.row_id * / as $$
+create type field_status as ( field_id meta.field_id, db_value text, db_value_hash text);
+
+create or replace function head_row_field_with_value(_bundle_id uuid) returns setof bundle.field_status as $$
 declare
     rel record;
+    stmts text[];
+    literals_stmt text;
     stmt text;
 begin
     -- all relations in the head commit
@@ -339,51 +365,60 @@ begin
         group by row_id::meta.relation_id, (row_id).pk_column_name
     loop
 
-        -- for each relation,
-        stmt := format('
-            select hcr.row_id, row_to_jsonb(x)
-            from head_commit_row hcr
+        -- for each relation, select head commit rows in this relation and also
+        -- in this bundle, and join them with the relation's data, breaking it out
+        -- into one row per field
+
+        stmts := array_append(stmts, format('
+            select hcr.row_id, jsonb_each_text(to_jsonb(x)) as keyval
+            from bundle.head_commit_row hcr
                 left join %I.%I x on
                     (hcr.row_id).pk_value = x.%I::text and
                     (hcr.row_id).schema_name = %L and
                     (hcr.row_id).relation_name = %L
-            where hcr.bundle_id = %L;',
+            where hcr.bundle_id = %L
+                and (hcr.row_id).schema_name = %L
+                and (hcr.row_id).relation_name = %L',
             rel.schema_name,
             rel.relation_name,
             rel.pk_column_name,
             rel.schema_name,
             rel.relation_name,
-            _bundle_id
-        );
-
-        raise notice '%', stmt;
+            _bundle_id,
+            rel.schema_name,
+            rel.relation_name
+        )
+    );
     end loop;
+
+    literals_stmt := array_to_string(stmts,E'\nunion\n');
+
+    -- wrap stmt to beautify columns
+    literals_stmt := format('
+        select
+            meta.field_id((row_id).schema_name, (row_id).relation_name, (row_id).pk_column_name, (row_id).pk_value, (keyval).key),
+            (keyval).value as db_value,
+            public.digest((keyval).value, ''sha256'')::text as value_hash
+        from (%s) fields;',
+        literals_stmt
+    );
+
+    -- raise notice 'literals_stmt: %', literals_stmt;
+
+    return query execute literals_stmt;
 
 end
 $$ language plpgsql;
 
-*/
-
-
 /*
-strategy for optimizing this:
-
-The goal is to detect all differences between the database and and the head commit, independent of whether or not they are staged.
-We can use this for both looking at the stage and generating head_db_stage.  Strategy is:
-
-1. One query per relation in the bundle.  Join
-
-select b.id as bundle_id, hcr.row_id, row_to_json(x)
-from head_commit_row hcr
-    left join %I.%I x on -- relation_name, schem_name
-        -- pks match
-        (hcr.row_id).pk_value = x.%I::text and --pk_value
-        -- schemas match
-        (hcr.row_id).schema_name = %I -- schema_name
-        -- relations match
-        (hcr.row_id).relation_name = %I -- relation_name
-where hcr.bundle_id = %L
-
+select head.field_id, head.value_hash, db.db_value_hash
+from head_commit_field head
+    join head_row_field_with_value((select id from bundle.bundle where name like '%.ide')) db
+        on db.field_id = head.field_id 
+        
+where head.bundle_id=(select id from bundle.bundle where name like '%.ide') 
+and head.value_hash != db.db_value_hash
+order by head.field_id;
 */
 
 
