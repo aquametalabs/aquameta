@@ -366,14 +366,14 @@ begin
     loop
 
         -- for each relation, select head commit rows in this relation and also
-        -- in this bundle, and join them with the relation's data, breaking it out
+        -- in this bundle, and inner join them with the relation's data, breaking it out
         -- into one row per field
 
         stmts := array_append(stmts, format('
             select hcr.row_id, jsonb_each_text(to_jsonb(x)) as keyval
             from bundle.head_commit_row hcr
-                left join %I.%I x on
-                    (hcr.row_id).pk_value = x.%I::text and
+                full join %I.%I x on -- (#(#) )
+                    (hcr.row_id).pk_value is not distinct from x.%I::text and -- catch null = null!
                     (hcr.row_id).schema_name = %L and
                     (hcr.row_id).relation_name = %L
             where hcr.bundle_id = %L
@@ -403,7 +403,7 @@ begin
         literals_stmt
     );
 
-    -- raise notice 'literals_stmt: %', literals_stmt;
+    raise notice 'literals_stmt: %', literals_stmt;
 
     return query execute literals_stmt;
 
