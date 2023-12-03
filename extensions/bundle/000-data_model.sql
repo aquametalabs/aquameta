@@ -377,8 +377,8 @@ begin
         from get_commit_rows(commit_id) row_id
         group by row_id::meta.relation_id, (row_id).pk_column_name
     loop
-        -- TODO: check that each table exists and has not been deleted.  when
-        -- that happens, this function will fail.
+        -- TODO: check that each relation exists and has not been deleted.
+        -- currently, when that happens, this function will fail.
 
         -- for each relation, select head commit rows in this relation and also
         -- in this bundle, and inner join them with the relation's data, breaking it out
@@ -386,7 +386,7 @@ begin
 
         stmts := array_append(stmts, format('
             select row_id, jsonb_each_text(to_jsonb(x)) as keyval
-            from bundle.get_commit_rows(%L, meta.relation_id(%I,I%)) row_id
+            from bundle.get_commit_rows(%L, meta.relation_id(%L,%L)) row_id
                 left join %I.%I x on -- (#(#) )
                     (row_id).pk_value is not distinct from x.%I::text and -- catch null = null!
                     (row_id).schema_name = %L and
@@ -469,11 +469,47 @@ begin
 
     literals_stmt := array_to_string(stmts,E'\nunion\n');
 
-    raise notice 'literals_stmt: %', literals_stmt;
+    -- raise notice 'literals_stmt: %', literals_stmt;
 
     return query execute literals_stmt;
 end;
 $$ language plpgsql;
+
+
+create type row_status as (row_id meta.row_id, exists boolean, changed_fields meta.field_id[]);
+create or replace function get_rows_status(commit_id uuid) returns setof row_status as $$
+select
+    r.row_id,
+    r.exists,
+    case when r.exists = false then
+        null
+    else
+        -- set to null if array is empty
+        nullif(
+            -- remove nulls
+            array_remove(
+                -- agg
+                array_agg(
+                    -- not changed
+                    case when cf.value_hash = dbf.value_hash or (cf.value_hash is null and dbf.value_hash is null) then
+                        null
+                    else
+                        dbf.field_id
+                    end
+                ),
+                null
+            ),
+            '{}'
+        )
+    end as changed_fields
+from get_db_rows(commit_id) as r
+    join get_commit_fields(commit_id) cf
+        on (cf.field_id)::meta.row_id = r.row_id
+    left join get_db_fields(commit_id) dbf
+        on (dbf.field_id)::meta.row_id = r.row_id
+        and dbf.field_id = cf.field_id
+group by r.row_id, r.exists
+$$ language sql;
 
 
 /*

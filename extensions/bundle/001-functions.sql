@@ -249,6 +249,10 @@ create or replace function commit (bundle_name text, message text) returns void 
     from bundle.bundle
     where name = bundle_name;
 
+    -- if bundle_has_uncommitted_changes(_bundle_id) = false then
+    --    raise exception 'bundle: This bundle does not have any changes.  Aborting.';
+    -- end if;
+
     -- make a rowset that will hold the contents of this commit
     insert into bundle.rowset default values
     returning id into new_rowset_id;
@@ -261,7 +265,7 @@ create or replace function commit (bundle_name text, message text) returns void 
 
 
     raise notice 'bundle: Committing blobs...';
-    -- FIELDS: copy all the fields in stage_row_field to the new rowset's fields
+    -- BLOB: insert every field's value into the blob table, generating its hash
     insert into bundle.blob (value)
     select f.value
     from bundle.rowset_row rr
@@ -277,7 +281,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     join bundle.stage_row_field f on (f.field_id)::meta.row_id::text = rr.row_id::text;
 
     raise notice 'bundle: Creating the commit...';
-    -- create the commit
+    -- COMMIT: create the commit
     insert into bundle.commit (bundle_id, parent_id, rowset_id, message)
     values (_bundle_id, (select head_commit_id from bundle.bundle b where b.id=_bundle_id), new_rowset_id, message)
     returning id into new_commit_id;
