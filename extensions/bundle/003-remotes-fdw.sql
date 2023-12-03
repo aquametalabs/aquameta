@@ -552,7 +552,7 @@ begin
             join bundle.rowset r on c.rowset_id = r.id
             join bundle.rowset_row rr on rr.rowset_id = r.id
             join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-            join bundle.blob bb on rrf.value_hash = bb.hash
+            left join bundle.blob bb on rrf.value_hash = bb.hash
         where b.id=%2$L
             and c.id in (%3$s)',
             -- and bb.hash not in (select all the hashes that aren't new.... optimization)
@@ -593,4 +593,4 @@ select distinct on (b.id, bb.hash) b.id as bundle_id, bb.* from bundle.bundle b
     join bundle.rowset r on c.rowset_id = r.id
     join bundle.rowset_row rr on rr.rowset_id = r.id
     join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-    join bundle.blob bb on bb.hash = rrf.value_hash;
+    left join bundle.blob bb on bb.hash = rrf.value_hash;

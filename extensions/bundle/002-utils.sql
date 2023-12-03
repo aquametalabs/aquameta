@@ -57,7 +57,7 @@ begin
         join bundle.rowset r on c.rowset_id=r.id
         join bundle.rowset_row rr on rr.rowset_id=r.id
         join bundle.rowset_row_field rrf on rrf.rowset_row_id=rr.id
-        join bundle.blob on rrf.value_hash=blob.hash
+        left join bundle.blob on rrf.value_hash=blob.hash
         where b.name=%L order by blob.hash) to ''%s/blob.csv''', bundle_name, directory);
 
     -- add a bundle_csv to track where this bundle was exported
@@ -175,7 +175,7 @@ begin
         search_stmt := search_stmt || '
             join bundle.head_commit_row hcr on hcr.commit_id = c.id
             join bundle.head_commit_field rrf on rrf.row_id = hcr.row_id
-            join bundle.blob bb on rrf.value_hash = bb.hash ';
+            left join bundle.blob bb on rrf.value_hash = bb.hash ';
         when 'stage' then
         search_stmt := search_stmt || '
             join bundle.stage_row sr on sr.bundle_id = b.id
@@ -185,7 +185,7 @@ begin
             join bundle.rowset r on c.rowset_id=r.id
             join bundle.rowset_row rr on rr.rowset_id=r.id
             join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-            join bundle.blob bb on rrf.value_hash = bb.hash ';
+            left join bundle.blob bb on rrf.value_hash = bb.hash ';
         else raise exception 'Not Yet Implemented';
     end case;
 

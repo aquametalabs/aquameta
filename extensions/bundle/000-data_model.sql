@@ -164,9 +164,8 @@ from bundle.head_commit_row hcr
 -- can't be materialized because of call to row_exists()
 -- TODO: can we optimize this query by calling something like meta.rows_exist(row_id[])?
 create view head_commit_row_with_exists as
-select hcf.*, meta.row_exists(hcf.row_id) as exists
-from head_commit_field hcf;
-
+select *, meta.row_exists(row_id) as exists
+from head_commit_row;
 
 
 ------------------------------------------------------------------------------
@@ -286,7 +285,7 @@ create or replace view bundle.offstage_field_changed as
     select f.field_id, f.row_id, b.value as old_value, f.new_value, f.bundle_id
     from f
         -- their value in the repository
-        join bundle.blob b on f.value_hash = b.hash
+        left join bundle.blob b on f.value_hash = b.hash -- left join so we catch nulls
         -- if the change is staged, skip it
         left join bundle.stage_field_changed sfc on f.field_id = sfc.field_id
     where sfc.field_id is null
@@ -491,7 +490,7 @@ select
                 -- agg
                 array_agg(
                     -- not changed
-                    case when cf.value_hash = dbf.value_hash or (cf.value_hash is null and dbf.value_hash is null) then
+                    case when cf.value_hash is not distinct from dbf.value_hash then -- AUDIT can't we use = here? indf is so slow
                         null
                     else
                         dbf.field_id

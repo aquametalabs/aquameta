@@ -277,6 +277,7 @@ create or replace function commit (bundle_name text, message text) returns void 
 
     raise notice 'bundle: Committing blobs...';
     -- BLOB: insert every field's value into the blob table, generating its hash
+    -- TODO: we can probably speed this up a lot by just inserting ones that don't already exist -- left join on blob
     insert into bundle.blob (value)
     select f.value
     from bundle.rowset_row rr
@@ -880,7 +881,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
-                join bundle.blob b on f.value_hash=b.hash
+                left join bundle.blob b on f.value_hash=b.hash
                 join meta.relation_column col on (f.field_id)::meta.column_id = col.id
             where c.id=commit_id
             and (rr.row_id::meta.schema_id).name = 'meta'
@@ -972,7 +973,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
-                join bundle.blob b on f.value_hash=b.hash
+                left join bundle.blob b on f.value_hash=b.hash
                 join meta.relation_column col on (f.field_id)::meta.column_id = col.id
             where c.id=commit_id
             and (rr.row_id).schema_name != 'meta'
@@ -1043,7 +1044,7 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
                 join bundle.rowset r on c.rowset_id=r.id
                 join bundle.rowset_row rr on rr.rowset_id=r.id
                 join bundle.rowset_row_field f on f.rowset_row_id=rr.id
-                join bundle.blob b on f.value_hash=b.hash
+                left join bundle.blob b on f.value_hash=b.hash
                 join meta.relation_column col on (f.field_id)::meta.column_id = col.id
             where c.id=commit_id
                 and rr.row_id = _row_id::meta.row_id
@@ -1263,7 +1264,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
                         join bundle.rowset r on c.rowset_id = r.id
                         join bundle.rowset_row rr on rr.rowset_id = r.id
                         join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-                        join bundle.blob b on rrf.value_hash = b.hash
+                        left join bundle.blob b on rrf.value_hash = b.hash
                     where c.id = %L
                         and rrf.field_id::text = %L
                 ) where %I = %L',
@@ -1323,7 +1324,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
                         join bundle.rowset r on c.rowset_id = r.id
                         join bundle.rowset_row rr on rr.rowset_id = r.id
                         join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-                        join bundle.blob b on rrf.value_hash = b.hash
+                        left join bundle.blob b on rrf.value_hash = b.hash
                     where c.id = %L
                         and rrf.field_id::text = %L
                 ) where %I = %L',
@@ -1348,7 +1349,7 @@ create or replace function merge(_merge_commit_id uuid) returns void as $$
                     join bundle.rowset r on c.rowset_id = r.id
                     join bundle.rowset_row rr on rr.rowset_id = r.id
                     join bundle.rowset_row_field rrf on rrf.rowset_row_id = rr.id
-                    join bundle.blob b on rrf.value_hash = b.hash
+                    left join bundle.blob b on rrf.value_hash = b.hash
                 where c.id = %L
                     and rrf.field_id::text = %L',
                 _merge_commit_id, f.field_id::text
