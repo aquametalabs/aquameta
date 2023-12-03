@@ -239,9 +239,20 @@ create or replace function commit (bundle_name text, message text) returns void 
         _bundle_id uuid;
         new_rowset_id uuid;
         new_commit_id uuid;
+        saved_search_path text;
     begin
 
-    set local search_path=something_that_must_not_be;
+    -- Clear search_path so information_schema etc. doesn't localize identifiers.  We want public.foo not foo, and if
+    -- some object is in the search_path, information_schema (and sometimes pg_catalog) will remove the search_path.
+    -- Also, we could be using "local search_path" here, but since we're setting it back, it doesn't matter.  We need
+    -- to set it back, because commit(), checkout() etc run inside transactions with other things (e.g. bundle tests)
+    -- and foul up the search_path for everything else in the same transaction.
+    -- FIXME: We can remove this when we stop using information schema, or work around all the places that it does this.
+    saved_search_path := current_setting('search_path', true);
+    set search_path to '';
+
+
+
     raise notice 'bundle: Committing to %', bundle_name;
 
     select id
@@ -299,6 +310,9 @@ create or replace function commit (bundle_name text, message text) returns void 
     -- update head_commit_* materialized views
     execute format ('refresh materialized view bundle.head_commit_row');
     execute format ('refresh materialized view bundle.head_commit_field');
+
+    -- restore search_path
+    execute 'set search_path to ' || saved_search_path;
 
     return;
 
@@ -678,10 +692,13 @@ create type checkout_field as (name text, value text, type_name text);
 create or replace function checkout_row (in row_id meta.row_id, in fields checkout_field[], in force_overwrite boolean) returns void as $$
     declare
         query_str text;
+        saved_search_path text;
     begin
+        saved_search_path := current_setting('search_path', true);
+        set search_path to '';
+
         -- raise log '------------ checkout_row % ----------',
         --    (row_id).schema_name || '.' || (row_id).relation_name ;
-        set local search_path=something_that_must_not_be;
 
         if meta.row_exists(row_id) then
             -- raise log '---------------------- row % already exists.... overwriting.',
@@ -781,6 +798,8 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
 
             execute query_str;
         end if;
+
+        execute 'set search_path to ' || saved_search_path;
     end;
 
 $$ language plpgsql;
@@ -809,9 +828,10 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         commit_role text;
         commit_time timestamp;
         has_changes boolean;
+        saved_search_path text;
     begin
-        -- set local search_path=bundle,meta,public;
-        set local search_path=something_that_must_not_be;
+        saved_search_path := current_setting('search_path', true);
+        set search_path to '';
 
         -- propagate variables
         select b.name, b.id, b.head_commit_id, b.checkout_commit_id, c.id, c.message, c.time, (c.role_id).name
@@ -987,6 +1007,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         update bundle.bundle set head_commit_id = commit_id where id in (select bundle_id from bundle.commit c where c.id = commit_id); -- TODO: now that checkout_commit_id exists, do we still do this?
         update bundle.bundle set checkout_commit_id = commit_id where id in (select bundle_id from bundle.commit c where c.id = commit_id);
 
+        execute 'set search_path to ' || saved_search_path;
         return;
     end;
 $$ language plpgsql;
@@ -1003,8 +1024,11 @@ $$ language plpgsql;
 create or replace function checkout_row(_row_id text, commit_id uuid) returns void as $$
     declare
         commit_row record;
+        save_search_path text;
     begin
-        set local search_path=something_that_must_not_be;
+        saved_search_path := current_setting('search_path', true);
+        set search_path to '';
+
         for commit_row in
             select
                 rr.row_id,
@@ -1027,6 +1051,8 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
         loop
             perform bundle.checkout_row(commit_row.row_id, commit_row.fields_agg, true);
         end loop;
+
+        execute 'set search_path to ' || saved_search_path;
         return;
     end;
 $$ language plpgsql;
