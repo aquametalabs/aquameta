@@ -249,7 +249,7 @@ create or replace function commit (bundle_name text, message text) returns void 
     -- and foul up the search_path for everything else in the same transaction.
     -- FIXME: We can remove this when we stop using information schema, or work around all the places that it does this.
     saved_search_path := current_setting('search_path', true);
-    set search_path to '';
+    set search_path to 'nonexistent_schema';
 
 
 
@@ -696,7 +696,7 @@ create or replace function checkout_row (in row_id meta.row_id, in fields checko
         saved_search_path text;
     begin
         saved_search_path := current_setting('search_path', true);
-        set search_path to '';
+        set search_path to 'nonexistent_schema';
 
         -- raise log '------------ checkout_row % ----------',
         --    (row_id).schema_name || '.' || (row_id).relation_name ;
@@ -832,7 +832,7 @@ create or replace function checkout (in commit_id uuid, in comment text default 
         saved_search_path text;
     begin
         saved_search_path := current_setting('search_path', true);
-        set search_path to '';
+        set search_path to 'nonexistent_schema';
 
         -- propagate variables
         select b.name, b.id, b.head_commit_id, b.checkout_commit_id, c.id, c.message, c.time, (c.role_id).name
@@ -1028,7 +1028,7 @@ create or replace function checkout_row(_row_id text, commit_id uuid) returns vo
         save_search_path text;
     begin
         saved_search_path := current_setting('search_path', true);
-        set search_path to '';
+        set search_path to 'nonexistent_schema';
 
         for commit_row in
             select
