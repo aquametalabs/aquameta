@@ -300,6 +300,7 @@ create or replace view bundle.offstage_field_changed as
 create type field_hash as ( field_id meta.field_id, value_hash text);
 
 
+-- basically head_commit_field, but not necessarily head
 create or replace function get_commit_fields(_commit_id uuid) returns setof field_hash as $$
     select rrf.field_id, rrf.value_hash
     from commit c
@@ -373,7 +374,7 @@ begin
             (row_id::meta.relation_id).name as relation_name,
             (row_id::meta.relation_id).schema_name as schema_name,
             (row_id).pk_column_name as pk_column_name
-        from get_commit_rows(commit_id) row_id
+        from bundle._get_commit_rows_exist(commit_id) row_id
         group by row_id::meta.relation_id, (row_id).pk_column_name
     loop
         -- TODO: check that each relation exists and has not been deleted.
@@ -385,7 +386,7 @@ begin
 
         stmts := array_append(stmts, format('
             select row_id, jsonb_each_text(to_jsonb(x)) as keyval
-            from bundle.get_commit_rows(%L, meta.relation_id(%L,%L)) row_id
+            from bundle._get_commit_rows_exist(%L, meta.relation_id(%L,%L)) row_id
                 left join %I.%I x on -- (#(#) )
                     (row_id).pk_value is not distinct from x.%I::text and -- catch null = null!
                     (row_id).schema_name = %L and
@@ -421,9 +422,9 @@ end
 $$ language plpgsql;
 
 
-create type commit_row as ( row_id meta.row_id, exists boolean);
+create type row_exists as ( row_id meta.row_id, exists boolean);
 
-create or replace function get_db_rows(commit_id uuid) returns setof commit_row as $$
+create or replace function get_commit_rows_exist( commit_id uuid) returns setof row_exists as $$
 declare
     rel record;
     stmts text[];
@@ -439,8 +440,7 @@ begin
         from get_commit_rows(commit_id, null) row_id
         group by row_id::meta.relation_id, (row_id).pk_column_name
     loop
-        -- TODO: check that each table exists and has not been deleted.  when
-        -- that happens, this function will fail.
+        -- TODO: check that each relation exists and still has the same primary key, else skip it
 
         -- for each relation, select head commit rows in this relation and also
         -- in this bundle, and inner join them with the relation's data, breaking it out
@@ -468,7 +468,63 @@ begin
 
     literals_stmt := array_to_string(stmts,E'\nunion\n');
 
-    -- raise notice 'literals_stmt: %', literals_stmt;
+    raise debug 'literals_stmt: %', literals_stmt;
+
+    return query execute literals_stmt;
+end;
+$$ language plpgsql;
+
+
+
+-- mostly copy past from get_commit_row_exists ^^
+create or replace function get_stage_rows_exist( _bundle_id uuid) returns setof row_exists as $$
+declare
+    rel record;
+    stmts text[];
+    literals_stmt text;
+    stmt text;
+begin
+    -- all relations in the head commit
+    for rel in
+        select
+            (row_id::meta.relation_id).name as relation_name,
+            (row_id::meta.relation_id).schema_name as schema_name,
+            (row_id).pk_column_name as pk_column_name
+        from bundle.stage_row_added
+        where bundle_id = _bundle_id
+        group by row_id::meta.relation_id, (row_id).pk_column_name
+    loop
+        -- TODO: check that each relation exists and still has the same primary key, else skip it
+
+        -- for each relation, select head commit rows in this relation and also
+        -- in this bundle, and inner join them with the relation's data, breaking it out
+        -- into one row per field
+
+        stmts := array_append(stmts, format('
+            select row_id, x.%I is not null as exists
+            from bundle.stage_row_added sra
+                left join %I.%I x on
+                    (row_id).pk_value is not distinct from x.%I::text and -- catch null = null!
+                    (row_id).schema_name = %L and
+                    (row_id).relation_name = %L',
+            rel.pk_column_name,
+            rel.schema_name,
+            rel.relation_name,
+            rel.pk_column_name,
+            rel.schema_name,
+            rel.relation_name
+        )
+    );
+    end loop;
+
+    -- no relations
+    if stmts is null then
+        return;
+    end if;
+
+    literals_stmt := array_to_string(stmts,E'\nunion\n');
+
+    raise debug 'literals_stmt: %', literals_stmt;
 
     return query execute literals_stmt;
 end;
@@ -562,7 +618,33 @@ create view stage_row as
 
 
 
+create type stage_row_status as (row_id meta.row_id, new_row boolean, exists boolean);
+
+create or replace function stage_row( _bundle_id uuid, _commit_id uuid default null ) returns setof stage_row_status as $$
+    begin
+        -- use head_commit_id unless otherwise told
+        if _commit_id is null then
+            select head_commit_id from bundle.bundle where id = _bundle_id into _commit_id;
+        end if;
+
+        if _commit_id is null then
+            raise exception 'No such bundle with id %', _bundle_id;
+        end if;
+
+        return query
+			select row_id, exists, true as new_row
+			from bundle.get_stage_rows_exist(_bundle_id)
+
+			union
+
+			select row_id, exists, false as new_row
+			from bundle.get_commit_rows_exist(_commit_id);
+    end;
+$$ language plpgsql;
+
+
 /*
+
 a virtual view of what the next commit's fields will look like.  it's centered
 around stage_row, we can definitely start there.  then, we get the field values
 from:
@@ -605,8 +687,7 @@ select stage_row_id, field_id, value, encode(public.digest(value, 'sha256'),'hex
                 re.primary_key_column_names[1], -- FIXME
                 (sr.row_id).pk_value,
                 c.name
-            )/*,
-            true -- use meta_mat */
+            )
         )::text as value
 
     from bundle.stage_row_added sr
@@ -632,83 +713,6 @@ from bundle.stage_row sr
     left join stage_field_changed sfc on sfc.field_id::text = hcf.field_id::text
     where sr.new_row=false;
 
-
-
-/*
-getting closer:
-
-create function stage_row_field(_bundle_id uuid) returns setof meta.field_id as $$
-begin;
-for keys in
-	select
-		count(*),
-		b.name,
-		sr.row_id::meta.relation_id as relation_id,
-		(sr.row_id).pk_column_name as pk_column_name,
-		string_agg((sr.row_id).pk_value, ',') as pk_values
-	from stage_row sr
-	join bundle b on sr.bundle_id = b.id
-	where b.id = _bundle_id
-	group by (sr.row_id)::meta.relation_id, ((sr.row_id).pk_column_name), b.name, b.id
-loop
-	execute format 'select * from %I join',
-	keys.relation_id
-	
-
-loop over keys
-	- select * from keys.relation_id
-
-*/
-
-
-/*
-ATTEMPT TO OPTIMIZE STAGE_ROW_FIELD, ended in tears.
-
-ok.
-1. for all the rows in stage_row, aggregate each relation, it's pk column, and the pks of each row.
-2. for each relation in the above, select * from that relation where pk in keys into a json_agg
-3. convert the json_agg to field_id and value, one per row
-
-
--- returns a relation_id, the column name of it's primary key, and all the pks
--- of all the rows in that relation_id on the stage
-
-create or replace view _stage_relation_keys as
-with srk as (
-select
-    stage_row.row_id::meta.relation_id as relation_id,
-    ((stage_row.row_id).pk_column_id).name as pk_column_name,
-    string_agg(quote_literal((stage_row.row_id).pk_value),',') as keys
-from stage_row
-group by (stage_row.row_id::meta.relation_id, ((stage_row.row_id).pk_column_id).name))
-
-
-
--- takes a relation_id, pk name and
-create or replace function stage_row_keys_to_fields ()
-returns setof json as $$
-declare
-    keys text;
-    rows_json json[];
-    fields meta.field_id[];
-begin
-    return query execute 'select row_to_json(r) from (select * from '
-            || quote_ident((relation_id::meta.schema_id).name) || '.'
-            || quote_ident(relation_id.name)
-            || ' where ' || quote_ident(pk_column_name) || '::text in'
-            || '(' || keys || ')'
-            || ') r';
-
-end;
-$$ language plpgsql;
-
-create or replace view stage_row_field as
-with srk as (
-    select * from _stage_relation_keys
-)
-select * from bundle.stage_row_keys_to_fields(srk.relation_id, srk.pk_column_name, srk.keys);
-
-*/
 
 
 ------------------------------------------------------------------------------
