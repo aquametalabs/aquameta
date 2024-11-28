@@ -1,5 +1,4 @@
 create extension if not exists hstore schema public;
-create extension if not exists dblink schema public;
 create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto schema public;
 create extension if not exists postgres_fdw;
