@@ -195,10 +195,9 @@ func main() {
 
         installQueries := [...]string{
             "create extension if not exists hstore schema public",
-            "create extension if not exists dblink schema public",
-            "create extension if not exists \"uuid-ossp\"",
+            "create extension if not exists \"uuid-ossp\" schema public",
             "create extension if not exists pgcrypto schema public",
-            "create extension if not exists postgres_fdw",
+            "create extension if not exists postgres_fdw schema public",
             "create extension meta version '0.4.0'",
             "create extension meta_triggers version '0.4.0'",
             "create extension bundle",
