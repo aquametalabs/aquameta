@@ -1,0 +1,45 @@
+Bundle Information Model
+------------------------
+
+dev=# select name from meta.table where schema_name = 'bundle' and name like '%row%';
+         name          
+-----------------------
+ rowset_row
+ rowset_row_field
+ ignored_row
+ stage_row_added
+ stage_row_deleted
+ tracked_row_added
+(8 rows)
+
+dev=# select name from meta.view where schema_name = 'bundle' and name like '%row%';
+               name               
+----------------------------------
+ head_commit_row_with_exists
+ offstage_row_deleted
+ offstage_row_deleted_by_schema
+ offstage_row_deleted_by_relation
+ stage_row
+ stage_row_field
+ tracked_row
+ not_ignored_row_stmt
+ untracked_row
+ untracked_row_by_schema
+ untracked_row_by_relation
+(11 rows)
+
+dev=# select name from meta.table where schema_name = 'bundle' and name like '%field%';
+        name         
+---------------------
+ rowset_row_field
+ stage_field_changed
+(2 rows)
+
+dev=# select name from meta.view where schema_name = 'bundle' and name like '%field%';
+          name          
+------------------------
+ offstage_field_changed
+ stage_row_field
+(2 rows)
+
+

@@ -176,6 +176,8 @@ $$ language plpgsql;
 
 create or replace function bundle_delete (in _bundle_id uuid) returns void as $$
     -- TODO: delete blobs
+    -- TODO: check for uncommited changes
+    -- TODO: check for tracked rows
     delete from bundle.rowset r where r.id in (select c.rowset_id from bundle.commit c join bundle.bundle b on c.bundle_id = b.id where b.id = _bundle_id);
     delete from bundle.bundle where id = _bundle_id;
 $$ language sql;
@@ -211,6 +213,8 @@ create or replace function checkout_delete(in _bundle_id uuid, in _commit_id uui
 declare
         temprow record;
 begin
+    -- TODO: check for uncommited changes
+    -- TODO: check for tracked rows (maybe?  they will not be lost)
     for temprow in
         select rr.* from bundle.bundle b
             join bundle.commit c on c.bundle_id = b.id
@@ -450,7 +454,6 @@ as $$
         (row_id).pk_value
     );
 $$ language sql;
-
 
 
 

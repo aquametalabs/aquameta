@@ -292,41 +292,48 @@ create or replace function semantics.field_component (
     bundles text[]
 ) returns setof json as
 $$
+declare
+    stmt text;
 begin
   -- TODO: this should use the order of the bundles array as the priority
-  return query execute '
-    select json_build_object(''name'', c.name, ''bundleName'', b.name)
-    from semantics.column_component cc
-      join semantics.column_purpose cp on cp.id=cc.purpose_id
-      join widget.component c on c.id=cc.component_id
-      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
-      join bundle.bundle b on b.id=tr.bundle_id
-    where cc.column_id=meta.column_id('
-      || quote_literal((column_id::meta.schema_id).name) || ','
-      || quote_literal((column_id::meta.relation_id).name) || ','
-      || quote_literal(column_id.name) || ')
-      and cp.purpose=' || quote_literal(purpose) || '
-      and b.name=any(' || quote_literal(bundles) || ')
+  stmt := format('
+    select json_build_object(''name'', name, ''bundleName'', bundle_name)
+	from (
+		select c.name, b.name as bundle_name
+		from semantics.column_component cc
+		  join semantics.column_purpose cp on cp.id=cc.purpose_id
+		  join widget.component c on c.id=cc.component_id
+		  join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
+		  join bundle.bundle b on b.id=tr.bundle_id
+		where cc.column_id::text=%L
+		and cp.purpose=%L
+		and b.name=any(%L)
 
-    union
+		union
 
-    select json_build_object(''name'', c.name, ''bundleName'', b.name)
-    from semantics.type_component tc
-      join semantics.column_purpose cp on cp.id=tc.purpose_id
-      join widget.component c on c.id=tc.component_id
-      join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
-      join bundle.bundle b on b.id=tr.bundle_id
-      join meta.column mc on mc.type_id=tc.type_id
-    where mc.id=meta.column_id('
-      || quote_literal((column_id::meta.schema_id).name) || ','
-      || quote_literal((column_id::meta.relation_id).name) || ','
-      || quote_literal(column_id.name) || ')
-      and cp.purpose=' || quote_literal(purpose) || '
-      and b.name=any(' || quote_literal(bundles) || ')
+		select c.name, b.name as bundle_name
+		from semantics.type_component tc
+		  join semantics.column_purpose cp on cp.id=tc.purpose_id
+		  join widget.component c on c.id=tc.component_id
+		  join bundle.tracked_row tr on tr.row_id=meta.row_id(''widget'', ''component'', ''id'', c.id::text)
+		  join bundle.bundle b on b.id=tr.bundle_id
+		  join meta.column mc on mc.type_id=tc.type_id
+		where mc.id::text=%1$L
+		  and cp.purpose=%2$L
+		  and b.name=any(%3$L)
+	  ) x limit 1',
+      column_id,
+      purpose,
+      bundles
+    );
 
-    limit 1';
+  raise debug '%', stmt;
+  return query execute stmt;
+
 end;
 $$ language plpgsql;
+
+
 
 
 
