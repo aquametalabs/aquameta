@@ -37,9 +37,10 @@ create or replace function endpoint.columns_json(
     _schema_name text,
     _relation_name text,
     exclude text[],
-    include text[],
-    out json json
+    include text[]
 ) returns json as $$
+    declare
+        json json;
     begin
         execute
             'select (''['' || string_agg(row_to_json(row(c2.name, c2.type_name)::endpoint.column_type, true)::text, '','') || '']'')::json
