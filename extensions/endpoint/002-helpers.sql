@@ -56,6 +56,7 @@ create or replace function endpoint.columns_json(
             ' order by position) c2'
 
             into json;
+        return json;
     end;
 $$
 language plpgsql;
