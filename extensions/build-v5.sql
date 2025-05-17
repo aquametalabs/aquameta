@@ -1,12 +1,17 @@
 -- base install
+create extension if not exists hstore schema public;
+create extension if not exists "uuid-ossp" schema public;
+create extension if not exists pgcrypto schema public;
+
 create extension meta version '0.5.0';
 create extension meta_triggers version '0.5.0';
 \i bundle--0.5.0.sql
 
 -- these still work or at least install
-create extension event;
-create extension endpoint;
-
+create extension event version '0.5.0';
+create extension endpoint version '0.5.0';
+create extension widget version '0.5.0';
+create extension ide version '0.5.0';
 
 
 -- postgres_fdw server to v4 instance
@@ -54,46 +59,6 @@ import foreign schema documentation
 
 
 
-/* 
-recreate widget/endpoint tables (that are being used)
-this code is just copy pasta from v4 widget schema def
-*/
-
-create table widget.widget (
-    id uuid not null default public.uuid_generate_v4() primary key,
-    name varchar(255) not null,
-    pre_js text default 'return {};'::text not null,
-    css text default '.{{= name }} {
-}'::text not null,
-    html text default '<div id="{{= id }}" class="{{= name }}">
-</div>'::text not null,
-    server_js text not null default '', -- TODO default NULL on these?
-    common_js text not null default '',
-    post_js text default 'var w = $("#"+id);'::text not null,
-    help text
-);
-
-create table widget.dependency_js (
-    id uuid not null default public.uuid_generate_v4() primary key,
-    name varchar(255) not null,
-    version varchar(255) not null,
-    variable varchar(255),
-    content text not null,
-    unique(name, version)
-);
-
-create table widget.widget_dependency_js (
-    id uuid not null default public.uuid_generate_v4() primary key,
-    widget_id uuid not null references widget.widget(id) on delete cascade on update cascade,
-    dependency_js_id uuid not null references widget.dependency_js(id) on delete cascade on update cascade,
-    unique(widget_id, dependency_js_id)
-);
-
-select endpoint.set_mimetype('widget', 'dependency_js', 'content', 'text/javascript');
-
-
-
-
 -- transfer widget.* and endpoint.* from foreign server to local
 insert into widget.widget select * from widgetv4.widget;
 insert into widget.dependency_js select * from widgetv4.dependency_js;
@@ -115,7 +80,7 @@ from documentationv4.bundle_doc d4
     join bundle.repository r on b.name = r.name;
 */
 
-
+-- (widget,widget,{id},{d31ba103-3129-4780-b723-4c92299e89a1},post_js)
 
 
 /*
@@ -123,7 +88,7 @@ IMPORT EVERYTHING
 */
 -- create all the new bundles
 select bundle.create_repository(name) from bundlev4.bundle
-where name not like '%bundle%';
+where name not like '%bundle%';  --skip old bundle internal ignores
 
 select bundle.track_untracked_row(name, meta.row_id(bc.schema_name, bc.relation_name, bc.pk_column_name, bc.pk_value))
 from bundlev4.v4_bundle_contents bc

@@ -29,23 +29,24 @@ create or replace function widget.bundled_widget (
 	widget_name text /*,
     args json default '{}' */
 ) returns setof widget.widget as $$
-        select w.*
-        from bundle.bundle b
-            join bundle.tracked_row tr on tr.bundle_id=b.id
-            join widget.widget w on w.id = (tr.row_id).pk_value::uuid
-        where ((tr.row_id)::meta.schema_id).name = 'widget'
-            and ((tr.row_id)::meta.relation_id).name = 'widget'
-            and w.name=widget_name
-            and b.name = bundle_name
+    select w.*
+    from bundle.get_tracked_rows(bundle_name) tr
+        join widget.widget w on tr.pk_values[1] = w.id::text
+    where tr.schema_name='widget'
+        and tr.relation_name='widget'
+        and name=widget_name;
 $$ language sql;
 
 
+/*
+needs refactor to bundle v0.5
 create view widget.bundled_widget as
     select b.name as bundle_name, w.* from bundle.bundle b
         join bundle.tracked_row tr on tr.bundle_id = b.id
         join widget.widget w on w.id::text = (tr.row_id).pk_value
     where ((tr.row_id)::meta.schema_id).name = 'widget'
         and ((tr.row_id)::meta.relation_id).name = 'widget';
+*/
 
 
 

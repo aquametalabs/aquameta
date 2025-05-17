@@ -4,6 +4,11 @@
  *
  * Copyright (c) 2019 - Aquameta - http://aquameta.org/
  ******************************************************************************/
+/*
+
+needs bundle v0.5 audit
+
+
 create or replace view ide.bundle_contained_relation as
 select *, count(*) as count from (
 select (row_id::meta.schema_id).name as schema_name, (row_id::meta.relation_id).name
@@ -27,6 +32,7 @@ create table ide.sql_code (
 );
 
 
+*/
 
 create or replace view ide.resource as
 select r.*, b.id as bundle_id, b.name from (
@@ -38,17 +44,21 @@ select r.*, b.id as bundle_id, b.name from (
 
     select meta.row_id('endpoint','resource_binary','id',rb.id::text), path, mimetype
     from endpoint.resource_binary rb
-        join endpoint.mimetype m on rb.mimetype_id = m.id
-) r left join (
-    select rr.row_id, b.*
-    from bundle.rowset_row rr
-        join bundle.rowset rs on rr.rowset_id = rs.id
-        join bundle.commit c on c.rowset_id = rs.id
-        join bundle.bundle b on b.head_commit_id = c.id
-) b on b.row_id = r.row_id
+      join endpoint.mimetype m on rb.mimetype_id = m.id
+) r
 
+left join (
+    select id, name, bundle.get_tracked_rows(name) as row_id from bundle.repository
+) b
+
+on r.row_id = b.row_id
 order by path;
 
+
+/*
+
+
+needs bundle v0.5 audit
 
 
 create or replace view ide.route as
@@ -84,4 +94,5 @@ select
 	bundle.commit_is_mergable(c.id)
 from bundle.commit c
     join bundle.bundle b on c.bundle_id = b.id;
+*/
 
