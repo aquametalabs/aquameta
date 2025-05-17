@@ -31,7 +31,7 @@ create table "table" (
 
 create table bundle_doc (
     id uuid not null default public.uuid_generate_v4() primary key,
-    bundle_id uuid references bundle.bundle(id),
+    bundle_id uuid references bundle.repository(id),
     title text not null default '',
     content text not null default ''
 );

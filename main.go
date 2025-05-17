@@ -24,7 +24,7 @@ func main() {
     log.Print(` / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_`)
     log.Print(`(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /`)
     log.Print(`     \/    |__|          \/      \/     \/          \/ `)
-    log.Print(`                 [ version 0.4.0 ]                     `)
+    log.Print(`                 [ version 0.5.0 ]                     `)
 
     // log.SetPrefix("[💧 aquameta 💧] ")
     log.Print("Aquameta server... ENGAGE!")
@@ -176,10 +176,11 @@ func main() {
     // - install aquameta extensions
     //
     var ct int
-    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','meta_triggers','bundle','event','endpoint','ide','documentation','widget','semantics')")
+    dbQuery := fmt.Sprintf("select count(*) as ct from pg_catalog.pg_extension where extname in ('meta','meta_triggers','pg_bundle','event','endpoint','ide','documentation','widget','semantics')")
     err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&ct)
     log.Print("Checking for Aquameta installation....")
 
+    // TODO: handle this with a flag instead. Stop installing by default.
     if ct != 9 {
 
         //
@@ -196,17 +197,18 @@ func main() {
         installQueries := [...]string{
             "create extension if not exists hstore schema public",
             "create extension if not exists \"uuid-ossp\" schema public",
+            "create extension if not exists pg_uuidv7 schema public",
             "create extension if not exists pgcrypto schema public",
             "create extension if not exists postgres_fdw schema public",
-            "create extension meta version '0.4.0'",
-            "create extension meta_triggers version '0.4.0'",
-            "create extension bundle",
-            "create extension event",
-            "create extension endpoint",
-            "create extension widget",
-            "create extension semantics",
-            "create extension ide",
-            "create extension documentation"}
+            "create extension meta version '0.5.0'",
+            "create extension meta_triggers version '0.5.0'",
+            "create extension pg_bundle version '0.5.0'",
+            "create extension event version '0.5.0'",
+            "create extension endpoint version '0.5.0'",
+            "create extension widget version '0.5.0'",
+            "create extension semantics version '0.5.0'",
+            "create extension ide version '0.5.0'",
+            "create extension documentation version '0.5.0'"}
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])
@@ -223,6 +225,7 @@ func main() {
         //
         // setup hub remote
         //
+        /*
         log.Print("Adding bundle.remote_database for hub...")
         hubRemoteQuery := `insert into bundle.remote_database (foreign_server_name, schema_name, connection_string, username, password)
             values (
@@ -237,6 +240,7 @@ func main() {
             }
             log.Fatalf("Unable to add bundle.remote_database: %v", err)
         }
+        */
 
         //
         // create superuser
@@ -278,6 +282,7 @@ func main() {
 
         // install from local filesystem
         // TODO: Do this by inspecting the bundles directory?
+        /*
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
             "org.aquameta.core.bootloader",
@@ -310,10 +315,8 @@ func main() {
             }
 
         }
+        */
 
-        //
-        // check out core bundles
-        //
         log.Print("Installation complete!")
 
     }

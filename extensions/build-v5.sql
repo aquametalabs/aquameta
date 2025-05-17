@@ -1,19 +1,3 @@
--- base install
-create extension if not exists hstore schema public;
-create extension if not exists "uuid-ossp" schema public;
-create extension if not exists pgcrypto schema public;
-
-create extension meta version '0.5.0';
-create extension meta_triggers version '0.5.0';
-\i bundle--0.5.0.sql
-
--- these still work or at least install
-create extension event version '0.5.0';
-create extension endpoint version '0.5.0';
-create extension widget version '0.5.0';
-create extension ide version '0.5.0';
-
-
 -- postgres_fdw server to v4 instance
 create extension postgres_fdw schema public;
 
@@ -80,9 +64,6 @@ from documentationv4.bundle_doc d4
     join bundle.repository r on b.name = r.name;
 */
 
--- (widget,widget,{id},{d31ba103-3129-4780-b723-4c92299e89a1},post_js)
-
-
 /*
 IMPORT EVERYTHING
 */
@@ -100,13 +81,19 @@ where bc.schema_name != 'documentation'
     and schema_name != 'semantics'
     and relation_name != 'js_module';
 
-select stage_tracked_rows(name) from bundle.repository;
+select bundle.stage_tracked_rows(name) from bundle.repository;
 
-select commit(name, 'Initial import from v0.4', 'Eric Hanson', 'eric@aquameta.com')
+select bundle.commit(name, 'Initial import from v0.4', 'Eric Hanson', 'eric@aquameta.com')
 from bundle.repository r
 where r.name != 'io.bundle.core.repository';
 
 
 
-
+-- fix all the widgets
+/*
+vi -p  \
+pgfs/widget/widget/d31ba103-3129-4780-b723-4c92299e89a1/post_js \
+pgfs/widget/widget/927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js \
+pgfs/widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
+*/
 
