@@ -6,3 +6,6 @@
 	path = extensions/meta_triggers
 	url = git@github.com:aquameta/meta_triggers.git
     branch = master
+[submodule "extensions/pg_bundle"]
+	path = extensions/pg_bundle
+	url = git@github.com:erichanson/pg_bundle.git
