@@ -91,9 +91,24 @@ where r.name != 'io.bundle.core.repository';
 
 -- fix all the widgets
 /*
-vi -p  \
-pgfs/widget/widget/d31ba103-3129-4780-b723-4c92299e89a1/post_js \
-pgfs/widget/widget/927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js \
+-- top level widgets to fix
+pgfs/widget/widget/d31ba103-3129-4780-b723-4c92299e89a1/post_js
+pgfs/widget/widget/927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js
 pgfs/widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
+pgfs/widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
+
+-- grep
+eric@thunk:~/dev/aquameta/pgfs/widget/widget$ grep "table('bundle')" * /post_js
+05642077-3e03-40e9-b1e0-c679b283f6a4/post_js:endpoint.schema('bundle').table('bundle').row('id', bundle.get('id')).then(function(bundle) {
+05642077-3e03-40e9-b1e0-c679b283f6a4/post_js:endpoint.schema('bundle').table('bundle').row('id', bundle.get('id')).then(function(bundle) {
+5958da09-33b4-455c-a50f-05896aa1a7cc/post_js:endpoint.schema('bundle').table('bundle').rows({
+7a7ca3d4-2188-4c4e-9526-b0e3b9cddd9d/post_js:endpoint.schema('bundle').table('bundle').rows({
+8f0690e2-7883-48d2-898f-e4ce3406b0cc/post_js:            endpoint.schema('bundle').table('bundle').row('id',bundle_id)
+927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js:endpoint.schema('bundle').table('bundle').row({
+a9d024a5-7e7e-4435-9a06-692f09752e37/post_js:    endpoint.schema('bundle').table('bundle').insert({
+b7468ec6-d896-49c3-b5b8-ca8662349ecd/post_js:endpoint.schema('bundle').table('bundle').rows({
+d31ba103-3129-4780-b723-4c92299e89a1/post_js:endpoint.schema('bundle').table('bundle').rows({
+d3c72a98-efd3-48bf-848b-6200af3e2429/post_js:    endpoint.schema('bundle').table('bundle').row('id', stage_row.get('bundle_id')).then(function(bundle) {
+e74a4129-6e37-49d2-9391-0f6d99d8fd79/post_js:            endpoint.schema('bundle').table('bundle').rows({ order_by: {
 */
 
