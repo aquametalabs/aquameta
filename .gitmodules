@@ -1,8 +1,8 @@
 [submodule "meta"]
 	path = extensions/meta
-	url = https://github.com/aquameta/meta.git
+	url = git@github.com:aquameta/meta.git
     branch = master
 [submodule "meta_triggers"]
 	path = extensions/meta_triggers
-	url = https://github.com/aquameta/meta_triggers.git
+	url = git@github.com:aquameta/meta_triggers.git
     branch = master
