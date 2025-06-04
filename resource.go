@@ -81,9 +81,11 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             pq.QuoteLiteral(path)))
 
         if err != nil {
-            log.Fatalf("Resource matching query failed: %v", err)
+			log.Printf("Resource matching query failed: %v", err)
+			return
         }
         defer matches.Close()
+
 
         var id string
         var resourceTable string

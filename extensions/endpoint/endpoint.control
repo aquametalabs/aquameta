@@ -3,3 +3,4 @@ comment = 'endpoint extension'
 default_version = '0.5.0'
 relocatable = false
 schema = 'endpoint'
+requires= 'meta'
