@@ -554,11 +554,13 @@ create or replace function endpoint.field_select(
     declare
         _schema_name text;
         _relation_name text;
-        pk text;
-        pk_column_name text;
-        pk_type text;
+        pk_values text[];
+        pk_column_names text[];
+        pk_types text;
         field_name text;
         field_type text;
+        stmt text;
+        pk_stmt text;
 
     begin
         raise notice 'FIELD SELECT ARGS: %', field_id;
@@ -566,15 +568,15 @@ create or replace function endpoint.field_select(
 
         select (field_id).schema_name into _schema_name;
         select (field_id).relation_name into _relation_name;
-        select (field_id).pk_value into pk;
-        select (field_id).pk_column_name into pk_column_name;
+        select (field_id).pk_values into pk_values;
+        select (field_id).pk_column_names into pk_column_names;
         select (field_id).column_name into field_name;
 
-        -- Find pk_type
+        -- Find pk_types
         select type_name
         from meta.column
         where id = field_id::meta.column_id
-        into pk_type;
+        into pk_types;
 
         -- Find field_type
         select type_name
@@ -595,6 +597,44 @@ create or replace function endpoint.field_select(
 
         -- Default mimetype
         mimetype := coalesce(mimetype, 'application/json');
+        pk_stmt := meta._pk_stmt(
+            field_id.pk_column_names,
+            field_id.pk_values,
+            '%1$I = %2$L' -- refactor for composite-pk meta is skipping pk_type and type casting, not sure if that'll cause problems
+        );
+
+        if field_type = 'endpoint.resource_bin' then
+            /*
+            -- first try at a rewrite
+            stmt := format(
+                'select (%I).mimetype, encode((%I).content, ''escape'')
+                     from %I.%I as t
+                     where (%s)
+                     into mimetype, field'
+                field_name,
+                field_name,
+                _schema_name,
+                _relation_name,
+                pk_stmt
+            );
+            execute stmt;
+            */
+
+            execute 'select (' || quote_ident(field_name) || ').mimetype, encode((' || quote_ident(field_name) || ').content, ''escape'')'
+                || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
+                || ' as t where (' || pk_stmt || ')' into mimetype, field;
+        elsif field_type = 'pg_catalog.bytea' then
+            execute 'select encode(' || quote_ident(field_name) || ', ''escape'') from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
+                || ' as t where (' || pk_stmt || ')' into field;
+        else
+            execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
+                || ' as t where (' || pk_stmt || ')' into field;
+        end if;
+
+        /*
+
+        before composite-pk meta refactor:
+
         if field_type = 'endpoint.resource_bin' then
             execute 'select (' || quote_ident(field_name) || ').mimetype, encode((' || quote_ident(field_name) || ').content, ''escape'')'
                 || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
@@ -604,8 +644,9 @@ create or replace function endpoint.field_select(
                 || ' as t where ' || quote_ident(pk_column_name) || ' = ' || quote_literal(pk) || '::' || pk_type into field;
         else
             execute 'select ' || quote_ident(field_name) || ' from ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name)
-                || ' as t where ' || quote_ident(pk_column_name) || '::text = ' || quote_literal(pk) || '::text' /* || pk_type */ into field;
+                || ' as t where ' || quote_ident(pk_column_name) || '::text = ' || quote_literal(pk) || '::text' / * || pk_type * / into field;
         end if;
+        */
 
         -- implicitly returning field and mimetype
     end;

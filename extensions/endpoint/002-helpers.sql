@@ -54,8 +54,8 @@ create or replace function endpoint.columns_json(
                     ' and not c.name = any(' || quote_literal(exclude) || ')'
                 else '' end ||
             ' order by position) c2'
-
             into json;
+
         return json;
     end;
 $$

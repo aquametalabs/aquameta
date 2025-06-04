@@ -18,7 +18,7 @@ echo "\__  \  / ____/  |  \__  \  /     \_/ __ \   __\__  \  "
 echo " / __ \< <_|  |  |  // __ \|  Y Y  \  ___/|  |  / __ \_"
 echo "(____  /\__   |____/(____  /__|_|  /\___  >__| (____  /"
 echo "     \/    |__|          \/      \/     \/          \/ "
-echo "        [ version 0.3.0 - extensions builder ]"
+echo "        [ version 0.5.0 - extensions builder ]"
 echo ""
 echo ""
 
@@ -41,7 +41,7 @@ rm -f $SRC/../extensions/*/*--0.3.0.sql
 echo "Building core PostgreSQL extensions..."
 cd $SRC/../extensions/meta && make
 cd $SRC/../extensions/meta_triggers && make
-cd $SRC/../extensions/bundle && make
+cd $SRC/../extensions/pg_bundle && make
 cd $SRC/../extensions/event && make
 
 # build the plgo part of extension

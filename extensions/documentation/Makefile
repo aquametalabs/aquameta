@@ -1,5 +1,5 @@
 EXTENSION = documentation
-EXTVERSION = 0.4.0
+EXTVERSION = 0.5.0
 DATA = $(EXTENSION)--$(EXTVERSION).sql
 PG_CONFIG = pg_config
 

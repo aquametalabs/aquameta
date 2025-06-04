@@ -6,7 +6,7 @@ SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "Building core PostgreSQL extensions..."
 cd $SRC/../extensions/meta && make && make install
 cd $SRC/../extensions/meta_triggers && make && make install
-cd $SRC/../extensions/bundle && make && make install
+cd $SRC/../extensions/pg_bundle && make && make install
 cd $SRC/../extensions/event && make && make install
 
 # build the plgo part of extension
