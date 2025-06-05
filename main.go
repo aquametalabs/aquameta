@@ -200,13 +200,13 @@ func main() {
             "create extension if not exists postgres_fdw schema public",
             "create extension meta version '0.4.0'",
             "create extension meta_triggers version '0.4.0'",
-            "create extension bundle",
-            "create extension event",
-            "create extension endpoint",
-            "create extension widget",
-            "create extension semantics",
-            "create extension ide",
-            "create extension documentation"}
+            "create extension bundle version '0.4.0'",
+            "create extension event version '0.4.0'",
+            "create extension endpoint version '0.4.0'",
+            "create extension widget version '0.4.0'",
+            "create extension semantics version '0.4.0'",
+            "create extension ide version '0.4.0'",
+            "create extension documentation version '0.4.0'"}
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])
