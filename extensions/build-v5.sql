@@ -1,5 +1,20 @@
+-- create this view on the v4 server
+/*
+create view bundle.v4_bundle_contents as
+select b.name, (tr.row_id).schema_name, (tr.row_id).relation_name, (tr.row_id).pk_column_name, (tr.row_id).pk_value
+from bundle.bundle b
+    join bundle.tracked_row tr on tr.bundle_id = b.id
+order by b.name;
+*/
+
 -- postgres_fdw server to v4 instance
-create extension postgres_fdw schema public;
+create extension if not exists postgres_fdw schema public;
+
+/*
+
+setup server
+
+*/
 
 create server v4
     foreign data wrapper postgres_fdw
@@ -9,17 +24,22 @@ create user mapping for current_user
     server v4
     options (user 'eric', password 'whatevz');
 
--- map widget
+
+/*
+
+map all of widget
+
+*/
 create schema widgetv4;
-import foreign schema widget except (module)
+import foreign schema widget
     from server v4
     into widgetv4;
 
 -- map bundle
 /*
--- create this view on the v4 server
-create view bundle.v4_bundle_contents as
-select b.name, (tr.row_id).schema_name,  (tr.row_id).relation_name, (tr.row_id).pk_column_name, (tr.row_id).pk_value from bundle.bundle b join bundle.tracked_row tr on tr.bundle_id = b.id order by b.name;
+
+map all of widget
+
 */
 
 create schema bundlev4;
@@ -42,16 +62,25 @@ import foreign schema documentation
     into documentationv4;
 
 
+/*
+
+copy all live db data from v4 instance into same tables in v5
+
+*/
+
 
 -- transfer widget.* and endpoint.* from foreign server to local
 insert into widget.widget select * from widgetv4.widget;
 insert into widget.dependency_js select * from widgetv4.dependency_js;
 insert into widget.widget_dependency_js select * from widgetv4.widget_dependency_js;
+insert into widget.module select * from widgetv4.module;
+insert into widget.component select * from widgetv4.component;
 
 insert into endpoint.mimetype select * from endpointv4.mimetype;
 insert into endpoint.mimetype_extension select * from endpointv4.mimetype_extension;
 insert into endpoint.resource select * from endpointv4.resource;
 insert into endpoint.resource_binary select * from endpointv4.resource_binary;
+insert into endpoint.resource_function select * from endpointv4.resource_function;
 
 
 -- transfer documentation
@@ -69,7 +98,7 @@ IMPORT EVERYTHING
 */
 -- create all the new bundles
 select bundle.create_repository(name) from bundlev4.bundle
-where name not like '%bundle%';  --skip old bundle internal ignores
+where name != 'org.aquameta.core.bundle';  --skip old bundle internal ignores
 
 select bundle.track_untracked_row(name, meta.row_id(bc.schema_name, bc.relation_name, bc.pk_column_name, bc.pk_value))
 from bundlev4.v4_bundle_contents bc

@@ -10,4 +10,6 @@ select bundle.checkout('org.aquameta.core.mimetypes');
 select bundle.checkout('org.aquameta.core.endpoint');
 select bundle.checkout('org.aquameta.core.widget');
 select bundle.checkout('org.aquameta.core.ide');
+select bundle.checkout('org.aquameta.ui.bundle');
+select bundle.checkout('org.aquameta.ui.editor');
 
