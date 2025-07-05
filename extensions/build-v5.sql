@@ -18,8 +18,8 @@ import foreign schema widget except (module)
 -- map bundle
 /*
 -- create this view on the v4 server
-create view v4_bundle_contents as
-select b.name, (tr.row_id).schema_name,  (tr.row_id).relation_name, (tr.row_id).pk_column_name, (tr.row_id).pk_value from bundle b join tracked_row tr on tr.bundle_id = b.id order by b.name;
+create view bundle.v4_bundle_contents as
+select b.name, (tr.row_id).schema_name,  (tr.row_id).relation_name, (tr.row_id).pk_column_name, (tr.row_id).pk_value from bundle.bundle b join bundle.tracked_row tr on tr.bundle_id = b.id order by b.name;
 */
 
 create schema bundlev4;
@@ -94,7 +94,6 @@ where r.name != 'io.bundle.core.repository';
 -- top level widgets to fix
 pgfs/widget/widget/d31ba103-3129-4780-b723-4c92299e89a1/post_js
 pgfs/widget/widget/927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js
-pgfs/widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
 pgfs/widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
 
 -- grep
