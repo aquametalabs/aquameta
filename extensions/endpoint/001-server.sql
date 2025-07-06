@@ -341,31 +341,31 @@ create or replace function endpoint.row_update(
         -- raise notice 'ROW_UPDATE ARGS: %, %, %, %, %', _schema_name, relation_type, _relation_name, pk, args::text;
         select (row_id::meta.schema_id).name into _schema_name;
         select (row_id::meta.relation_id).name into _relation_name;
-        select row_id.pk_value::text into pk;
+        select row_id.pk_values[1]::text into pk;
 
         execute (
             select 'update ' || quote_ident(_schema_name) || '.' || quote_ident(_relation_name) || ' as r
                     set ' || (
                        select string_agg(
-                           quote_ident(json_object_keys) || ' =
-                               case when json_typeof($1->' || quote_literal(json_object_keys) || ') = ''array'' then ((
+                           quote_ident(keys) || ' =
+                               case when json_typeof($1->' || quote_literal(keys) || ') = ''array'' then ((
                                         select ''{'' || string_agg(value::text, '', '') || ''}''
-                                        from json_array_elements(($1->>' || quote_literal(json_object_keys) || ')::json)
+                                        from json_array_elements(($1->>' || quote_literal(keys) || ')::json)
                                     ))
-                                    when json_typeof($1->' || quote_literal(json_object_keys) || ') = ''object'' then
-                                        ($1->' || quote_literal(json_object_keys) || ')::text
-                                    else ($1->>' || quote_literal(json_object_keys) || ')::text
-                               end::' || case when json_typeof((args->json_object_keys)) = 'object' then 'json::'
+                                    when json_typeof($1->' || quote_literal(keys) || ') = ''object'' then
+                                        ($1->' || quote_literal(keys) || ')::text
+                                    else ($1->>' || quote_literal(keys) || ')::text
+                               end::' || case when json_typeof((args->keys)) = 'object' then 'json::'
                                               else ''
                                          end || c.type_name, ',
                            '
-                       ) from json_object_keys(args)
+                       ) from json_object_keys(args) keys
                        inner join meta.relation_column c
                                on c.schema_name = _schema_name and
                                   c.relation_name = _relation_name and
-                                  c.name = json_object_keys
+                                  c.name = keys
                    ) || ' where ' || (
-                       select 'r.' || quote_ident((row_id).pk_column_name) || ' = ' || quote_literal((row_id).pk_value)
+                       select 'r.' || quote_ident((row_id).pk_column_names[1]) || ' = ' || quote_literal((row_id).pk_values[1])
                    )
         ) using args;
 
@@ -373,9 +373,6 @@ create or replace function endpoint.row_update(
     end;
 $$
 language plpgsql;
-
-
-
 
 
 /****************************************************************************************************

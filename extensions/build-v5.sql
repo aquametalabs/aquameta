@@ -27,35 +27,35 @@ create user mapping for current_user
 
 /*
 
-map all of widget
+create foreign tables to v4 instance
 
 */
+
+-- map all of widget
 create schema widgetv4;
 import foreign schema widget
     from server v4
     into widgetv4;
 
--- map bundle
-/*
-
-map all of widget
-
-*/
-
+-- map all of bundle
 create schema bundlev4;
 import foreign schema bundle
     from server v4
     into bundlev4;
 
+-- map all of semantics 
+create schema semanticsv4;
+import foreign schema semantics
+    from server v4
+    into semanticsv4;
 
--- map endpoint
+-- map all of endpoint
 create schema endpointv4;
 import foreign schema endpoint
     from server v4
     into endpointv4;
 
-
--- map documentation
+-- map all of documentation
 create schema documentationv4;
 import foreign schema documentation
     from server v4
@@ -68,8 +68,7 @@ copy all live db data from v4 instance into same tables in v5
 
 */
 
-
--- transfer widget.* and endpoint.* from foreign server to local
+-- transfer data from foreign server to local
 insert into widget.widget select * from widgetv4.widget;
 insert into widget.dependency_js select * from widgetv4.dependency_js;
 insert into widget.widget_dependency_js select * from widgetv4.widget_dependency_js;
@@ -82,6 +81,29 @@ insert into endpoint.resource select * from endpointv4.resource;
 insert into endpoint.resource_binary select * from endpointv4.resource_binary;
 insert into endpoint.resource_function select * from endpointv4.resource_function;
 
+insert into semantics.column_purpose select * from semanticsv4.column_purpose;
+insert into semantics.relation_purpose select * from semanticsv4.relation_purpose;
+insert into semantics.unique_identifier select * from semanticsv4.unique_identifier;
+insert into semantics.column select * from semanticsv4.column;
+insert into semantics.type select * from semanticsv4.type;
+insert into semantics.foreign_key select * from semanticsv4.foreign_key;
+insert into semantics.relation select * from semanticsv4.relation;
+insert into semantics.relation_component select * from semanticsv4.relation_component;
+insert into semantics.column_component select * from semanticsv4.column_component;
+insert into semantics.type_component select * from semanticsv4.type_component;
+
+/*
+column            
+column_component  
+column_purpose    
+foreign_key       
+relation          
+relation_component
+relation_purpose  
+type              
+type_component    
+unique_identifier 
+*/
 
 -- transfer documentation
 /*
@@ -107,7 +129,6 @@ where bc.schema_name != 'documentation'
     and relation_name != 'ignored_schema'
     and relation_name not like 'template%'
     and relation_name != 'snippet'
-    and schema_name != 'semantics'
     and relation_name != 'js_module';
 
 select bundle.stage_tracked_rows(name) from bundle.repository;
@@ -121,9 +142,9 @@ where r.name != 'io.bundle.core.repository';
 -- fix all the widgets
 /*
 -- top level widgets to fix
-pgfs/widget/widget/d31ba103-3129-4780-b723-4c92299e89a1/post_js
-pgfs/widget/widget/927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js
-pgfs/widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
+widget/widget/d31ba103-3129-4780-b723-4c92299e89a1/post_js
+widget/widget/927efac6-a523-445e-a6ac-4f7c8a76d7f1/post_js
+widget/widget/76354157-7b96-49fc-98fe-6b953a0c7c56/post_js
 
 -- grep
 eric@thunk:~/dev/aquameta/pgfs/widget/widget$ grep "table('bundle')" * /post_js

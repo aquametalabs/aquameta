@@ -96,3 +96,28 @@ from bundle.commit c
     join bundle.bundle b on c.bundle_id = b.id;
 */
 
+create or replace function ide.repository_row_list( repository_id uuid)
+returns table (row_id meta.row_id, changed boolean, change_type text) as $$
+    -- head commit rows
+	select
+        dbcf.field_id::meta.row_id,
+        bool_or(dbcf.value_hash is distinct from hcf.value_hash) as changed,
+        'same' as change_type -- FIXME
+	from bundle._get_db_commit_fields(bundle._head_commit_id(repository_id)) dbcf
+		full outer join bundle._get_commit_fields(bundle._head_commit_id(repository_id)) hcf on hcf.field_id = dbcf.field_id
+	 group by 1
+
+	union
+
+    -- stage rows to add
+	select srta.row_id as row_id, true as changed, 'staged' as change_type
+	from bundle._get_stage_rows_to_add(repository_id) srta
+
+    union
+
+    -- tracked rows added
+    select tra.row_id, true as changed, 'tracked'
+    from bundle._get_tracked_rows_added(repository_id) tra
+
+
+$$ language sql;
