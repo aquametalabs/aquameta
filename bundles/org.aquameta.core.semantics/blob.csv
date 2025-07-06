@@ -7,6 +7,7 @@
 \\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2	.{{= name }} {\n}
 \\x0d4c36b04af1613ede37fba252ffdf94d543e19aaa9f8393baea28b65c5b4d3c	form_field_display
 \\x0d75d16dc3e8c639844546bb2152fa480a98524783a552c84d711d33624015ce	(widget,widget,server_js)
+\\x0e6813b748d50330375e58dabe274d3176e71f7b4dadf685fb935d87e88ad298	(widget,module,content)
 \\x0ec07467ff74367de5fba940b6a6f1cbf7acfbb87d3849316f68f7ecb0743db3	(widget,widget)
 \\x111508a8170462025e56a11ceddca979e888b8efee10990853f9cf6bc0747ffb	916d8772-e268-42c7-bcd4-8e796d007b96
 \\x143cd24cf7d6a8386a4f87f0d0348a4f49d8a3e6b37681c0ec046abf7998921d	191b0c4b-75a3-462c-bb97-89340a023afc
@@ -26,6 +27,7 @@
 \\x345a6c53e5100836b096fa3def99ea2e3409e1e0b437e0d5cc487b1f0b929b4c	grid_view
 \\x3685566284c83299b0b79d7f7d8077d41a120e4f4fbdbbd62c4ae85c2dfa18eb	text_identifier
 \\x3922da143794910d6f261b3c23ad7d62e1c6f966d36e08ca4d9e5dbd8eb44f9c	27004682-519f-439e-83bc-97a9338cd454
+\\x395473732442b31ca397ef4317cda3e6ee305bf3affa69e73ed3ed0468f415e8	d2cff91a-af44-45e6-bee9-600cad974c2d
 \\x3c00c08c091cc37694150bf3ce3f23fe9766956fe3c0f1e396d4ed22657c054d	<span id="{{= id }}" class="{{= name }}">\n    <nobr>\n    <span class='label'>\n    </span>\n    </nobr>\n</span>
 \\x3e75ef1d3fb0e83d961e4c8aa2375f45072767c9a619896f1adc14a573c8ddfa	8e0a718c-420d-4d46-9239-bf213e433d17
 \\x415fb9d3305678e4e4f4d3ba33e7215aac55f23d88436c2cd5a324ac3051cbd6	(widget,widget,pre_js)
@@ -40,6 +42,8 @@
 \\x51b372882554719b446bf0437acf8721114ac14b103ffaec218aebb031a4291c	9a04641e-2348-41d5-86fe-3ad726dbaa94
 \\x562347c10967c9834719b8a8843ef8de74fd5bf4e51169fc284d64796f1b5385	30c85abd-fa53-4429-b088-5e78c7589568
 \\x57ae1612b9692014484953cfe0da9216432bd372ab84a1b8041cf3b991fc9a87	506990f8-99c0-4441-a3fd-04ec402d7e22
+\\x589dcc015f40e99420ccb0084c71d1ba18c228225a0329ba1b77298f974f8ae8	eac38487-8eca-47fb-ab57-56bf21ed392d
+\\x5aa331951fa92d9c1986d44506d2f34292b53a1a3d12c7a6acc9d975500183b8	4de1b6a5-2d1a-44fb-9aed-765bbd5b5c2d
 \\x5e5db985019cc0a1d1164b4cc01c739041592e83de60581d0d6fa3b556e02058	grid_field_display
 \\x5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9	0
 \\x61e579c7bfd49be247a1e475ae6a2ab3a535bf6a3fd0b6de33b2885cfe5c2126	grid_view_label
@@ -85,6 +89,7 @@
 \\xa8ae5aa90a94d908fc7ab35b18702a301e9378f83386f49d4b1dc63c0502a34f	<div id="{{= id }}" class="{{= name }}">\n</div>
 \\xa8cc5e4f18b3f569cc9a3d13e15b3f7a9d1a84ea2efb9887ba326b681b38fa01	table.{{= name }},\ntable.{{= name }} td,\ntable.{{= name }} th,\ntable.{{= name }} tr {\n    border: 1px solid #666;\n    border-collapse: collapse;\n    padding: 0.5rem;\n}\n\n.{{= name }} .no_border {\n    border: none;\n}
 \\xaed0007c07f753c0d9398ebad321cf671ab85d4099b1e7a7e792756c3577cd3c	d78f89f9-48b5-45d9-8073-2cdd630d31a9
+\\xaf6388260716ebfb131a3c759dbad2bc1b283309df8d1b53f92f9a4b739a9df3	(widget,component,html)
 \\xb08570cc93ac68f44c43c2f52e68fcd3fc7d6b8d4dba549c39ec980aec1fb9ea	(meta,function_id)
 \\xb4b611e1db81c856d6139d6297e1f2cc4b0acde91154d69a1a69d48ab539c2fb	5cc67297-5959-4bbd-b113-30ca581c6180
 \\xb551d0b29174d8cc68e525c76f3a446938fdb8a8735611b1dcff42552ee3babb	new_row
@@ -99,6 +104,7 @@
 \\xcb187560afba8ccc3293cf444fa6a6affc4e2d91886d1c35c93b0441c0dda0ae	(meta,policy_id)
 \\xcb7ddd48b7a46568cf1da05424114c3cbd9d51e951b76a8af43097797e76e861	var w = $("#"+id);\n\n\nrow.relation.row(row.pk_column_name, row.pk_value)\n.then(function(row) {\n    var rel_name = row.relation.schema.name + '.' + row.relation.name;\n\n    row.columns.forEach(function(col) {\n        w.append(\n            '<tr>' +\n            \t'<td>' + \n\t\t            widget('semantics/form_label', row.field(col.name)) + \n        \t    '</td>' +\n            \t'<td>' + \n\t\t            widget('semantics/form_field', row.field(col.name)) + \n\t            '</td>' +\n            '</tr>');\n    });\n\n\n    w.find('.delete_row').on('click', function() {\n        if (confirm('Are you sure you\\'d like to delete this row?')) {\n            row.delete()\n            .then(function() {\n                w.trigger('close_tab_self');\n                w.trigger('status', ['Row deleted from ' + rel_name, 'success']);\n                w.trigger('row_detail_delete');\n                w.trigger('done');\n                w.remove();\n            })\n            .catch(function() {\n                w.trigger('status', ['Failed delete on ' + rel_name, 'fail']);\n            });\n        }\n    });\n\n    w.find('.save_row').on('click', function() {\n        row.update()\n        .then(function() {\n            return;\n        })\n        .catch(function() {\n            alert('failed to save '+rel_name);\n        });\n    });\n\n});
 \\xd01da7bd78a7769e0bc713a64d0e7860bf137ed031c617210465532d9814fd57	form_field_edit uuid
+\\xd14055ee98aad513707cb5aabaf0232334c8898f71501b6ed872ca8fccf5ad5e	c197955f-54b9-4a38-a899-34e53b4d327f
 \\xd2005e4f96beb6c47cd1f8fc00f281e0e025715fe8f393edc0805d060f29c905	188d7c72-3d13-4508-b68a-b07733e48454
 \\xd406affbf32edcbea640888c2932e83253600a30cb76d02953d36fcbd9770be0	(endpoint,resource,content)
 \\xd42bf06032932bb5b2e147f8a4baf75fe319b5abec16194bf8fc133501a0b72f	grid_row
@@ -108,6 +114,7 @@
 \\xe4570890bcc7c1639a7e9c37ea67a5c8b56886febe0f2ff235673c0284265a1d	endpoint/template
 \\xe468622950ed7c6cd3fca1610a14fc6c5fa9a577a29652517fb00c8d6b6de1e2	1a99c920-8641-4f45-a659-68e752a598e2
 \\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382	return {};
+\\xe55de5efe917b2d28ecc12b0a04d95db07312fcbba9750e6e461ffc9df6a5bd0	(widget,component,js)
 \\xe6a57205bbdb80db3ba8ae4c064cb1951fbbef0f92e928392c8afbb3bda1854f	grid_display
 \\xe720a1abb1b786bf08e43c5bbe861915676e69db72a0f21cb2d15e04f8baf073	.{{= name }} {\n} \n\n.{{= name }}:not(.displaying) > .display {\n    display: none;\n}\n\n.{{= name }} > .display:hover {\n    text-decoration: underline;\n    cursor: hand;\n    cursor: pointer;\n}\n\n.{{= name }}:not(.editing) > .edit {\n    display: none;\n}\n\n.{{= name }}:not(.saving) > .save {\n    display: none;\n}\n
 \\xe7a0ac8750f8729ce07cbfcb9604bd52e1ce3041968e276262eb17c7f3454238	list_view
@@ -118,6 +125,7 @@
 \\xf3498573b89bfc70aefc01efb96fbae34cdc097e0669c98777f900478813626d	486d1939-8093-40b9-b790-a6d1675727c8
 \\xf3d156e7070072c44cec83eb6247b507bd0c6ff920d39d23b34764739122d67b	d1f29c6b-b861-40de-be53-a8ee785b1cfc
 \\xf3e4f44290db4f289df8aa4f1c342048590b37cb000dd310e2cca7eccde852c0	var w = $('#'+id);\n\nw.data('datum', row);\nw.data('row', row);\n\n// Assign all triggers\n['click'].forEach(function(trig) {\n    w.on(trig, function(e) {\n        e.stopPropagation();\n        w.trigger('list_item_' + trig, [row, w]);\n    });\n});
+\\xf535dec02f78ecbf66fdfe0b9d2ef87bfa0a69ed41c9d9b87df1e5b446e8d7d7	(widget,component,css)
 \\xf55bd9d1c136fdf5902305258b433b2602b7be33dc777df5506add0cd15120e3	aad6b1d3-c105-4fba-9fbb-faafa4855ddd
 \\xf8cf6ec2d44d14e4910fcb6247301b6b2133ec216c365f4861f9093afb2c3343	d97b737d-e9d3-4238-96f1-b952a1c37230
 \\xf92266fc259baec964599e8d421159d93015fdbbf7965d00716b2b53b7870d9c	2643fd82-2eba-4123-bf7a-b9c0daa1adcb
