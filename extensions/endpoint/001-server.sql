@@ -329,6 +329,7 @@ language plpgsql;
  * FUNCTION row_update                                                                              *
  ****************************************************************************************************/
 
+-- TODO: rewrite this entirely.  Hacked in some non-composite-pk support for 0.5 to get things working
 create or replace function endpoint.row_update(
     row_id meta.row_id,
     args json

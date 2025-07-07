@@ -89,35 +89,38 @@ order by b.name;
 create or replace view ide.commit_with_mergable as
 select
     c.*,
-	bundle.commit_ancestry(c.id),
-	bundle.commits_common_ancestor(c.id, b.head_commit_id),
-	bundle.commit_is_mergable(c.id)
+    bundle.commit_ancestry(c.id),
+    bundle.commits_common_ancestor(c.id, b.head_commit_id),
+    bundle.commit_is_mergable(c.id)
 from bundle.commit c
     join bundle.bundle b on c.bundle_id = b.id;
 */
 
-create or replace function ide.repository_row_list( repository_id uuid)
+create or replace function ide.repository_row_list( repository_id uuid )
 returns table (row_id meta.row_id, changed boolean, change_type text) as $$
     -- head commit rows
-	select
+    select
         dbcf.field_id::meta.row_id,
         bool_or(dbcf.value_hash is distinct from hcf.value_hash) as changed,
-        'same' as change_type -- FIXME
-	from bundle._get_db_commit_fields(bundle._head_commit_id(repository_id)) dbcf
-		full outer join bundle._get_commit_fields(bundle._head_commit_id(repository_id)) hcf on hcf.field_id = dbcf.field_id
-	 group by 1
+        case
+            when bool_or(dbcf.value_hash is distinct from hcf.value_hash) then 'modified'
+            else 'same'
+        end as change_type
+    from bundle._get_db_commit_fields(bundle._head_commit_id(repository_id)) dbcf
+        full outer join bundle._get_commit_fields(bundle._head_commit_id(repository_id)) hcf
+            on hcf.field_id = dbcf.field_id
+     group by 1
 
-	union
+    union
 
     -- stage rows to add
-	select srta.row_id as row_id, true as changed, 'staged' as change_type
-	from bundle._get_stage_rows_to_add(repository_id) srta
+    select srta.row_id as row_id, true as changed, 'added' as change_type
+    from bundle._get_stage_rows_to_add(repository_id) srta
 
     union
 
     -- tracked rows added
     select tra.row_id, true as changed, 'tracked'
     from bundle._get_tracked_rows_added(repository_id) tra
-
 
 $$ language sql;
