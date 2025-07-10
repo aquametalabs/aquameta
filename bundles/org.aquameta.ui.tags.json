@@ -1,0 +1,106 @@
+{
+    "blobs": [
+        {
+            "hash": "\\xa11a75e0feeecc1a9eff682b06ef0b1461ed4ee7a4d6da4ae333bdc1041d9d51",
+            "value": "option"
+        },
+        {
+            "hash": "\\xa2ff2522382852a144365e46f2f8646319024abb7ae1aa9c97c24177c44e3deb",
+            "value": "18251e25-cfca-4f4d-bde5-c9c5be89eaba"
+        },
+        {
+            "hash": "\\xd103fa289ce6b5f6c57d50cf2c1d655be29601b9ae168236d55431a1c5589120",
+            "value": "e83c6a04-bc73-43ed-ab3e-2642bf43e9e1"
+        },
+        {
+            "hash": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+            "value": null
+        },
+        {
+            "hash": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "value": ""
+        },
+        {
+            "hash": "\\x34c569ef714981a0dd00295a5869bf5099066b6d673b312a4220ccd493c7557c",
+            "value": "<option\n\t    id=\"{{= id }}\"\n        class=\"{{= name }}\"\n        value=\"{{= value }}\"\n        {{? typeof selected != 'undefined' && selected }}\n        \tselected=\"selected\"\n        {{?}}\n>{{= label }}</option>"
+        },
+        {
+            "hash": "\\x00a9e4255a5b63067b76cbfb9fd67f26bdb91be802d5ffcb177ec1b7a8d4c623",
+            "value": "li"
+        },
+        {
+            "hash": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+            "value": "return {};"
+        },
+        {
+            "hash": "\\x78900e1c20f125bccfcc6f98137f14b5985899d33e1adef5d8a28878db116c16",
+            "value": "var w = $(\"#\"+id);\n\n// if they passed in a row, attach it as jQuery data to the element\nif(typeof row != 'undefined') {\n    w.data('row', row);\n}"
+        },
+        {
+            "hash": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+            "value": ".{{= name }} {\n}"
+        },
+        {
+            "hash": "\\xb462be37eb1d011a9e7009fc3ded570a9d5f1c3767572003c9d124b76d4213b7",
+            "value": "<li id=\"{{= id }}\" class=\"{{= name }}\">\n    {{= content }}\n</li>"
+        },
+        {
+            "hash": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+            "value": "var w = $(\"#\"+id);"
+        }
+    ],
+    "commits": [
+        {
+            "id": "20fba3f8-feda-423a-bdfd-b83677d53ee0",
+            "message": "Initial import from v0.4",
+            "parent_id": null,
+            "jsonb_rows": [
+                "(widget,widget,{id},{e83c6a04-bc73-43ed-ab3e-2642bf43e9e1})",
+                "(widget,widget,{id},{18251e25-cfca-4f4d-bde5-c9c5be89eaba})"
+            ],
+            "author_name": "Eric Hanson",
+            "commit_time": "2025-07-10T01:44:30.232095-06:00",
+            "author_email": "eric@aquameta.com",
+            "jsonb_fields": {
+                "(widget,widget,{id},{18251e25-cfca-4f4d-bde5-c9c5be89eaba})": {
+                    "id": "\\xa2ff2522382852a144365e46f2f8646319024abb7ae1aa9c97c24177c44e3deb",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x34c569ef714981a0dd00295a5869bf5099066b6d673b312a4220ccd493c7557c",
+                    "name": "\\xa11a75e0feeecc1a9eff682b06ef0b1461ed4ee7a4d6da4ae333bdc1041d9d51",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x78900e1c20f125bccfcc6f98137f14b5985899d33e1adef5d8a28878db116c16",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{e83c6a04-bc73-43ed-ab3e-2642bf43e9e1})": {
+                    "id": "\\xd103fa289ce6b5f6c57d50cf2c1d655be29601b9ae168236d55431a1c5589120",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xb462be37eb1d011a9e7009fc3ded570a9d5f1c3767572003c9d124b76d4213b7",
+                    "name": "\\x00a9e4255a5b63067b76cbfb9fd67f26bdb91be802d5ffcb177ec1b7a8d4c623",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            },
+            "repository_id": "5b101247-c299-4805-a63c-a9c897a4971b",
+            "merge_parent_id": null
+        }
+    ],
+    "repository": {
+        "id": "5b101247-c299-4805-a63c-a9c897a4971b",
+        "name": "org.aquameta.ui.tags",
+        "head_commit_id": "20fba3f8-feda-423a-bdfd-b83677d53ee0",
+        "stage_rows_to_add": [
+        ],
+        "checkout_commit_id": "20fba3f8-feda-423a-bdfd-b83677d53ee0",
+        "tracked_rows_added": [
+        ],
+        "stage_rows_to_remove": [
+        ],
+        "stage_fields_to_change": [
+        ]
+    }
+}

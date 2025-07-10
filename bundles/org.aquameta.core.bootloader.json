@@ -1,0 +1,342 @@
+{
+    "blobs": [
+        {
+            "hash": "\\x971415941ceddd645c8447e2b6fa57ba09a4dd6323c0980cab8cc93777e6de7b",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }} ui container\">\n    <div class=\"ui segment\" id=\"setup_bootdb\">\n        {{= widget('bl:setup_bootdb') }}\n    </div>\n\n    <div class=\"ui segment\" id=\"setup_bootdb_connection\">\n        {{= widget('bl:setup_bootdb_connection') }}\n    </div>\n    \n    <div class=\"ui segment\" id=\"setup_http\">\n        {{= widget('bl:setup_http') }}\n    </div>    \n    \n    <div class=\"ui segment\" id=\"setup_finish\">\n        {{= widget('bl:setup_finish') }}\n    </div>\n\n</div>"
+        },
+        {
+            "hash": "\\x33399274499d3d18c68a4efef83220aa247e4a995ced32f96925f89b8b051923",
+            "value": "var w = $(\"#\"+id);\n\n$('#quit').click(function() {\n    $.ajax('/bootloader/halt');\n    alert('server halted.');\n});"
+        },
+        {
+            "hash": "\\xcee59d26dd90dd705c2a480a05bfb8949d8c0e3239e0147852798d73ef3a46f1",
+            "value": "0e14ed65-0792-4c7e-803c-2e870fb65d04"
+        },
+        {
+            "hash": "\\x03efbe1d14a4adee7bb1eba35e8f54e3c93ab52424696a67a74a2f6e5448533b",
+            "value": "ba62b0bf-fd7f-4b75-b129-4ae7ae97523a"
+        },
+        {
+            "hash": "\\x8fb6d5f37e8055ce720bd0b1d56587f88c0071f285966ba17e72b2b12672aa73",
+            "value": "setup"
+        },
+        {
+            "hash": "\\xcae662172fd450bb0cd710a769079c05bfc5d8e35efa6576edc7d0377afdd4a2",
+            "value": "base"
+        },
+        {
+            "hash": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+            "value": null
+        },
+        {
+            "hash": "\\x569e2034b6b4420225e93ac611ff908336b22eb9df83a289753e56cf3d46a9e6",
+            "value": "5adb74b2-8c13-4877-8f3f-0e24d0ff1865"
+        },
+        {
+            "hash": "\\x5bfedd8674718ff919b8dd9556d17f4a5d668bb6102f93102bb21da451730135",
+            "value": ".{{= name }} > header {\n    text-align: center;\n}"
+        },
+        {
+            "hash": "\\x0ec38c3af50fede4e0433f7ad70e436cec0981ac4a94f9249e0b19f9bbe0fe0c",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    <header>\n        <h3>Configuration Complete!</h3>\n    </header>\n\n\n    <div class=\"ui segment\">\n        \n        The following configuration file will be written:\n        \n        <p><code>foo.bar.conf</code></p>\n        \n        Here are the settings to be writ:\n        \n        \n        <button class=\"ui button back\">Back</button>\n        <button class=\"ui button next\">Write it!</button>\n    </div>\n</div>"
+        },
+        {
+            "hash": "\\x68fe26e34cee3d17173d14671d5e47c98c22909fe6f0c3f53115d05a3b65988f",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    <header>\n        <h3>Custom PostgreSQL Server</h3>\n    </header>\n\n\n    <div class=\"ui form\">\n\n\n        <div class=\"security segment ui\">\n            <!--\n            <h3>Connection Type</h3>\n\n\n            <div class=\"inline field\">\n                <div class=\"ui radio checkbox\">\n                    <input disabled type=\"radio\" name=\"traffic\" tabindex=\"0\" class=\"hidden\">\n                    <label>Unix Socket</label>\n                </div>\n            </div>\n            <div class=\"inline field\">\n                <div class=\"ui radio checkbox\">\n                    <input disabled type=\"radio\" name=\"traffic\" tabindex=\"0\" class=\"hidden\">\n                    <label>TCP/IP</label>\n                </div>\n            </div>\n\t\t\t-->\n\n\n        </div>\n\n\n        <div class=\"ui segment connection_string_pane\">\n            <h3>Connection string</h3>\n\n            <input type=\"text\" class=\"string_display\" value=\"postgresql:///dbname?host=/var/lib/postgresql\">\n\n\n            <button class=\"ui primary button save\">Test</button>\n            <p><a href=\"https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING\">(syntax documentation)</a></p>\n\n\n        </div>\n\n        <button class=\"ui primary button save\">\n            Save\n        </button>\n        \n        <button class=\"ui button cancel\">\n            Cancel\n        </button>\n\n    </div>\n</div>"
+        },
+        {
+            "hash": "\\xa95033e027db23f73617c0a7231072b10b3b81ce427f2aab26329eaae12022a0",
+            "value": "var w = $(\"#\"+id);\n\n// semantic ui tabs\nw.find('.tabular.menu .item').tab();\n\n// show first pane\n$(\"#setup_bootdb\").show();\n\n/*\n\nDONT DO THIS.\n\n// next_db\nw.bind('next_db', function() {\n    w.find('div.setup_bootdb').show();\n    w.find('div.setup_bootdb_connection').hide();\n});\n\nw.bind('connection_cancel', function() {\n    w.find('div.setup').show();\n    w.find('div.setup_custom').hide();\n});\n\n\nw.find('.next_embedded').click(function(){\n    w.find('div.setup').hide();\n    w.find('div.setup_http').show();\n});\n\n\nw.find('.next_custom').click(function(){\n    w.find('div.setup').hide();\n    w.find('div.setup_http').show();\n});\nw.find('.next_http').click(function(){\n    w.find('div.setup_http').hide();\n    w.find('div.setup_finish').show();\n});\n\n*/"
+        },
+        {
+            "hash": "\\xdc80a79714795da2576be11722e24cd5156631acb145ade55480622593b18b52",
+            "value": ".{{= name }} {\n}\n\n.{{= name }} > header {\n    text-align: center;\n}\n\n\n.ui.menu .item img.logo {\n    margin-right: 1.5em;\n}\n.main.container {\n    margin-top: 5em;\n}\n.wireframe {\n    margin-top: 2em;\n}\n.ui.footer.segment {\n    margin: 5em 0em 0em;\n    padding: 5em 0em;\n}"
+        },
+        {
+            "hash": "\\xd0f6c74f8ddef4fc02791d2b5263576b657fa098a7ad9154d4a130845cde3a8a",
+            "value": "setup_http"
+        },
+        {
+            "hash": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "value": ""
+        },
+        {
+            "hash": "\\x3d87a45f185c0d549a96535413658ff169d98bfc7c6e9b5ccc77d48dabc303bd",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    <div class=\"ui fixed inverted menu\">\n        <div class=\"ui container\">\n            <a href=\"#\" class=\"header item\">\n                Aquameta Boot Loader\n            </a>\n            <a href=\"#\" class=\"item huge\" style=\"color:green\"><h2>boot conf: conf/bootloader.toml</h2></a>\n            <div class=\"ui simple dropdown item\">\n                Options <i class=\"dropdown icon\"></i>\n                <div class=\"menu\">\n                    <a class=\"item\" href=\"#quit\">Quit</a>\n                    <div class=\"divider\"></div>\n                    <div class=\"header\">Header Item</div>\n                    <div class=\"item\">\n                        <i class=\"dropdown icon\"></i>\n                        Sub Menu\n                        <div class=\"menu\">\n                            <a class=\"item\" href=\"#\">Link Item</a>\n                            <a class=\"item\" href=\"#\">Link Item</a>\n                        </div>\n                    </div>\n                    <a class=\"item\" href=\"#\">Link Item</a>\n                </div>\n            </div>\n        </div>\n    </div>\n\n    <div class=\"ui main text container\">\n        {{= content }}\n    </div>\n\n\n\n\n\n\n</div>"
+        },
+        {
+            "hash": "\\xf68918e0a15b4ab037a6e52d9a10ac02cfb01326f4d871ba0f9994ac66da3da4",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    Goodbye from bootloader.\n</div>"
+        },
+        {
+            "hash": "\\x5cf2c9608674a858232efa6283a05e911aec572a98afddc78fd22e68a7d1eff5",
+            "value": "var w = $(\"#\"+id);\n\nw.find('button.finish').click(function() {\n    $('#setup_finish').hide();\n    $('#bootscreen').show();\n});"
+        },
+        {
+            "hash": "\\x2dd61805c67f9c2aa781c07a3b10587cf247c4f80cd147226027373e47e4c6df",
+            "value": "bootscreen"
+        },
+        {
+            "hash": "\\xb5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+            "value": "true"
+        },
+        {
+            "hash": "\\x532654f34aa745f4189f03e83e52843001a2ab37282b9e5d0310717ae37770f7",
+            "value": "database_booting"
+        },
+        {
+            "hash": "\\xb6d0ef4875e96df9727451504df6fb901e23e1470a747e15776d73079430df02",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    <p><i class=\"green check icon\"></i> Connecting to database <code><nobr>postgresql:///var/run/postgresql?dbname=aquameta</nobr></code>...Connected!</p>\n    <p><i class=\"green check icon\"></i>Checking for valid installation...Not Found</p>\n    \n    \n    <p>Aquameta is not installed on this database.  Booting requires creating the Aquameta extensions.</p>\n    \n    <p>Would you like to create them?</p>\n    \n    <button class=\"ui button\">Back to Configuration</button>\n    <button class=\"ui button\">Create Extensions</button>\n    \n</div>"
+        },
+        {
+            "hash": "\\x8b8b10210acfe37d11a36b4903305ab35ab8d992e5dd91833a558eba40c809b1",
+            "value": "var w = $(\"#\"+id);\nw.find('.ui.checkbox')\n  .checkbox()\n;\n\nw.find('button.next').click(function() {\n    $('#setup_http').hide();\n    $('#setup_finish').show();\n});\nw.find('button.back').click(function() {\n    $('#setup_http').hide();\n    $('#setup_bootdb').show();\n});"
+        },
+        {
+            "hash": "\\x8a7bf0e95cb72949eb188401d12f8810fa89f0b750080f6f073fd358c26e8944",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    <header>\n        <h3>Configure HTTP Server</h3>\n    </header>\n\n\n    <div class=\"ui form\">\n\n        <div class=\"security segment ui\">\n            <h4>Encryption</h4>\n\n            Should the webserver serve encrypted traffic, unencrypted, or both?\n\n            <div class=\"inline field\">\n                <div class=\"ui checkbox\">\n                    <input type=\"checkbox\" tabindex=\"0\" class=\"hidden\">\n                    <label>HTTP (unencrypted)</label>\n                </div>\n            </div>\n            <div class=\"inline field\">\n                <div class=\"ui checkbox\">\n                    <input type=\"checkbox\" tabindex=\"0\" class=\"hidden\">\n                    <label>HTTPS (encrypted)</label>\n                </div>\n            </div>\n        </div>\n\n\n        <div class=\"security segment ui\">\n            <h4>Network Configuration</h4>\n\n            Where can this HTTP server be accessed from?\n\n            <div class=\"inline field\">\n                <div class=\"ui radio checkbox\">\n                    <input type=\"radio\" name=\"traffic\" tabindex=\"0\" class=\"hidden\">\n                    <label>Local Only (firewalled somehow?)</label>\n                </div>\n            </div>\n            <div class=\"inline field\">\n                <div class=\"ui radio checkbox\">\n                    <input type=\"radio\" name=\"traffic\" tabindex=\"0\" class=\"hidden\">\n                    <label>Available to network></label>\n                </div>\n            </div>\n        </div>\n\n        <button class=\"ui button back\">Back</button>\n        <button class=\"ui button next\">Next</button>\n    </div>\n</div>"
+        },
+        {
+            "hash": "\\xf65e40d4da8e44cb167f1e0443285390ba04e20794020e4eaaf3ccaa4a8abbf0",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }} ui container\">\n    <header>\n        <h3>Configure a boot database:</h3>\n    </header>\n    <div class=\"ui segment setup\">\n        <div class=\"ui two column very relaxed grid\">\n            <div class=\"column\">\n                <h3>Embedded PostgreSQL Server</h3>\n                <p>Boot from Aquameta's embedded PostgreSQL server (recommended).</p>\n\n                <button class=\"ui button next_embedded\">Next<i class=\"right arrow icon\"></i></button>\n\n            </div>\n            <div class=\"column\">\n                <h3>Custom PostgreSQL Server</h3>\n\n                <p>Boot from a custom PostgreSQL server, such as already installed on your computer.</p>\n\n                <button class=\"ui button configure\">Configure...</button>\n            </div>\n        </div>\n        <div class=\"ui vertical divider\">\n            or\n        </div>\n    </div>\n\n</div>"
+        },
+        {
+            "hash": "\\x40a55c8eae30c72616632afbca6f218d6f5b1b9a59697dff7d435a03fe1b6cb0",
+            "value": "setup_bootdb_connection"
+        },
+        {
+            "hash": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+            "value": "return {};"
+        },
+        {
+            "hash": "\\xe2a2881b4f2c35c5b2bcbf386107385feec0b71610043ac7ddfe51d38100e3dd",
+            "value": "setup_bootdb"
+        },
+        {
+            "hash": "\\x0d6e4079e36703ebd37c00722f5891d28b0e2811dc114b129215123adcce3605",
+            "value": "main"
+        },
+        {
+            "hash": "\\xd6219b7f18e0d510a965e60307774f65a41d92b456a429ac513fa34b7bc7c918",
+            "value": "8fdc7862-2dba-4e9a-b973-47fe4d293c6b"
+        },
+        {
+            "hash": "\\x6db6ac45fd8aaac4f6be740fdffa1fbfb3e50471e32bb4be6e37d1c12a913d42",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    <ul>\n        <li>\n            <h2>database servers</h2>\n            <h3>available</h3>\n            <ul>\n                <li>boot (<code>localhost:9876/aquameta</code>) (online, aquameta not installed, default)</li>\n                <li>Postgres.app Server (<code>localhost:5432/aquameta</code>) (online, aquameta installed)</li>\n            </ul>\n\n            <h3>actions</h3>\n            <ul>\n                <li><a href=\"\">install instructions</a> (select platform (OSX, Windows, Debian).  select packager (brew, Postgres.app, binary)</li>\n                <li><a href=\"\">connect</a> (enter manual PostgreSQL connections settings)</li>\n            </ul>\n        </li>\n\n        <li>\n            <h2>http servers</h2>\n\n            <ul>\n                <li><a href=\"\">bootloader (this)</a> (online, private, autostart, <code>localhost:8888</code>, database <code>aquameta</code>)</li>\n                <li><a href=\"\">shared</a> (online, public, no autostart, <code>localhost:8080</code>, database  <code>aquameta</code>)</li>\n            </ul>\n        </li>\n\n        <li>\n            <h2>peers</h2>\n            P2P connections to other users\n\n            <ul>\n                <li><a href=\"\">jim</a> (connecte, 8 subscriptions)</li>\n                <li><a href=\"\">marge</a> (offline)</li>\n                <li><a href=\"\">barry</a> (connected)</li>\n            </ul>\n\n            <h3>current connections</h3>\n            <ul>\n                <li><a href=\"\">home</a> <code>localhost:9876/aquameta</code>(online)</li>\n            </ul>\n        </li>\n    </li>\n</div>"
+        },
+        {
+            "hash": "\\xe6958b6d199ed9ffcc3ef2101b517208ff7c23351c391001092c757a799953a0",
+            "value": "bce2ca97-053f-48e4-8551-d6f03cd03ea4"
+        },
+        {
+            "hash": "\\x85a9efe66bfa83aaf1603171346048b3108ff5aae2242918288b04f494fb7fad",
+            "value": "ebb21bca-47bc-4d54-a3a8-81d3d362f73a"
+        },
+        {
+            "hash": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+            "value": ".{{= name }} {\n}"
+        },
+        {
+            "hash": "\\xd0f1756ddc3ffa1a73c98c2aa3561bc7ae899baa3d5273a0996ab567af191702",
+            "value": "385fb542-b0ed-4802-8eda-938ae7068ed4"
+        },
+        {
+            "hash": "\\xdd2741e2734916143a6dbf1d1939cbc04396f10356faf54aba282066cec41b5f",
+            "value": "944b5a05-be70-45a1-a549-1301d38799e4"
+        },
+        {
+            "hash": "\\x77beadf9e07d7c4df13447b0e83f0ffb565b5e77fd433fbd7f68d966a97f5600",
+            "value": "f5f69879-360a-4915-983e-27440629f431"
+        },
+        {
+            "hash": "\\x347a1e2537cc7aea90a4938443f967a544ea0e3f60fdc4cb45c3347a3df94bc9",
+            "value": "/boot"
+        },
+        {
+            "hash": "\\xec7d44905b80bbabab509acefb21e0fee66ec1c4bd0cc5a44ba66ed94d0d91a2",
+            "value": "0990a23b-e5ca-480b-87d7-8234a15d6ad6"
+        },
+        {
+            "hash": "\\xe8ea95712bf5e78b8c4b163d4ce3e059a9522b988a2337552071d3e011a93872",
+            "value": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n\n        <title>Aquameta</title>\n        <script src='/system.js'></script>\n        <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css\">        \n        <meta http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\">\n        <meta name=\"viewport\" content=\"width=device-width\">\n    </head>\n    <body></body>\n    <script>\n        System.import('/widget.js').then(function(widget) {\n            System.import('/semantic.min.js').then(function(s) {\n\n                var db = new AQ.Database('/endpoint/0.2', { evented: 'no' });\n                window.endpoint = db;\n\n                AQ.Widget.import('org.aquameta.core.bootloader', 'bl', db);\n                AQ.Widget.import('org.aquameta.core.ide', 'ide', db);\n                AQ.Widget.import('org.aquameta.ui.p2p', 'p2p', db);\n                AQ.Widget.import('org.aquameta.ui.auth', 'auth', db);\n                AQ.Widget.import('org.aquameta.ui.layout', 'layout', db);\n                AQ.Widget.import('org.aquameta.ui.tags', 'tag', db);\n\n                $('body').append(widget('bl:base', {\n                    content: widget('bl:setup')\n                }));\n                $('body').append(widget('ide:debugger3_manager'));\n\n            });\n        });\n    </script>\n</html>\n\n"
+        },
+        {
+            "hash": "\\xcd57204c6a780a175a2f7eacc5a0a438673071f08287633a96e7196f3597b139",
+            "value": "67f905b7-9d6f-40b0-bd4c-a644d4faa4ec"
+        },
+        {
+            "hash": "\\x69ed642adbb6ae1457fe172cc7e8ba40805b2c9ffdd72f1ddd28516286d01db2",
+            "value": "var w = $(\"#\"+id);\n\nw.find('button.cancel').click(function() {\n    $('#setup_bootdb_connection').hide();\n    $('#setup_bootdb').show();\n});\n\nw.find('button.save').click(function() {\n    $('#setup_bootdb_connection').hide();\n    $('#setup_http').show();\n});"
+        },
+        {
+            "hash": "\\x20af0663ffaf114b890285d986d5f5d1d138a73fac8404f7b7eea6e42db50c87",
+            "value": "var w = $(\"#\"+id);\n\nw.find('.tabular.menu .item').tab();\n\nw.find('button.next_embedded').click(function(){\n    $('#setup_bootdb').hide();\n    $('#setup_http').show();\n});\n\nw.find('button.configure').click(function() {\n    $('#setup_bootdb').hide();\n    $('#setup_bootdb_connection').show();    \n});"
+        },
+        {
+            "hash": "\\xe2aa7a9196192aadd73de3ead90a67e90eab72c9d0aa9def68b1f6d6b9902e3f",
+            "value": ".{{= name }} header {\n    text-align: center;\n}"
+        },
+        {
+            "hash": "\\x2b843c3048e6ae9ccd07276c61c00b9a08a319f8dda7e51fd6a32e70b5d6ef42",
+            "value": ".{{= name }} header {\n    text-align: center;\n}\n\n.{{= name }} .connection_string .string_display {\n    background-color: black;\n    font-family: monospace;\n    font-size: 120%;\n    color: lightgreen;\n    padding: 10px;\n}"
+        },
+        {
+            "hash": "\\xe55479deca8fae016a12f5a6f480bff69bd5939a5be7f44796b903e4ba7d89e7",
+            "value": ".{{= name }} > header {\n    text-align: center;\n}\n\n.{{= name }} > div.segment {\n    display: none;\n}"
+        },
+        {
+            "hash": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+            "value": "var w = $(\"#\"+id);"
+        },
+        {
+            "hash": "\\xc0bd433e4e19e3e6e6b8fcf2bb4c957a077adfcb6485232c7110f49788000a13",
+            "value": "setup_finish"
+        }
+    ],
+    "commits": [
+        {
+            "id": "b65d6d75-4a45-45fb-b1de-f8d1afe980c4",
+            "message": "Initial import from v0.4",
+            "parent_id": null,
+            "jsonb_rows": [
+                "(widget,widget,{id},{ba62b0bf-fd7f-4b75-b129-4ae7ae97523a})",
+                "(widget,widget,{id},{67f905b7-9d6f-40b0-bd4c-a644d4faa4ec})",
+                "(widget,widget,{id},{8fdc7862-2dba-4e9a-b973-47fe4d293c6b})",
+                "(widget,widget,{id},{f5f69879-360a-4915-983e-27440629f431})",
+                "(widget,widget,{id},{5adb74b2-8c13-4877-8f3f-0e24d0ff1865})",
+                "(widget,widget,{id},{bce2ca97-053f-48e4-8551-d6f03cd03ea4})",
+                "(widget,widget,{id},{0990a23b-e5ca-480b-87d7-8234a15d6ad6})",
+                "(widget,widget,{id},{0e14ed65-0792-4c7e-803c-2e870fb65d04})",
+                "(widget,widget,{id},{ebb21bca-47bc-4d54-a3a8-81d3d362f73a})",
+                "(endpoint,resource,{id},{385fb542-b0ed-4802-8eda-938ae7068ed4})"
+            ],
+            "author_name": "Eric Hanson",
+            "commit_time": "2025-07-10T01:44:30.232095-06:00",
+            "author_email": "eric@aquameta.com",
+            "jsonb_fields": {
+                "(widget,widget,{id},{0990a23b-e5ca-480b-87d7-8234a15d6ad6})": {
+                    "id": "\\xec7d44905b80bbabab509acefb21e0fee66ec1c4bd0cc5a44ba66ed94d0d91a2",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x6db6ac45fd8aaac4f6be740fdffa1fbfb3e50471e32bb4be6e37d1c12a913d42",
+                    "name": "\\x0d6e4079e36703ebd37c00722f5891d28b0e2811dc114b129215123adcce3605",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{0e14ed65-0792-4c7e-803c-2e870fb65d04})": {
+                    "id": "\\xcee59d26dd90dd705c2a480a05bfb8949d8c0e3239e0147852798d73ef3a46f1",
+                    "css": "\\x5bfedd8674718ff919b8dd9556d17f4a5d668bb6102f93102bb21da451730135",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xf65e40d4da8e44cb167f1e0443285390ba04e20794020e4eaaf3ccaa4a8abbf0",
+                    "name": "\\xe2a2881b4f2c35c5b2bcbf386107385feec0b71610043ac7ddfe51d38100e3dd",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x20af0663ffaf114b890285d986d5f5d1d138a73fac8404f7b7eea6e42db50c87",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{5adb74b2-8c13-4877-8f3f-0e24d0ff1865})": {
+                    "id": "\\x569e2034b6b4420225e93ac611ff908336b22eb9df83a289753e56cf3d46a9e6",
+                    "css": "\\xe2aa7a9196192aadd73de3ead90a67e90eab72c9d0aa9def68b1f6d6b9902e3f",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x8a7bf0e95cb72949eb188401d12f8810fa89f0b750080f6f073fd358c26e8944",
+                    "name": "\\xd0f6c74f8ddef4fc02791d2b5263576b657fa098a7ad9154d4a130845cde3a8a",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x8b8b10210acfe37d11a36b4903305ab35ab8d992e5dd91833a558eba40c809b1",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{67f905b7-9d6f-40b0-bd4c-a644d4faa4ec})": {
+                    "id": "\\xcd57204c6a780a175a2f7eacc5a0a438673071f08287633a96e7196f3597b139",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xf68918e0a15b4ab037a6e52d9a10ac02cfb01326f4d871ba0f9994ac66da3da4",
+                    "name": "\\x2dd61805c67f9c2aa781c07a3b10587cf247c4f80cd147226027373e47e4c6df",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{8fdc7862-2dba-4e9a-b973-47fe4d293c6b})": {
+                    "id": "\\xd6219b7f18e0d510a965e60307774f65a41d92b456a429ac513fa34b7bc7c918",
+                    "css": "\\x2b843c3048e6ae9ccd07276c61c00b9a08a319f8dda7e51fd6a32e70b5d6ef42",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x68fe26e34cee3d17173d14671d5e47c98c22909fe6f0c3f53115d05a3b65988f",
+                    "name": "\\x40a55c8eae30c72616632afbca6f218d6f5b1b9a59697dff7d435a03fe1b6cb0",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x69ed642adbb6ae1457fe172cc7e8ba40805b2c9ffdd72f1ddd28516286d01db2",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{ba62b0bf-fd7f-4b75-b129-4ae7ae97523a})": {
+                    "id": "\\x03efbe1d14a4adee7bb1eba35e8f54e3c93ab52424696a67a74a2f6e5448533b",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xb6d0ef4875e96df9727451504df6fb901e23e1470a747e15776d73079430df02",
+                    "name": "\\x532654f34aa745f4189f03e83e52843001a2ab37282b9e5d0310717ae37770f7",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{bce2ca97-053f-48e4-8551-d6f03cd03ea4})": {
+                    "id": "\\xe6958b6d199ed9ffcc3ef2101b517208ff7c23351c391001092c757a799953a0",
+                    "css": "\\xdc80a79714795da2576be11722e24cd5156631acb145ade55480622593b18b52",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x3d87a45f185c0d549a96535413658ff169d98bfc7c6e9b5ccc77d48dabc303bd",
+                    "name": "\\xcae662172fd450bb0cd710a769079c05bfc5d8e35efa6576edc7d0377afdd4a2",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x33399274499d3d18c68a4efef83220aa247e4a995ced32f96925f89b8b051923",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{ebb21bca-47bc-4d54-a3a8-81d3d362f73a})": {
+                    "id": "\\x85a9efe66bfa83aaf1603171346048b3108ff5aae2242918288b04f494fb7fad",
+                    "css": "\\xe2aa7a9196192aadd73de3ead90a67e90eab72c9d0aa9def68b1f6d6b9902e3f",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x0ec38c3af50fede4e0433f7ad70e436cec0981ac4a94f9249e0b19f9bbe0fe0c",
+                    "name": "\\xc0bd433e4e19e3e6e6b8fcf2bb4c957a077adfcb6485232c7110f49788000a13",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x5cf2c9608674a858232efa6283a05e911aec572a98afddc78fd22e68a7d1eff5",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{f5f69879-360a-4915-983e-27440629f431})": {
+                    "id": "\\x77beadf9e07d7c4df13447b0e83f0ffb565b5e77fd433fbd7f68d966a97f5600",
+                    "css": "\\xe55479deca8fae016a12f5a6f480bff69bd5939a5be7f44796b903e4ba7d89e7",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x971415941ceddd645c8447e2b6fa57ba09a4dd6323c0980cab8cc93777e6de7b",
+                    "name": "\\x8fb6d5f37e8055ce720bd0b1d56587f88c0071f285966ba17e72b2b12672aa73",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\xa95033e027db23f73617c0a7231072b10b3b81ce427f2aab26329eaae12022a0",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(endpoint,resource,{id},{385fb542-b0ed-4802-8eda-938ae7068ed4})": {
+                    "id": "\\xd0f1756ddc3ffa1a73c98c2aa3561bc7ae899baa3d5273a0996ab567af191702",
+                    "path": "\\x347a1e2537cc7aea90a4938443f967a544ea0e3f60fdc4cb45c3347a3df94bc9",
+                    "active": "\\xb5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+                    "content": "\\xe8ea95712bf5e78b8c4b163d4ce3e059a9522b988a2337552071d3e011a93872",
+                    "mimetype_id": "\\xdd2741e2734916143a6dbf1d1939cbc04396f10356faf54aba282066cec41b5f"
+                }
+            },
+            "repository_id": "5ddb6055-5ece-4e9d-8af6-c15118726f1d",
+            "merge_parent_id": null
+        }
+    ],
+    "repository": {
+        "id": "5ddb6055-5ece-4e9d-8af6-c15118726f1d",
+        "name": "org.aquameta.core.bootloader",
+        "head_commit_id": "b65d6d75-4a45-45fb-b1de-f8d1afe980c4",
+        "stage_rows_to_add": [
+        ],
+        "checkout_commit_id": "b65d6d75-4a45-45fb-b1de-f8d1afe980c4",
+        "tracked_rows_added": [
+        ],
+        "stage_rows_to_remove": [
+        ],
+        "stage_fields_to_change": [
+        ]
+    }
+}

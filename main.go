@@ -281,26 +281,24 @@ func main() {
         */
 
         // install from local filesystem
-        // TODO: Do this by inspecting the bundles directory?
-        /*
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
-            "org.aquameta.core.bootloader",
-            // "org.aquameta.core.bundle",
-            "org.aquameta.core.endpoint",
-            "org.aquameta.core.ide",
             "org.aquameta.core.mimetypes",
-            "org.aquameta.core.semantics",
+            "org.aquameta.core.endpoint",
             "org.aquameta.core.widget",
+            "org.aquameta.core.ide",
+            "org.aquameta.core.semantics",
             "org.aquameta.games.snake",
             "org.aquameta.ui.fsm",
             "org.aquameta.ui.layout",
             "org.aquameta.ui.tags",
+            "org.aquameta.core.bootloader",
+            // "org.aquameta.core.repository",
         }
 
         for i := 0; i < len(coreBundles); i++ {
             log.Print("  - "+coreBundles[i])
-            q := "select bundle.bundle_import_csv('" + workingDirectory + "/bundles/" + coreBundles[i] + "')"
+            q := "select bundle.import_repository(pg_read_file('" + workingDirectory + "/bundles/" + coreBundles[i] + ".json'))"
             _, err := dbpool.Exec(context.Background(), q)
             if err != nil {
                 if config.Database.Mode == "embedded" {
@@ -309,13 +307,11 @@ func main() {
                 log.Fatalf("Unable to install Aquameta bundles: %v", err)
             }
 
-            _, err = dbpool.Exec(context.Background(), "select bundle.checkout(c.id) from bundle.commit c join bundle.bundle b on b.head_commit_id = c.id where b.name = '" + coreBundles[i] + "'")
+            _, err = dbpool.Exec(context.Background(), "select bundle.checkout('" + coreBundles[i] + "')")
             if err != nil {
                 log.Fatalf("Unable to checkout core bundles: %v", err)
             }
-
         }
-        */
 
         log.Print("Installation complete!")
 

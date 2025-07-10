@@ -1,0 +1,320 @@
+{
+    "blobs": [
+        {
+            "hash": "\\x4bb9b7d708edefede56b7ef721dec4575f122d6b82bd17988ef1fd628bd42986",
+            "value": "6173195d-17b4-46a8-8915-b93ca3c54df8"
+        },
+        {
+            "hash": "\\x12d17b5fd917e1ce1445963dbef9cd54e29bfadd82cbed8a1291f74e8fadb3e5",
+            "value": "ac294312-bd44-4f99-bfff-1313e97df9a7"
+        },
+        {
+            "hash": "\\x538d7d9fe78e7baac47a9fbd6f2c68845ecca72dbdc2b47b4c5a0f5620ab8e93",
+            "value": "snake"
+        },
+        {
+            "hash": "\\x782336fb5d76674b47d339a2a0d8e19c6a8401d68fd2efd54f699e22d44c8757",
+            "value": "3554e3d4-a96e-4a80-9458-6616cad959e9"
+        },
+        {
+            "hash": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+            "value": null
+        },
+        {
+            "hash": "\\xa93b0cbe2c2fd495754a18ab0a2b42b2a8605e046ffd76398978cf57b662cacc",
+            "value": "var w = $(\"#\"+id);\n\nw.css('width', config.BOARD_WIDTH * config.PIECE_SIZE + 'px');\nw.css('height', config.BOARD_HEIGHT * config.PIECE_SIZE + 'px');\n\n/*\nfor (var i=0;i<50;i++) {\n    for (var j=0;j<50;j++) {\n        w.append(widget('s:square', { x: i, y: j }));\n    }\n}\n*/\nw.append(widget('s:snake', { config: config }));\nw.append(widget('s:food', { config: config }));"
+        },
+        {
+            "hash": "\\x3109334ac622b1ed4db38c480826227b22be3a855a54ee9708d232e38f77f725",
+            "value": ".{{= name }} {\n    position: absolute;\n    background-color: green;\n}"
+        },
+        {
+            "hash": "\\x0aca120bbb0623f5f4e412cbc64f869e28ce7859adbb346c110c07988f9029be",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    GAME OVER\n</div>"
+        },
+        {
+            "hash": "\\x48e7b1232576d5aa5471fb85fac589b731551fbe1f49a3f24843fe4df50fb233",
+            "value": ".{{= name }} {\n    width: 100%;\n    height: 100%;\n    background-color: red;\n    color: white;\n    font-size: 700%;\n}"
+        },
+        {
+            "hash": "\\x4ba3e8e3765f2970eb37fae535353dd623d40a0507848c3c1dd240a5a7eb995e",
+            "value": "square"
+        },
+        {
+            "hash": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "value": ""
+        },
+        {
+            "hash": "\\xb5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+            "value": "true"
+        },
+        {
+            "hash": "\\xb2e42c400317c5fc398693ea93ff1cf33ba3181bcc89036bff8391b36ee96359",
+            "value": "var w = $(\"#\"+id);\n\n// setup\nw.css('width', config.PIECE_SIZE + 'px');\nw.css('height', config.PIECE_SIZE + 'px');\n\nvar x, y;\n\nfunction draw (e, tail) {\n    var tail_collission = false;\n    \n    do {\n        x = Math.floor(Math.random() * config.BOARD_WIDTH);\n        y = Math.floor(Math.random() * config.BOARD_HEIGHT);\n\n        for (var i=0;i<tail.length;i++) {\n            if (x == tail[i].x && y == tail[i].y)\n                tail_collision = true;\n        }\n    } while (tail_collission == true);\n\n    w.css('left', x * config.PIECE_SIZE + 'px');\n    w.css('top', y * config.PIECE_SIZE + 'px');\n    \n    w.data('x',x);\n    w.data('y',y);\n}\n\nw.closest('.game').bind('piece_eaten', draw);\ndraw(null, Array());\n"
+        },
+        {
+            "hash": "\\x5c7b06ed703823b9ca6618ae338c5d4d0d789c8a66c0b0cbf31f371d08b0e4cc",
+            "value": ".{{= name }} {\n    position: absolute;\n    width: 20px;\n    height: 20px;\n    border: 2px solid green;\n}"
+        },
+        {
+            "hash": "\\x67c6d33e91583396f6c959121d04af0b0b21266aabe5fa5ed18e27c82cadd790",
+            "value": "1335cdfd-24db-44dc-ac91-3b4e4c5267ca"
+        },
+        {
+            "hash": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+            "value": "return {};"
+        },
+        {
+            "hash": "\\x1400cb70908a8f850d11210478824c09509a0fdfe76621fa37896fd822d9611d",
+            "value": "var w = $(\"#\"+id);\n\nw.css('width', config.PIECE_SIZE);\nw.css('height', config.PIECE_SIZE);\n\nvar x_pos = Math.floor(config.BOARD_WIDTH / 2);\nvar y_pos = Math.floor(config.BOARD_HEIGHT / 2);\nvar x_dir = 1, y_dir = 0;\nvar tail = Array({x_pos, y_pos});\ngame_over = false;\n\n\nfunction reverse() {\n    console.log('reverse!');\n\n    tail.reverse();\n\n\t// direction\n    if (tail.length > 2) {\n        x_dir = tail[0].x - tail[1].x;\n        y_dir = tail[0].y - tail[1].y;\n    } else {\n        x_dir = x_dir * -1;\n        y_dir = y_dir * -1;\n    }\n\n    \n    x_pos = tail[0].x;\n    y_pos = tail[0].y;\n}\n\n\nfunction draw() {\n    // update position\n    x_pos += x_dir;\n    y_pos += y_dir;\n\n    // check for collission\n    // wall\n    if (x_pos < 0 || x_pos >= config.BOARD_WIDTH || y_pos < 0 || y_pos >= config.BOARD_HEIGHT) {\n        game_over_f();\n        return;\n    }\n\t// self\n    for (var i=0;i<tail.length;i++) {\n        if (x_pos == tail[i].x && y_pos == tail[i].y) {\n            game_over_f();\n            return;\n        }\n    }\n\n    // add to tail\n    tail.unshift({ x: x_pos, y: y_pos });\n\n    // redraw\n    w.css('left', x_pos * config.PIECE_SIZE + 'px');\n    w.css('top', y_pos * config.PIECE_SIZE + 'px');\n\n    // check for food\n    var food_x = $('.food').data('x');\n    var food_y = $('.food').data('y');\n\n    if (food_x == x_pos && food_y == y_pos) {\n        w.trigger('piece_eaten', { tail: tail } );\n    } else {\n        // remove tail piece\n        tail.splice(-1);\n    }\n\n    // tail\n    var tail_of_tail_x = tail[tail.length-1].x;\n    var tail_of_tail_y = tail[tail.length-1].y;\n    \n    // console.log('tail of tail: ', tail_of_tail_y, tail_of_tail_x);\n    \n    /*\n    failed attempt at optimizing this so we don't redraw the whole snake each move:\n    \n    w.closest('.board')\n    \t.append(widget('s:tail_piece', {\n            x: tail[0].x,\n            y: tail[0].y,\n            config: config \n        }));\n    \n    $('.tail_piece[data-xpos='+tail_of_tail_x+'][data-ypos='+tail_of_tail_y+']').remove();\n    */\n    \n    $(document).find('.tail_piece').remove();\n    for (var i=1;i<tail.length;i++) {\n        w.closest('.board').append(widget('s:tail_piece', { x: tail[i].x, y: tail[i].y, config: config }));\n    }\n    // */\n\n    if (!game_over) {\n        setTimeout(draw, config.SPEED);\n    }\n}\n\n\nfunction game_over_f() {\n    w.trigger('game_over');\n    game_over = true;\n}\n\n\njwerty.key('↑', function() { x_dir = 0; y_dir = -1 });\njwerty.key('↓', function() { x_dir = 0; y_dir = 1; });\njwerty.key('←', function() { x_dir = -1; y_dir = 0; });\njwerty.key('→', function() { x_dir = 1; y_dir = 0 });\njwerty.key('r', reverse);\n\ndraw();\n"
+        },
+        {
+            "hash": "\\x520fdaf211090e8506a8aaf21317e7eec05a9fa790733d10cdcbf518da06b586",
+            "value": ".{{= name }} {\n    position: absolute;\n    background-color: yellow;\n}"
+        },
+        {
+            "hash": "\\x262132a4bb4feca53a36993b55a69d1e7ac233847824ac7edb34fbc0a97c350a",
+            "value": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <script src='/system.js'></script>\n        <title>Snake!</title>\n        <meta http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\">\n        <meta name=\"viewport\" content=\"width=device-width\">\n\n\n\n        <link href='//fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>\n        <style>\n            html {\n                box-sizing: border-box;\n                background-color: black;\n                color: white;\n            }\n            *, *:before, *:after {\n                box-sizing: inherit;\n            }\n            body {\n                font-family: 'Open Sans', sans-serif;\n            }\n            html, body {\n                height: 100%;\n                margin: 0;\n            }\n        </style>\n    </head>\n    <body></body>\n    <script>\n        System.import('/widget.js').then(function(widget) {\n\n            var db = new AQ.Database('/endpoint/0.3', { evented: 'no' });\n            window.endpoint = db;\n\n            AQ.Widget.import('org.aquameta.core.ide', 'ide', db);\n            AQ.Widget.import('org.aquameta.games.snake', 's', db);\n\n            $('body').append(widget('s:game'));\n            $('body').append(widget('ide:debugger3_manager'));\n\n        });\n    </script>\n</html>\n"
+        },
+        {
+            "hash": "\\x56f274987be85416d462d863ac0986e81b2698518972d832516a2c79c595653b",
+            "value": "c5c27e68-1a4b-42e7-9c8e-c8fa7fadaa3e"
+        },
+        {
+            "hash": "\\x6ca5cab77e702c787b4c14b3d3bf26bad43da606be6eed04ab0b9720120ae081",
+            "value": "game"
+        },
+        {
+            "hash": "\\xa8ae5aa90a94d908fc7ab35b18702a301e9378f83386f49d4b1dc63c0502a34f",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n</div>"
+        },
+        {
+            "hash": "\\xe5b98fa1fc9ed7d8d1b2f219c1117f55b8a8a14c7b4f702ac2db617b97783ed9",
+            "value": "66511858-1f9f-4214-9868-68af32699d1b"
+        },
+        {
+            "hash": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+            "value": ".{{= name }} {\n}"
+        },
+        {
+            "hash": "\\x5bc600f375667e31384e64d648a7def88e55e2048c572dd32808316376029014",
+            "value": "game_over"
+        },
+        {
+            "hash": "\\x238fa28a94976c7da14563bc873c2729bd5cd325389085bb4c6dd0de28923590",
+            "value": "instructions"
+        },
+        {
+            "hash": "\\xdd2741e2734916143a6dbf1d1939cbc04396f10356faf54aba282066cec41b5f",
+            "value": "944b5a05-be70-45a1-a549-1301d38799e4"
+        },
+        {
+            "hash": "\\xf13bbad0d674b460ef96e81f31ed8395ca698bcc32db72a64df47f7e9a0944a9",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    \n</div>"
+        },
+        {
+            "hash": "\\xe253963f1b3eac60df9ad4ef26490bcba6a38b6afbbe58c20e5ebbda9bc72f94",
+            "value": ".{{= name }} {\n    position: absolute;\n    background-color: blue;\n    \n}"
+        },
+        {
+            "hash": "\\x45e811317390d9c96001c297d5b3ef0ada2f9b77cda5c347b21a192dca2c1b56",
+            "value": "c6af5741-02c6-4d51-ba6e-c622750137ed"
+        },
+        {
+            "hash": "\\xb759721d70233a8787e55df98fbc38778b70d9610931c406fd18fb5bfb161d0d",
+            "value": "666d5961-1263-4290-b672-e7d58d8b078e"
+        },
+        {
+            "hash": "\\xc2e464697bc0384335dff62d78b559e4f14549ed0ce814ee2eced17e43e356b7",
+            "value": "94438cca-7073-4440-85d4-7a28576d7ed1"
+        },
+        {
+            "hash": "\\xfbf648a0c5b3e39d32d118ae90f21f3e386baded7fb14e56a29747cf6daa5279",
+            "value": ".{{= name }} {\n    border: 5px dotted red;\n}"
+        },
+        {
+            "hash": "\\x859169b38185780daa5497983ff20d2994390058d8a71f2847ac7846f970971e",
+            "value": "board"
+        },
+        {
+            "hash": "\\x3ce5fef4216c56c249757c6f934650949276c9fb1d83a77ea6a30e2383bba157",
+            "value": "8c212247-ec13-4d86-a905-85875a0365c5"
+        },
+        {
+            "hash": "\\xa837bad123ff356e654ca27afdebfa46e5afbb16694bc5a58976e3c4dde1b39c",
+            "value": "tail_piece"
+        },
+        {
+            "hash": "\\xac940faf04fd4410cdf6be2bfc28789e44c8e58203a9b7f3ecdc21a13ca577b2",
+            "value": "var w = $(\"#\"+id);\n\n// setup\nw.css('width', config.PIECE_SIZE + 'px');\nw.css('height', config.PIECE_SIZE + 'px');\n\nw.css('left', x * config.PIECE_SIZE + 'px');\nw.css('top', y * config.PIECE_SIZE + 'px');\n\nw.attr('data-xpos',x);\nw.attr('data-ypos',y);\n"
+        },
+        {
+            "hash": "\\x1fd045cf2b409a1d3535c6ebd7a99bf3fd5d5d7ef82537a310d2b881c5ca41fe",
+            "value": "var w = $(\"#\"+id);\n\n// constants\nvar config = {\n    'BOARD_WIDTH': 40,\n    'BOARD_HEIGHT': 30,\n    'PIECE_SIZE': 20,\n    'SPEED': 100\n}\n\nw.append(widget('s:board', { config: config }));\nw.append(widget('s:instructions', { config: config }));\n\nw.bind('game_over', function() {\n    w.append(widget('s:game_over'));\n});"
+        },
+        {
+            "hash": "\\x4bc9c8d53e76b55b7a2667e1c1a19cf3c1e46f096ae985785637e4c69a8a33c6",
+            "value": "<div id=\"{{= id }}\" class=\"{{= name }}\">\n    How to play:  Snake collects the food to get longer.  Arrow keys to change direction, 'r' reverses.<br>Programmed by Eric Hanson in <a href='http://aquameta.org/'>aquameta</a>\n</div>"
+        },
+        {
+            "hash": "\\x2f59d3778a727c31c1992fc03657dec05bc7e496e13ec5b0e294816cb75f90d8",
+            "value": "var w = $(\"#\"+id);\n\nw.css('top',y * 22 + 'px');\nw.css('left',x * 22 + 'px');"
+        },
+        {
+            "hash": "\\x74c25e4c83f53b58fd582c04d91c6c349318d7749fd9d8147bbccdd3ed4dd497",
+            "value": "/snake"
+        },
+        {
+            "hash": "\\x537e1cd144937745596c3545551e02000ebd87c5c74cff59d0298506747eccca",
+            "value": "d41c9132-6ecf-44e3-b1e9-fd83ef58dbce"
+        },
+        {
+            "hash": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+            "value": "var w = $(\"#\"+id);"
+        },
+        {
+            "hash": "\\xc1f026582fe6e8cb620d0c85a72fe421ddded756662a8ec00ed4c297ad10676b",
+            "value": "food"
+        }
+    ],
+    "commits": [
+        {
+            "id": "8fb85650-4de6-4ced-b00e-03a3348e7790",
+            "message": "Initial import from v0.4",
+            "parent_id": null,
+            "jsonb_rows": [
+                "(widget,widget,{id},{1335cdfd-24db-44dc-ac91-3b4e4c5267ca})",
+                "(widget,widget,{id},{d41c9132-6ecf-44e3-b1e9-fd83ef58dbce})",
+                "(widget,widget,{id},{8c212247-ec13-4d86-a905-85875a0365c5})",
+                "(widget,widget,{id},{c5c27e68-1a4b-42e7-9c8e-c8fa7fadaa3e})",
+                "(widget,widget,{id},{94438cca-7073-4440-85d4-7a28576d7ed1})",
+                "(widget,widget,{id},{6173195d-17b4-46a8-8915-b93ca3c54df8})",
+                "(widget,widget,{id},{ac294312-bd44-4f99-bfff-1313e97df9a7})",
+                "(widget,widget,{id},{3554e3d4-a96e-4a80-9458-6616cad959e9})",
+                "(widget,widget_dependency_js,{id},{c6af5741-02c6-4d51-ba6e-c622750137ed})",
+                "(endpoint,resource,{id},{66511858-1f9f-4214-9868-68af32699d1b})"
+            ],
+            "author_name": "Eric Hanson",
+            "commit_time": "2025-07-10T01:44:30.232095-06:00",
+            "author_email": "eric@aquameta.com",
+            "jsonb_fields": {
+                "(widget,widget,{id},{1335cdfd-24db-44dc-ac91-3b4e4c5267ca})": {
+                    "id": "\\x67c6d33e91583396f6c959121d04af0b0b21266aabe5fa5ed18e27c82cadd790",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xf13bbad0d674b460ef96e81f31ed8395ca698bcc32db72a64df47f7e9a0944a9",
+                    "name": "\\x6ca5cab77e702c787b4c14b3d3bf26bad43da606be6eed04ab0b9720120ae081",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x1fd045cf2b409a1d3535c6ebd7a99bf3fd5d5d7ef82537a310d2b881c5ca41fe",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{3554e3d4-a96e-4a80-9458-6616cad959e9})": {
+                    "id": "\\x782336fb5d76674b47d339a2a0d8e19c6a8401d68fd2efd54f699e22d44c8757",
+                    "css": "\\x520fdaf211090e8506a8aaf21317e7eec05a9fa790733d10cdcbf518da06b586",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xf13bbad0d674b460ef96e81f31ed8395ca698bcc32db72a64df47f7e9a0944a9",
+                    "name": "\\xc1f026582fe6e8cb620d0c85a72fe421ddded756662a8ec00ed4c297ad10676b",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\xb2e42c400317c5fc398693ea93ff1cf33ba3181bcc89036bff8391b36ee96359",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{6173195d-17b4-46a8-8915-b93ca3c54df8})": {
+                    "id": "\\x4bb9b7d708edefede56b7ef721dec4575f122d6b82bd17988ef1fd628bd42986",
+                    "css": "\\x3109334ac622b1ed4db38c480826227b22be3a855a54ee9708d232e38f77f725",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xa8ae5aa90a94d908fc7ab35b18702a301e9378f83386f49d4b1dc63c0502a34f",
+                    "name": "\\xa837bad123ff356e654ca27afdebfa46e5afbb16694bc5a58976e3c4dde1b39c",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\xac940faf04fd4410cdf6be2bfc28789e44c8e58203a9b7f3ecdc21a13ca577b2",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{8c212247-ec13-4d86-a905-85875a0365c5})": {
+                    "id": "\\x3ce5fef4216c56c249757c6f934650949276c9fb1d83a77ea6a30e2383bba157",
+                    "css": "\\x5c7b06ed703823b9ca6618ae338c5d4d0d789c8a66c0b0cbf31f371d08b0e4cc",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xa8ae5aa90a94d908fc7ab35b18702a301e9378f83386f49d4b1dc63c0502a34f",
+                    "name": "\\x4ba3e8e3765f2970eb37fae535353dd623d40a0507848c3c1dd240a5a7eb995e",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x2f59d3778a727c31c1992fc03657dec05bc7e496e13ec5b0e294816cb75f90d8",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{94438cca-7073-4440-85d4-7a28576d7ed1})": {
+                    "id": "\\xc2e464697bc0384335dff62d78b559e4f14549ed0ce814ee2eced17e43e356b7",
+                    "css": "\\xe253963f1b3eac60df9ad4ef26490bcba6a38b6afbbe58c20e5ebbda9bc72f94",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xf13bbad0d674b460ef96e81f31ed8395ca698bcc32db72a64df47f7e9a0944a9",
+                    "name": "\\x538d7d9fe78e7baac47a9fbd6f2c68845ecca72dbdc2b47b4c5a0f5620ab8e93",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x1400cb70908a8f850d11210478824c09509a0fdfe76621fa37896fd822d9611d",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{ac294312-bd44-4f99-bfff-1313e97df9a7})": {
+                    "id": "\\x12d17b5fd917e1ce1445963dbef9cd54e29bfadd82cbed8a1291f74e8fadb3e5",
+                    "css": "\\x48e7b1232576d5aa5471fb85fac589b731551fbe1f49a3f24843fe4df50fb233",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x0aca120bbb0623f5f4e412cbc64f869e28ce7859adbb346c110c07988f9029be",
+                    "name": "\\x5bc600f375667e31384e64d648a7def88e55e2048c572dd32808316376029014",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{c5c27e68-1a4b-42e7-9c8e-c8fa7fadaa3e})": {
+                    "id": "\\x56f274987be85416d462d863ac0986e81b2698518972d832516a2c79c595653b",
+                    "css": "\\x0ba9b693da6b2dbb83cee744e953ac5cb5f3d2cb93a4a0550b607a7fdcca02c2",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\x4bc9c8d53e76b55b7a2667e1c1a19cf3c1e46f096ae985785637e4c69a8a33c6",
+                    "name": "\\x238fa28a94976c7da14563bc873c2729bd5cd325389085bb4c6dd0de28923590",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\x4938388f0c68650a2120ab03dfbf8e39b08edca0d086b3c3fd02e84e501a5fab",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(widget,widget,{id},{d41c9132-6ecf-44e3-b1e9-fd83ef58dbce})": {
+                    "id": "\\x537e1cd144937745596c3545551e02000ebd87c5c74cff59d0298506747eccca",
+                    "css": "\\xfbf648a0c5b3e39d32d118ae90f21f3e386baded7fb14e56a29747cf6daa5279",
+                    "help": "\\xc0178022ef029933301a5585abee372c28ad47d08e3b5b6b748ace8e5263d2c9",
+                    "html": "\\xa8ae5aa90a94d908fc7ab35b18702a301e9378f83386f49d4b1dc63c0502a34f",
+                    "name": "\\x859169b38185780daa5497983ff20d2994390058d8a71f2847ac7846f970971e",
+                    "pre_js": "\\xe4b08665b2511bc86ca7cf1116f4a4df34ec5c7f0a19329e166cd8a00e862382",
+                    "post_js": "\\xa93b0cbe2c2fd495754a18ab0a2b42b2a8605e046ffd76398978cf57b662cacc",
+                    "common_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "server_js": "\\xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "(endpoint,resource,{id},{66511858-1f9f-4214-9868-68af32699d1b})": {
+                    "id": "\\xe5b98fa1fc9ed7d8d1b2f219c1117f55b8a8a14c7b4f702ac2db617b97783ed9",
+                    "path": "\\x74c25e4c83f53b58fd582c04d91c6c349318d7749fd9d8147bbccdd3ed4dd497",
+                    "active": "\\xb5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+                    "content": "\\x262132a4bb4feca53a36993b55a69d1e7ac233847824ac7edb34fbc0a97c350a",
+                    "mimetype_id": "\\xdd2741e2734916143a6dbf1d1939cbc04396f10356faf54aba282066cec41b5f"
+                },
+                "(widget,widget_dependency_js,{id},{c6af5741-02c6-4d51-ba6e-c622750137ed})": {
+                    "id": "\\x45e811317390d9c96001c297d5b3ef0ada2f9b77cda5c347b21a192dca2c1b56",
+                    "widget_id": "\\xc2e464697bc0384335dff62d78b559e4f14549ed0ce814ee2eced17e43e356b7",
+                    "dependency_js_id": "\\xb759721d70233a8787e55df98fbc38778b70d9610931c406fd18fb5bfb161d0d"
+                }
+            },
+            "repository_id": "50573ccd-ff6e-4c10-bf87-e9eed2a293f0",
+            "merge_parent_id": null
+        }
+    ],
+    "repository": {
+        "id": "50573ccd-ff6e-4c10-bf87-e9eed2a293f0",
+        "name": "org.aquameta.games.snake",
+        "head_commit_id": "8fb85650-4de6-4ced-b00e-03a3348e7790",
+        "stage_rows_to_add": [
+        ],
+        "checkout_commit_id": "8fb85650-4de6-4ced-b00e-03a3348e7790",
+        "tracked_rows_added": [
+        ],
+        "stage_rows_to_remove": [
+        ],
+        "stage_fields_to_change": [
+        ]
+    }
+}
