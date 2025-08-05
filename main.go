@@ -5,7 +5,8 @@ import (
     "flag"
     "fmt"
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
-    "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/jackc/pgx/v5"
+    "github.com/jackc/pgx/v5/pgxpool"
     "github.com/lib/pq"
     "log"
     "net/http"
@@ -147,7 +148,20 @@ func main() {
     connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", config.Database.Role, config.Database.Password, config.Database.Host, config.Database.Port, config.Database.DatabaseName)
     log.Printf("Database: %s", connectionString)
 
-    dbpool, err := pgxpool.Connect(context.Background(), connectionString)
+    // parse the configuration string (so we can modify it to not use prepared statements)
+    pgxConfig, err := pgxpool.ParseConfig(connectionString)
+    if err != nil {
+        log.Fatalf("Unable to parse database configuration string: %v", err)
+    }
+
+    // don't use prepared statements (they make debugging hard)
+    // TODO: maybe make this a param in the config file?
+    // pgxConfig.PreferSimpleProtocol = true
+    pgxConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+
+    // new pgx pool connection
+    dbpool, err := pgxpool.NewWithConfig(context.Background(), pgxConfig)
     if err != nil {
         log.Fatalf("Unable to connect to database: %v", err)
     }
@@ -204,11 +218,14 @@ func main() {
             "create extension meta_triggers version '0.5.0'",
             "create extension pg_bundle version '0.5.0'",
             "create extension event version '0.5.0'",
-            "create extension endpoint version '0.5.0'",
+            "create extension aq_endpoint version '0.5.0'",
+            /*
             "create extension widget version '0.5.0'",
             "create extension semantics version '0.5.0'",
             "create extension ide version '0.5.0'",
-            "create extension documentation version '0.5.0'"}
+            "create extension documentation version '0.5.0'",
+            */
+        }
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])
@@ -281,6 +298,7 @@ func main() {
         */
 
         // install from local filesystem
+        /*
         log.Print("Installing core bundles from source")
         coreBundles := [...]string{
             "org.aquameta.core.mimetypes",
@@ -312,6 +330,7 @@ func main() {
                 log.Fatalf("Unable to checkout core bundles: %v", err)
             }
         }
+        */
 
         log.Print("Installation complete!")
 

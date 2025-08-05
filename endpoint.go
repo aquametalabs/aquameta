@@ -4,7 +4,7 @@ import (
     "context"
     "encoding/json"
     "fmt"
-    "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/jackc/pgx/v5/pgxpool"
     "github.com/lib/pq"
     "io"
     "io/ioutil"
@@ -19,9 +19,22 @@ func endpoint(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
     apiHandler := func(w http.ResponseWriter, req *http.Request) {
         log.Println(req.Proto, req.Method, req.RequestURI)
 
-        // api version, sub-path
-        s := strings.SplitN(req.URL.Path, "/", 4)
-        version, apiPath := s[2], s[3]
+
+		// CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// Handle preflight requests
+		if req.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+        // path
+        pathParts := strings.Split(req.URL.Path, "/")
+        version := pathParts[2]
+        log.Println("Path parts: ", pathParts)
 
         if version != "0.3" {
             log.Print("💩💩💩💩💩💩 Reference to non-0.3 endpoint.")
@@ -32,16 +45,25 @@ func endpoint(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         if err != nil {
             log.Fatal(err)
         }
-        q, err := json.Marshal(m)
+        queryStringJSON, err := json.Marshal(m)
         if err != nil {
             log.Fatal(err)
         }
+
+        /*
         queryStringJSON := string(q)
         if queryStringJSON == "" {
             queryStringJSON = "{}"
         }
-        // qsJSON := strings.ReplaceAll(string(js), ",", ", ")
+        */
 
+        /*
+        flat := map[string]string{}
+        for k, v := range h {
+            flat[k] = strings.Join(v, ", ")
+        }
+        j, _ := json.Marshal(flat)
+        */
         /*
            // convert req.Header JSON
            headerJSON, err := json.Marshal(req.Header)
@@ -68,25 +90,46 @@ func endpoint(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         var message string
         var mimetype string
         var response string
+        var response_headers string
 
+/*
         var dbQuery = fmt.Sprintf(
-            "select status, message, response, mimetype from endpoint.request(%v, %v, %v, %v::json, %v::json)",
-            pq.QuoteLiteral(version),
-            pq.QuoteLiteral(req.Method),
-            pq.QuoteLiteral(apiPath),
-            pq.QuoteLiteral(queryStringJSON),
-            pq.QuoteLiteral(requestBody))
+            "select status, message, response, mimetype, response_headers from endpoint.request(%v, %v, $1, %v::json, %v::json, %v::json)",
+            pq.QuoteLiteral(version),         // 0.5
+            pq.QuoteLiteral(req.Method),      // GET
+            // pathParts[3:],                    // everything after /endpoint/0.5
+            pq.QuoteLiteral(string(queryStringJSON)), // ?{pk_column_names[0]}={pk_values[0]}&...
+            pq.QuoteLiteral("{}"),            // request headers
+            pq.QuoteLiteral(requestBody),     // request body
+        )
+*/
+
+
+		var dbQuery = fmt.Sprintf(
+			"select (endpoint.request(%v, %v, $1, %v::json, %v::json, %v::json)).*",
+			pq.QuoteLiteral(version),
+			pq.QuoteLiteral(req.Method),
+			pq.QuoteLiteral(string(queryStringJSON)),
+			pq.QuoteLiteral("{}"),
+			pq.QuoteLiteral(requestBody),
+		)
+
+
+        log.Printf(dbQuery);
 
         // query endpoint.request()
-        err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&status, &message, &response, &mimetype)
+        err = dbpool.QueryRow(context.Background(), dbQuery, pathParts[3:]).Scan(&status, &message, &response, &mimetype, &response_headers)
 
         // unhandled exception in endpoint.request()
         if err != nil {
             log.Printf("💥💥💥💥 API Query failed, unhandled exception: %s", err)
             log.Printf("REQUEST:\nversion: %s\nmessage: %s\nresponse: %s\nmimetype: %s\n\n", version, message, response, mimetype)
-            log.Printf("RESPONSE:\ndbQuery: %s\nreq.Proto: %s\nreq.RequestURI: %s\nrequestBody: %s\nqueryStringJSON: %s\n\n", dbQuery, req.Proto, req.RequestURI, requestBody, queryStringJSON)
+            log.Printf("RESPONSE:\ndbQuery: %s\nreq.Proto: %s\nreq.RequestURI: %s\nrequestBody: %s\nqueryStringJSON: %s\n\n",
+                 dbQuery, req.Proto, req.RequestURI, requestBody, queryStringJSON)
             return
         }
+
+        // for(headers) Set(header)
 
         w.Header().Set("Content-Type", mimetype)
         w.WriteHeader(status)

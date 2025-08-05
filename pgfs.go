@@ -8,7 +8,7 @@ import (
     "fmt"
     "syscall"
 
-    "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/jackc/pgx/v5/pgxpool"
     // "github.com/jackc/pgx/v4"
     "github.com/lib/pq"
 

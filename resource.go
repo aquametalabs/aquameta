@@ -4,7 +4,7 @@ import (
     "context"
     "encoding/json"
     "fmt"
-    "github.com/jackc/pgx/v4/pgxpool"
+    "github.com/jackc/pgx/v5/pgxpool"
     "github.com/lib/pq"
     "io"
     "log"
@@ -151,6 +151,8 @@ func resource(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
             w.Write(contentBinary)
 
         case "resource_function":
+            // TODO: IDEA: if the function being called has a parameter of type http_request_obj(?)
+            // then pass it all the http request variables.
             // get the endpoint.resource_function row, propagate path_pattern, defalt_args and mimetype
             const resourceFunctionPrepQ = `
                 select
