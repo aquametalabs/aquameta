@@ -92,19 +92,6 @@ insert into semantics.relation_component select * from semanticsv4.relation_comp
 insert into semantics.column_component select * from semanticsv4.column_component;
 insert into semantics.type_component select * from semanticsv4.type_component;
 
-/*
-column            
-column_component  
-column_purpose    
-foreign_key       
-relation          
-relation_component
-relation_purpose  
-type              
-type_component    
-unique_identifier 
-*/
-
 -- transfer documentation
 /*
 this fouls up everything and should be part of bundle anyway.
