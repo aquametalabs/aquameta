@@ -17,9 +17,11 @@ cd ../aquameta
 dropdb -f aquameta
 createdb aquameta
 
+# load periodic table
+psql -c "\i extensions/pg_bundle/test/periodic/data.sql" aquameta
+
 # build go
 go build
 
 # start server
 ./aquameta -c conf/aquameta.toml 
-

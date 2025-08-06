@@ -5,7 +5,7 @@ import (
     "flag"
     "fmt"
     embeddedPostgres "github.com/aquametalabs/embedded-postgres"
-    "github.com/jackc/pgx/v5"
+    // "github.com/jackc/pgx/v5"
     "github.com/jackc/pgx/v5/pgxpool"
     "github.com/lib/pq"
     "log"
@@ -154,10 +154,9 @@ func main() {
         log.Fatalf("Unable to parse database configuration string: %v", err)
     }
 
-    // don't use prepared statements (they make debugging hard)
+    // don't use prepared statements (they make debugging hard when using $ args)
     // TODO: maybe make this a param in the config file?
-    // pgxConfig.PreferSimpleProtocol = true
-    pgxConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+    // pgxConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 
     // new pgx pool connection

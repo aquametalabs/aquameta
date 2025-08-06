@@ -19,25 +19,28 @@ func endpoint(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
     apiHandler := func(w http.ResponseWriter, req *http.Request) {
         log.Println(req.Proto, req.Method, req.RequestURI)
 
+        /*
+        // CORS headers
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-		// CORS headers
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		// Handle preflight requests
-		if req.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+        // Handle OPTIONS
+        if req.Method == http.MethodOptions {
+            w.WriteHeader(http.StatusNoContent)
+            return apiHandler
+        }
+        */
 
         // path
         pathParts := strings.Split(req.URL.Path, "/")
         version := pathParts[2]
+        path := strings.Join(pathParts[3:], "/")
+
         log.Println("Path parts: ", pathParts)
 
-        if version != "0.3" {
-            log.Print("💩💩💩💩💩💩 Reference to non-0.3 endpoint.")
+        if version != "0.5" {
+            log.Print("💩💩💩💩💩💩 Reference to non-0.5 endpoint.")
         }
 
         // convert query string to JSON
@@ -49,31 +52,6 @@ func endpoint(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         if err != nil {
             log.Fatal(err)
         }
-
-        /*
-        queryStringJSON := string(q)
-        if queryStringJSON == "" {
-            queryStringJSON = "{}"
-        }
-        */
-
-        /*
-        flat := map[string]string{}
-        for k, v := range h {
-            flat[k] = strings.Join(v, ", ")
-        }
-        j, _ := json.Marshal(flat)
-        */
-        /*
-           // convert req.Header JSON
-           headerJSON, err := json.Marshal(req.Header)
-           if err != nil { log.Fatal(err) }
-           log.Println(string(headerJSON))
-
-           // convert req.Header to bytes
-           headerBytes := bytes.Buffer{}
-           req.Header.Write(&headerBytes)
-        */
 
         // read request body
         r, err := ioutil.ReadAll(req.Body)
@@ -92,33 +70,21 @@ func endpoint(dbpool *pgxpool.Pool) func(w http.ResponseWriter, req *http.Reques
         var response string
         var response_headers string
 
-/*
         var dbQuery = fmt.Sprintf(
-            "select status, message, response, mimetype, response_headers from endpoint.request(%v, %v, $1, %v::json, %v::json, %v::json)",
-            pq.QuoteLiteral(version),         // 0.5
-            pq.QuoteLiteral(req.Method),      // GET
-            // pathParts[3:],                    // everything after /endpoint/0.5
-            pq.QuoteLiteral(string(queryStringJSON)), // ?{pk_column_names[0]}={pk_values[0]}&...
-            pq.QuoteLiteral("{}"),            // request headers
-            pq.QuoteLiteral(requestBody),     // request body
+            "select * from endpoint.request(%v, %v, %v, %v::json, %v::json, %v::json)",
+            pq.QuoteLiteral(version),
+            pq.QuoteLiteral(req.Method),
+            pq.QuoteLiteral(path),
+            pq.QuoteLiteral(string(queryStringJSON)),
+            pq.QuoteLiteral("{}"),
+            pq.QuoteLiteral(requestBody),
         )
-*/
-
-
-		var dbQuery = fmt.Sprintf(
-			"select (endpoint.request(%v, %v, $1, %v::json, %v::json, %v::json)).*",
-			pq.QuoteLiteral(version),
-			pq.QuoteLiteral(req.Method),
-			pq.QuoteLiteral(string(queryStringJSON)),
-			pq.QuoteLiteral("{}"),
-			pq.QuoteLiteral(requestBody),
-		)
 
 
         log.Printf(dbQuery);
 
         // query endpoint.request()
-        err = dbpool.QueryRow(context.Background(), dbQuery, pathParts[3:]).Scan(&status, &message, &response, &mimetype, &response_headers)
+        err = dbpool.QueryRow(context.Background(), dbQuery).Scan(&status, &message, &response, &mimetype, &response_headers)
 
         // unhandled exception in endpoint.request()
         if err != nil {
