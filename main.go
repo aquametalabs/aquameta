@@ -199,15 +199,15 @@ func main() {
             "create extension if not exists \"uuid-ossp\"",
             "create extension if not exists pgcrypto schema public",
             "create extension if not exists postgres_fdw",
-            "create extension meta",
-            "create extension meta_triggers",
-            "create extension bundle",
-            "create extension event",
-            "create extension endpoint",
-            "create extension widget",
-            "create extension semantics",
-            "create extension ide",
-            "create extension documentation"}
+            "create extension meta version '0.3.1'",
+            "create extension meta_triggers version '0.3.1'",
+            "create extension bundle version '0.3.1'",
+            "create extension event version '0.3.1'",
+            "create extension endpoint version '0.3.1'",
+            "create extension widget version '0.3.1'",
+            "create extension semantics version '0.3.1'",
+            "create extension ide version '0.3.1'",
+            "create extension documentation version '0.3.1'"}
 
         for i := 0; i < len(installQueries); i++ {
             log.Print(installQueries[i])
