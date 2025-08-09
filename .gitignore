@@ -6,5 +6,4 @@
 aquameta
 bootloader.db/
 extensions/*/*--*.sql
-conf/boot.toml
-conf/*.local.toml
+conf/*.toml
